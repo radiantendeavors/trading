@@ -1,3 +1,7 @@
 cmake_minimum_required(VERSION 3.23)
 
-project(Trading)
+project(trading)
+
+target_include_directories(trader PRIVATE "includes")
+
+add_subdirectory(src)

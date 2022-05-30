@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.23)
+set(TRADER_SOURCES trader.cpp ../includes/client.hpp)
 
-project(Trader)
-
-add_executable(Trader trader.cpp)
+add_executable(trader ${TRADER_SOURCES})
