@@ -1,7 +1,8 @@
 /**************************************************************************************************
  *                                                                                                *
- * Trader                                                                                         *
+ * brokerclient.cpp                                                                               *
  *                                                                                                *
+ * This file is part of trader.                                                                   *
  * Copyright (C) by G Derber <gd.github@radiantendeavors.com>                                     *
  *                                                                                                *
  * This program is free software; you can redistribute and/or modify it under the terms of the    *
@@ -12,40 +13,37 @@
  * the GNU Affero General Public License for more details.                                        *
  *                                                                                                *
  **************************************************************************************************/
-// C sytem headers
+#define _CRT_SECURE_NO_WARNINGS
 
+#include "brokerclient.hpp"
 
-// C++ standard library headers
-#include <iostream>
-
-// TWS API Specific Headers
-
-// Local Headers
-#include "version/version.h"
-#include "brokerclient/brokerclient.hpp"
-
-/**************************************************************************************************
- *                                                                                                *
- * Main                                                                                           *
- *                                                                                                *
- **************************************************************************************************/
-int main(int argc, char** argv) {
+BrokerClient::BrokerClient(const char* host, int port, int clientId) :
+  signal(1000), EClientSocket(this, &signal) {
 
   // Connect to TWS / IB Gateway
-  BrokerClient broker_client("127.0.0.1", 7497, 0);
+  bool conn = eConnect(host, port, clientId, false);
 
-  // Request the current time
-  broker_client.reqCurrentTime();
+  if (conn) {
 
-  // Sleep while the message is received
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-
-  // Read the message
-  broker_client.signal.waitForSignal();
-  broker_client.reader -> processMsgs();
-
-  // Disconnect
-  broker_client.eDisconnect();
-
-  return 0;
+    // Launch reader thread
+    reader = new EReader(this, &signal);
+    reader -> start();
+  } else {
+    std::cout << "Failed to connect" << std::endl;
+  }
 }
+
+BrokerClient::~BrokerClient() { delete reader; }
+
+// Receive and display the current time
+void BrokerClient::currentTime(long curTime) {
+  time_t epoch = curTime;
+  std::cout << "Current time: " << asctime(localtime(&epoch)) << std::endl;
+}
+
+// Respond to errors
+void BrokerClient::error(int id, int code, const std::string& msg,
+                         const std::string& advancedOrderRejectJson) {
+  std::cout << "Error: " << code << ": " << msg << std::endl;
+}
+
