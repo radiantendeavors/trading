@@ -6,6 +6,13 @@
 *.lo
 *.o
 *.obj
+*.elf
+*.ko
+
+# Linker output
+*.ilk
+*.map
+*.exp
 
 # Precompiled Headers
 *.gch
@@ -15,6 +22,9 @@
 *.so
 *.dylib
 *.dll
+*.lib
+*.a
+*.la
 
 # Fortran module files
 *.mod
@@ -30,8 +40,16 @@
 *.exe
 *.out
 *.app
+*.i*86
+*.x86_64
+*.hex
 bin
-build
+
+# Debug files
+*.dSYM
+*.su
+*.idb
+*.pdb
 
 # Emacs related
 *.~undo-tree
@@ -52,6 +70,29 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs
+dist/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+share/python-wheels/
+wheels/
+*.egg-info/
+.installed.cfg
+.egg
+MANIFEST
+
 
 # Misc
 pkg
