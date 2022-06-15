@@ -26,7 +26,7 @@ couple sample strategies are provided.
 
 ## References
 
-## Contributing(CONTRIBUTING.md)
+## [Contributing](CONTRIBUTING.md)
 
 ## [License](LICENSE.md)
 
