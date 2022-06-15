@@ -1,0 +1,3 @@
+#define trader_VERSION_MAJOR @trader_VERSION_MAJOR@
+#define trader_VERSION_MINOR @trader_VERSION_MINOR@
+#define trader_VERSION_PATCH @trader_VERSION_PATCH@
