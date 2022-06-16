@@ -147,6 +147,30 @@ class CommonParser(ArgumentParser):
                           version='%(prog)s ' + __version__)
         return None
 
+    # ==============================================================================================
+    #
+    # Function add_ibapi_connection_options
+    #
+    # Inputs
+    # ------
+    #    @param: self
+    #
+    # Returns
+    # -------
+    #    @return: None
+    #
+    # Raises
+    # ------
+    #    ...
+    #
+    #
+    # Defaults Ports:
+    #         | Live | Demo |
+    # --------+------+------|
+    # TWS     | 7496 | 7497 |
+    # Gateway | 4001 | 4002 |
+    #
+    # ==============================================================================================
     def add_ibapi_connection_options(self):
         self.add_argument(
             '-a',
