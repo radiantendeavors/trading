@@ -73,7 +73,8 @@ class BrokerClient():
                     order_type,
                     order_price=None,
                     quantity=1.0,
-                    time_in_force="DAY"):
+                    time_in_force="DAY",
+                    transmit=False):
         self.req_id += 1
 
         logger.debug("BrokerClient.place_order")
@@ -83,6 +84,7 @@ class BrokerClient():
         logger.debug("Order Price:", order_price)
         logger.debug("Quantity:", quantity)
         logger.debug("Time in Force:", time_in_force)
+        print("Transmit:", transmit)
 
         # Request details for the stock
         contract = Contract()
@@ -101,7 +103,7 @@ class BrokerClient():
         if order_type == "LMT":
             order.lmtPrice = order_price
 
-        order.transmit = False
+        order.transmit = transmit
 
         time.sleep(10)
 

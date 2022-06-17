@@ -37,7 +37,7 @@ def start_client(args):
     client = brokerclient.BrokerClient(args.address, args.port)
     client.connect()
 
-    if args.timecheck:
+    if args.checkserver:
         client.check_server_time()
         time.sleep(0.5)
 
@@ -46,7 +46,16 @@ def start_client(args):
         client.get_security_data("AAPL")
 
     elif args.order:
-        client.place_order("AAPL", "BUY", "LMT", 130.00, 1.0)
+        if args.transmit:
+            print("Transmitting Order")
+            client.place_order("AAPL",
+                               "BUY",
+                               "LMT",
+                               130.00,
+                               1.0,
+                               transmit=True)
+        else:
+            client.place_order("AAPL", "BUY", "LMT", 130.00, 1.0)
         time.sleep(20)
         client.get_open_positions()
         time.sleep(10)
@@ -79,9 +88,13 @@ def real_main(args):
     parser.add_version_option()
     parser.add_ibapi_connection_options()
 
-    parser.add_argument("-t", "--timecheck", action="store_true")
+    parser.add_argument("-c", "--checkserver", action="store_true")
     parser.add_argument("-o", "--order", action="store_true")
     parser.add_argument("-s", "--security", action="store_true")
+    parser.add_argument("-t",
+                        "--transmit",
+                        action="store_true",
+                        help="Transmit Order Automatically")
 
     args = parser.parse_args()
 
