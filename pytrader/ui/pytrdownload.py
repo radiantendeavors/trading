@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # ==================================================================================================
 #
 # pytrader
@@ -7,17 +6,16 @@
 # System libraries
 import logging
 import sys
-import time
+import pkg_resources
 
 # 3rd Party libraries
-from ibapi.ticktype import TickTypeEnum
 
 # System Library Overrides
 from pytrader.libs.system import argparse
+from pytrader.libs import utilities
 
 # Application Libraries
 from pytrader import DEBUG
-from pytrader.libs import brokerclient
 
 # ==================================================================================================
 #
@@ -29,39 +27,15 @@ logger = logging.getLogger(__name__)
 
 # ==================================================================================================
 #
-# Functions
-#
-# ==================================================================================================
-def start_client(args):
-    # Create the client and connect to TWS or IB Gateway
-    client = brokerclient.BrokerClient(args.address, args.port)
-    client.connect()
-
-    if args.timecheck:
-        client.check_server_time()
-        time.sleep(0.5)
-
-    elif args.security:
-        print("Security info")
-        client.get_security_data("AAPL")
-
-    elif args.order:
-        client.place_order("AAPL", "BUY", "LMT", 130.00, 1.0)
-        time.sleep(20)
-
-    # Disconnect
-    client.disconnect()
-
-    return None
-
-
-# ==================================================================================================
-#
 # Function real_main
 #
 # ==================================================================================================
 def real_main(args):
     logger.debug("Entered real main")
+
+    plugin_path = pkg_resources.resource_filename('pytrader',
+                                                  'plugins/download/')
+    import_path = "pytrader.plugins.download."
 
     epilog_text = """
     See man pytrader for more information.\n
@@ -74,25 +48,38 @@ def real_main(args):
 
     parser.add_version_option()
     parser.add_ibapi_connection_options()
-
     parent_parser = parser.add_logging_option()
+    subparsers = parser.create_subparsers()
 
-    parser.add_argument("-t", "--timecheck", action="store_true")
-    parser.add_argument("-o", "--order", action="store_true")
-    parser.add_argument("-s", "--security", action="store_true")
+    subcommands = ["broker", "init", "nasdaq"]
+
+    for i in subcommands:
+        subcommand = utilities.get_plugin_function(scmd='download',
+                                                   program=i,
+                                                   cmd='parser',
+                                                   import_path=import_path)
+        subcommand(subparsers, parent_parser)
+
+    parser.set_defaults(func=False, debug=False, verbosity=0, loglevel='INFO')
+
+    parser.add_logging_option()
 
     args = parser.parse_args()
 
     # 'application' code
+    # 'application' code
     if DEBUG is False:
         try:
-            start_client(args)
-        except Exception as msg:
+            args.func(args)
+        except:
             parser.print_help()
-            logger.info(msg)
             logger.error('No command was given')
     else:
-        start_client(args)
+        if args.func:
+            args.func(args)
+        else:
+            parser.print_help()
+            logger.debug("No command was given")
 
     logger.debug("End real main")
     return None

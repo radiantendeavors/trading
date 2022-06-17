@@ -83,11 +83,17 @@ class IbkrClient(EWrapper, EClient):
         print("Contract Details End")
 
     @iswrapper
-    def nextValidId(self, orderId):
+    def nextValidId(self, orderId: int):
         """ Provides the next order ID """
         super().nextValidId(orderId)
-        self.nextorderId = orderId
-        print("The next valid Order ID: ", self.nextorderId)
+
+        logging.debug("Setting nextValidOrderId:", orderId)
+        self.nextValidOrderId = orderId
+        print("The next valid Order ID: ", orderId)
+
+    def tickPrice(self, reqId, tickType, price, attrib):
+        if tickType == 2:
+            print("The current ask price is:", price)
 
     @iswrapper
     def openOrder(self, orderId, contract, order, orderState):
