@@ -48,6 +48,10 @@ def start_client(args):
     elif args.order:
         client.place_order("AAPL", "BUY", "LMT", 130.00, 1.0)
         time.sleep(20)
+        client.get_open_positions()
+        time.sleep(10)
+        client.get_account_summary()
+        time.sleep(10)
 
     # Disconnect
     client.disconnect()
@@ -75,8 +79,6 @@ def real_main(args):
     parser.add_version_option()
     parser.add_ibapi_connection_options()
 
-    parent_parser = parser.add_logging_option()
-
     parser.add_argument("-t", "--timecheck", action="store_true")
     parser.add_argument("-o", "--order", action="store_true")
     parser.add_argument("-s", "--security", action="store_true")
@@ -89,8 +91,8 @@ def real_main(args):
             start_client(args)
         except Exception as msg:
             parser.print_help()
-            logger.info(msg)
             logger.error('No command was given')
+            logger.critical(msg)
     else:
         start_client(args)
 
@@ -104,6 +106,8 @@ def real_main(args):
 #
 # ==================================================================================================
 def main(args=None):
+    logger.debug("Begin Application")
+
     if DEBUG is False:
         try:
             real_main(args)

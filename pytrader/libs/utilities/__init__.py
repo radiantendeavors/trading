@@ -2,7 +2,6 @@ import importlib
 
 
 def get_plugin_function(*args, **kwargs):
-    subcommand = kwargs['scmd']
     program = kwargs['program']
     command = kwargs['cmd']
     import_path = kwargs['import_path']

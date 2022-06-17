@@ -45,8 +45,13 @@ class BrokerClient():
         self.client_id = client_id
 
     def connect(self):
-        self.client = ibkrclient.IbkrClient(self.address, self.port,
-                                            self.client_id)
+        try:
+            self.client = ibkrclient.IbkrClient(self.address, self.port,
+                                                self.client_id)
+            return 0
+        except Exception as msg:
+            logger.debug(msg)
+            return 1
 
     def check_server_time(self):
         self.client.reqCurrentTime()
@@ -67,15 +72,17 @@ class BrokerClient():
                     action,
                     order_type,
                     order_price=None,
-                    quantity=1.0):
-
+                    quantity=1.0,
+                    time_in_force="DAY"):
         self.req_id += 1
 
-        print(security)
-        print(action)
-        print(order_type)
-        print(order_price)
-        print(quantity)
+        logger.debug("BrokerClient.place_order")
+        logger.debug("Security:", security)
+        logger.debug("Action:", action)
+        logger.debug("Order Type:", order_type)
+        logger.debug("Order Price:", order_price)
+        logger.debug("Quantity:", quantity)
+        logger.debug("Time in Force:", time_in_force)
 
         # Request details for the stock
         contract = Contract()
@@ -89,7 +96,7 @@ class BrokerClient():
         order.action = action
         order.totalQuantity = quantity
         order.orderType = order_type
-        order.tif = "DAY"
+        order.tif = time_in_force
 
         if order_type == "LMT":
             order.lmtPrice = order_price
@@ -98,8 +105,9 @@ class BrokerClient():
 
         time.sleep(10)
 
-        print(contract)
-        print(order)
+        logger.debug("Contract:", contract)
+        logger.debug("Order:", order)
+
         if self.client.nextValidOrderId:
             print("Order IDs: ", self.client.nextValidOrderId)
             self.client.placeOrder(self.client.nextValidOrderId, contract,
@@ -109,9 +117,13 @@ class BrokerClient():
             print("Order ID not received.  Ending application.")
             sys.exit()
 
+    def get_open_positions(self):
+        self.client.reqPositions()
+
+    def get_account_summary(self):
+        self.req_id += 1
         self.client.reqAccountSummary(self.req_id, "ALL",
                                       "AccountType, AvailableFunds")
-        self.client.reqPositions()
 
     def get_security_details(self, security):
         self.req_id += 1

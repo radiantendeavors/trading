@@ -33,8 +33,6 @@ logger = logging.getLogger(__name__)
 def real_main(args):
     logger.debug("Entered real main")
 
-    plugin_path = pkg_resources.resource_filename('pytrader',
-                                                  'plugins/download/')
     import_path = "pytrader.plugins.download."
 
     epilog_text = """
@@ -71,8 +69,9 @@ def real_main(args):
     if DEBUG is False:
         try:
             args.func(args)
-        except:
+        except Exception as msg:
             parser.print_help()
+            logger.debug(msg)
             logger.error('No command was given')
     else:
         if args.func:
