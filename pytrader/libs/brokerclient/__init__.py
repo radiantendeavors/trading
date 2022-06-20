@@ -54,8 +54,11 @@ class BrokerClient():
             logger.error(msg)
             return 1
 
-    def check_server_time(self):
+    def check_server(self):
         self.client.reqCurrentTime()
+        logger.info("Server Version: %s", self.client.serverVersion())
+        logger.info("Connection time: %s",
+                    self.client.twsConnectionTime().decode())
 
     def get_security_data(self,
                           security,

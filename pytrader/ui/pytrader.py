@@ -38,13 +38,14 @@ colortext = text.ConsoleText()
 # ==================================================================================================
 def start_client(args):
     # Create the client and connect to TWS or IB Gateway
+    logger.debug10("Begin Function")
     logger.debug("Connecting to server %s:%s", args.address, args.port)
     client = brokerclient.BrokerClient(args.address, args.port)
     client.connect()
 
     if args.checkserver:
         logger.debug("Checking Server time")
-        client.check_server_time()
+        client.check_server()
         time.sleep(0.5)
 
     elif args.security:
@@ -68,7 +69,10 @@ def start_client(args):
         logger.debug("No command specified")
 
     # Disconnect
+    logger.debug("Disconnecting from server")
     client.disconnect()
+
+    logger.debug("End Function")
 
     return None
 
