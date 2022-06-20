@@ -5,7 +5,6 @@
 #
 # ==================================================================================================
 # System Libraries
-import logging
 from datetime import datetime
 from threading import Thread
 import time
@@ -16,6 +15,8 @@ from ibapi.client import EClient
 from ibapi.wrapper import EWrapper
 from ibapi.utils import iswrapper
 
+# System Library Overrides
+from pytrader.libs.system import logging
 # ==================================================================================================
 #
 # Global Variables
@@ -50,37 +51,37 @@ class IbkrClient(EWrapper, EClient):
     @iswrapper
     def currentTime(self, cur_time):
         time_now = datetime.fromtimestamp(cur_time)
-        print("Current time: {}".format(time_now))
+        logger.info("Current time: %s", time_now)
 
     @iswrapper
     def error(self, req_id, code, msg):
+        logger.debug10(logger)
         if req_id < 0:
-            logger.debug("Error: ID# {}: Code {}: {}".format(
-                req_id, code, msg))
-            print("Error: ID# {}: Code {}: {}".format(req_id, code, msg))
+            logger.debug("Error: ID# %s: Code %s: %s", req_id, code, msg)
         else:
-            print("Error {}: {}".format(code, msg))
+            logger.error("Error %s: %s", code, msg)
 
     @iswrapper
     def symbolSamples(self, req_id, descs):
 
-        print("Number of descriptions: {}:".format(len(descs)))
+        logging.info("Number of descriptions: %s", len(descs))
 
         for desc in descs:
-            print("Symbol: {}".format(desc.contract.symbol))
+            logging.info("Symbol: %s", desc.contract.symbol)
 
         self.symbol = descs[0].contract.symbol
 
     @iswrapper
     def contractDetails(self, req_id, details):
-        print("Long name: {}".format(details.longName))
-        print("Category: {}".format(details.category))
-        print("Subcategory: {}".format(details.subcategory))
-        print("Contract ID: {}\n".format(details.contract.conId))
+        logging.info(
+            "Long name: %s, Category: %s, Subcategory: %s, Contract ID: %s",
+            details.longName, details.category, details.subcategory,
+            details.contract.conId)
+        logging.debug9(details)
 
     @iswrapper
     def contractDetailsEnd(self, reqId):
-        print("Contract Details End")
+        logging.vinfo1("Contract Details End")
 
     @iswrapper
     def nextValidId(self, orderId: int):
@@ -89,35 +90,35 @@ class IbkrClient(EWrapper, EClient):
 
         logging.debug("Setting nextValidOrderId:", orderId)
         self.nextValidOrderId = orderId
-        print("The next valid Order ID: ", orderId)
+        logging.info("The next valid Order ID: ", orderId)
 
     def tickPrice(self, reqId, tickType, price, attrib):
         if tickType == 2:
-            print("The current ask price is:", price)
+            logging.info("The current ask price is:", price)
 
     @iswrapper
     def openOrder(self, orderId, contract, order, orderState):
         """ Called in response to the submitted order """
-        print("Order status: ", orderState.status)
-        print("Commission charged: ", orderState.commission)
+        logging.info("Order status: ", orderState.status)
+        logging.info("Commission charged: ", orderState.commission)
 
     @iswrapper
     def orderStatus(self, orderId, status, filled, remaining, avgFillPrice,
                     permId, parentId, lastFillPrice, clientId, whyHeld,
                     mktCapPrice):
         """ Check the status of the subnitted order """
-        print("Number of filled positions: {}".format(filled))
-        print("Average fill price: {}".format(avgFillPrice))
+        logging.info("Number of filled positions: {}".format(filled))
+        logging.info("Average fill price: {}".format(avgFillPrice))
 
     @iswrapper
     def position(self, account, contract, pos, avgCost):
         """ Read information about the account"s open positions """
-        print("Position in {}: {}".format(contract.symbol, pos))
+        logging.info("Position in {}: {}".format(contract.symbol, pos))
 
     @iswrapper
     def accountSummary(self, req_id, account, tag, value, currency):
         """ Read information about the account """
-        print("Account {}: {} = {}".format(account, tag, value))
+        logging.info("Account {}: {} = {}".format(account, tag, value))
 
 
 # ==================================================================================================

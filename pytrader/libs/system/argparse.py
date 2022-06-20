@@ -215,11 +215,12 @@ class CommonParser(ArgumentParser):
         ]
 
         # Create Parent Parsur
-        self.parent = ArgumentParser(add_help=False)
+        # self.parent = ArgumentParser(add_help=False)
 
         # Parser Groups
         # Logging Group
-        self.logging = self.parent.add_argument_group('Logging Options')
+        # self.parent_logging = self.parent.add_argument_group("Logging Options")
+        self.logging = self.add_argument_group('Logging Options')
 
         # Quiet Settings
         self.logging.add_argument('-q',
@@ -227,12 +228,24 @@ class CommonParser(ArgumentParser):
                                   action='count',
                                   default=0,
                                   help=quiet_help)
+        # self.parent_logging.add_argument('-q',
+        #                                  '--quiet',
+        #                                  action='count',
+        #                                  default=0,
+        #                                  help=quiet_help)
+
         # Verbose Options
         self.logging.add_argument('-v',
                                   '--verbosity',
                                   action='count',
                                   default=0,
                                   help=verbose_help)
+
+        # self.parent_logging.add_argument('-v',
+        #                                  '--verbosity',
+        #                                  action='count',
+        #                                  default=0,
+        #                                  help=verbose_help)
 
         # If debugging is enabled
         if DEBUG:
@@ -246,7 +259,18 @@ class CommonParser(ArgumentParser):
                                       action='store_true',
                                       help=debug_help)
 
-        return self.parent
+            # # Set Loglevel
+            # self.parent_logging.add_argument('--loglevel',
+            #                                  choices=loglevel_choices,
+            #                                  default='INFO',
+            #                                  help=loglevel_help)
+            # # Maximize logging
+            # self.parent_logging.add_argument('--debug',
+            #                                  action='store_true',
+            #                                  help=debug_help)
+
+        #return self.parent_logging
+        return None
 
 
 # ==================================================================================================

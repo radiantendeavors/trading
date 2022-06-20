@@ -4,7 +4,7 @@
 #
 # ==================================================================================================
 # System libraries
-import logging
+
 import sys
 import time
 
@@ -13,6 +13,7 @@ from ibapi.client import Contract
 from ibapi.order import Order
 
 # System Library Overrides
+from pytrader.libs.system import logging
 
 # Application Libraries
 from pytrader import DEBUG
@@ -50,20 +51,24 @@ class BrokerClient():
                                                 self.client_id)
             return 0
         except Exception as msg:
-            logger.debug(msg)
+            logger.error(msg)
             return 1
 
     def check_server_time(self):
         self.client.reqCurrentTime()
 
-    def get_security_data(self, security):
+    def get_security_data(self,
+                          security,
+                          security_type="STK",
+                          exchange="SMART",
+                          currency="USD"):
         self.req_id += 1
 
         contract = Contract()
         contract.symbol = security
-        contract.secType = "STK"
-        contract.exchange = "SMART"
-        contract.currency = "USD"
+        contract.secType = security_type
+        contract.exchange = exchange
+        contract.currency = currency
         self.client.reqMktData(self.req_id, contract, "233", False, False, [])
         time.sleep(10)
 

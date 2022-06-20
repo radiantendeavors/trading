@@ -5,19 +5,21 @@
 #
 # ==================================================================================================
 # System libraries
-import logging
 import sys
 import time
 
 # 3rd Party libraries
-from ibapi.ticktype import TickTypeEnum
 
 # System Library Overrides
 from pytrader.libs.system import argparse
+from pytrader.libs.system import logging
 
 # Application Libraries
 from pytrader import DEBUG
 from pytrader.libs import brokerclient
+from pytrader.libs import security
+from pytrader.libs.utilities import config
+from pytrader.libs.utilities import text
 
 # ==================================================================================================
 #
@@ -25,6 +27,8 @@ from pytrader.libs import brokerclient
 #
 # ==================================================================================================
 logger = logging.getLogger(__name__)
+# Allow Color text on console
+colortext = text.ConsoleText()
 
 
 # ==================================================================================================
@@ -34,33 +38,34 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 def start_client(args):
     # Create the client and connect to TWS or IB Gateway
+    logger.debug("Connecting to server %s:%s", args.address, args.port)
     client = brokerclient.BrokerClient(args.address, args.port)
     client.connect()
 
     if args.checkserver:
+        logger.debug("Checking Server time")
         client.check_server_time()
         time.sleep(0.5)
 
     elif args.security:
-        print("Security info")
-        client.get_security_data("AAPL")
+        logger.debug("Security info")
+        sec = security.Security("AAPL")
+        sec.get_security_data(client)
 
     elif args.order:
+        sec = security.Security("AAPL")
         if args.transmit:
-            print("Transmitting Order")
-            client.place_order("AAPL",
-                               "BUY",
-                               "LMT",
-                               130.00,
-                               1.0,
-                               transmit=True)
+            logger.info("Transmitting Order")
+            sec.place_order(client, "BUY", "LMT", 130.00, 1.0, transmit=True)
         else:
-            client.place_order("AAPL", "BUY", "LMT", 130.00, 1.0)
+            sec.place_order(client, "BUY", "LMT", 130.00, 1.0)
         time.sleep(20)
         client.get_open_positions()
         time.sleep(10)
         client.get_account_summary()
         time.sleep(10)
+    else:
+        logger.debug("No command specified")
 
     # Disconnect
     client.disconnect()
@@ -87,6 +92,7 @@ def real_main(args):
 
     parser.add_version_option()
     parser.add_ibapi_connection_options()
+    parser.add_logging_option()
 
     parser.add_argument("-c", "--checkserver", action="store_true")
     parser.add_argument("-o", "--order", action="store_true")
@@ -96,10 +102,19 @@ def real_main(args):
                         action="store_true",
                         help="Transmit Order Automatically")
 
+    parser.set_defaults(debug=False, verbosity=0, loglevel='INFO')
+
     args = parser.parse_args()
+
+    configuration = config.main_configure(args)
+
+    logger.debug2('Configuration set')
+    logger.debug3('Configuration Settings: ' + str(configuration))
+    logger.debug4('Arguments: ' + str(args))
 
     # 'application' code
     if DEBUG is False:
+        logger.debug("Attempting to start client")
         try:
             start_client(args)
         except Exception as msg:
@@ -107,6 +122,7 @@ def real_main(args):
             logger.error('No command was given')
             logger.critical(msg)
     else:
+        logger.debug("Starting Client")
         start_client(args)
 
     logger.debug("End real main")

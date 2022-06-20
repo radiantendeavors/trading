@@ -23,13 +23,12 @@ __version__ = 'HEAD'
 #
 # ==================================================================================================
 # System Libraries
-import logging
 
 # 3rd Party Libraries
 
 # Application Libraries
 # System Library Overrides
-
+from pytrader.libs.system import logging
 # Other Application Libraries
 
 # Conditional Libraries
@@ -40,8 +39,22 @@ import logging
 #
 # ==================================================================================================
 DEBUG = True
+LOGLEVEL = 1
 
 # Enable Logging
 # create logger
 logger = logging.getLogger(__name__)
-logger.setLevel('INFO')
+logger.setLevel(LOGLEVEL)
+
+consolehandler = logging.ColorizingStreamHandler()
+
+# Define Formatters
+consoleformatter = logging.ConsoleLvlFormatter(
+    "%(name)s:%(funcName)s:%(lineno)d - %(levelname)s - %(message)s")
+
+# Set handler ...
+consolehandler.setLevel(LOGLEVEL)
+consolehandler.setFormatter(consoleformatter)
+
+# Add handlers to logger
+logger.addHandler(consolehandler)
