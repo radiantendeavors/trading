@@ -4,7 +4,6 @@
 #
 # ==================================================================================================
 # System libraries
-import logging
 import sys
 import pkg_resources
 
@@ -12,10 +11,13 @@ import pkg_resources
 
 # System Library Overrides
 from pytrader.libs.system import argparse
-from pytrader.libs import utilities
+from pytrader.libs.system import logging
 
 # Application Libraries
 from pytrader import DEBUG
+from pytrader.libs import utilities
+from pytrader.libs.utilities import config
+from pytrader.libs.utilities import text
 
 # ==================================================================================================
 #
@@ -23,6 +25,8 @@ from pytrader import DEBUG
 #
 # ==================================================================================================
 logger = logging.getLogger(__name__)
+# Allow Color text on console
+colortext = text.ConsoleText()
 
 
 # ==================================================================================================
@@ -64,7 +68,12 @@ def real_main(args):
 
     args = parser.parse_args()
 
-    # 'application' code
+    configuration = config.main_configure(args)
+
+    logger.debug2('Configuration set')
+    logger.debug3('Configuration Settings: ' + str(configuration))
+    logger.debug4('Arguments: ' + str(args))
+
     # 'application' code
     if DEBUG is False:
         try:

@@ -1,29 +1,6 @@
 #!/usr/bin/env python3
 # ==================================================================================================# ==================================================================================================
 #
-# Original BASH version
-# Original version Copyright 2001 by Kyle Sallee
-# Additions/corrections Copyright 2002 by the Source Mage Team
-#
-# Python rewrite
-# Copyright 2017 Geoff S Derber
-#
-# This file is part of Sorcery.
-#
-# File: pysorcery/lib/system/argparse.py
-#
-#    Sorcery is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published
-#    by the Free Software Foundation, either version 3 of the License,
-#    or (at your option) any later version.
-#
-#    Sorcery is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
-#
-#    You should have received a copy of the GNU General Public License
-#    along with Sorcery.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Argparse:
 #
@@ -215,11 +192,12 @@ class CommonParser(ArgumentParser):
         ]
 
         # Create Parent Parsur
-        self.parent = ArgumentParser(add_help=False)
+        # self.parent = ArgumentParser(add_help=False)
 
         # Parser Groups
         # Logging Group
-        self.logging = self.parent.add_argument_group('Logging Options')
+        # self.parent_logging = self.parent.add_argument_group("Logging Options")
+        self.logging = self.add_argument_group('Logging Options')
 
         # Quiet Settings
         self.logging.add_argument('-q',
@@ -227,12 +205,24 @@ class CommonParser(ArgumentParser):
                                   action='count',
                                   default=0,
                                   help=quiet_help)
+        # self.parent_logging.add_argument('-q',
+        #                                  '--quiet',
+        #                                  action='count',
+        #                                  default=0,
+        #                                  help=quiet_help)
+
         # Verbose Options
         self.logging.add_argument('-v',
                                   '--verbosity',
                                   action='count',
                                   default=0,
                                   help=verbose_help)
+
+        # self.parent_logging.add_argument('-v',
+        #                                  '--verbosity',
+        #                                  action='count',
+        #                                  default=0,
+        #                                  help=verbose_help)
 
         # If debugging is enabled
         if DEBUG:
@@ -246,7 +236,18 @@ class CommonParser(ArgumentParser):
                                       action='store_true',
                                       help=debug_help)
 
-        return self.parent
+            # # Set Loglevel
+            # self.parent_logging.add_argument('--loglevel',
+            #                                  choices=loglevel_choices,
+            #                                  default='INFO',
+            #                                  help=loglevel_help)
+            # # Maximize logging
+            # self.parent_logging.add_argument('--debug',
+            #                                  action='store_true',
+            #                                  help=debug_help)
+
+        #return self.parent_logging
+        return None
 
 
 # ==================================================================================================

@@ -4,7 +4,7 @@
 #
 # ==================================================================================================
 # System libraries
-import logging
+
 import sys
 import time
 
@@ -13,6 +13,7 @@ from ibapi.client import Contract
 from ibapi.order import Order
 
 # System Library Overrides
+from pytrader.libs.system import logging
 
 # Application Libraries
 from pytrader import DEBUG
@@ -50,20 +51,27 @@ class BrokerClient():
                                                 self.client_id)
             return 0
         except Exception as msg:
-            logger.debug(msg)
+            logger.error(msg)
             return 1
 
-    def check_server_time(self):
+    def check_server(self):
         self.client.reqCurrentTime()
+        logger.info("Server Version: %s", self.client.serverVersion())
+        logger.info("Connection time: %s",
+                    self.client.twsConnectionTime().decode())
 
-    def get_security_data(self, security):
+    def get_security_data(self,
+                          security,
+                          security_type="STK",
+                          exchange="SMART",
+                          currency="USD"):
         self.req_id += 1
 
         contract = Contract()
         contract.symbol = security
-        contract.secType = "STK"
-        contract.exchange = "SMART"
-        contract.currency = "USD"
+        contract.secType = security_type
+        contract.exchange = exchange
+        contract.currency = currency
         self.client.reqMktData(self.req_id, contract, "233", False, False, [])
         time.sleep(10)
 
@@ -78,13 +86,13 @@ class BrokerClient():
         self.req_id += 1
 
         logger.debug("BrokerClient.place_order")
-        logger.debug("Security:", security)
-        logger.debug("Action:", action)
-        logger.debug("Order Type:", order_type)
-        logger.debug("Order Price:", order_price)
-        logger.debug("Quantity:", quantity)
-        logger.debug("Time in Force:", time_in_force)
-        print("Transmit:", transmit)
+        logger.debug("Security: %s", security)
+        logger.debug("Action: %s", action)
+        logger.debug("Order Type: %s", order_type)
+        logger.debug("Order Price: %s", order_price)
+        logger.debug("Quantity: %s", quantity)
+        logger.debug("Time in Force: %s", time_in_force)
+        logger.debug("Transmit: %s", transmit)
 
         # Request details for the stock
         contract = Contract()
@@ -107,16 +115,23 @@ class BrokerClient():
 
         time.sleep(10)
 
-        logger.debug("Contract:", contract)
-        logger.debug("Order:", order)
+        logger.debug("Contract: %s", contract)
+        logger.debug("Order: %s", order)
 
         if self.client.nextValidOrderId:
-            print("Order IDs: ", self.client.nextValidOrderId)
+            logger.info("Order IDs: %s", self.client.nextValidOrderId)
             self.client.placeOrder(self.client.nextValidOrderId, contract,
                                    order)
             time.sleep(5)
+
+            logger.debug("Requesting Open Orders")
+            self.client.reqOpenOrders()
+            time.sleep(20)
+            logger.debug("Requesting All Open Orders")
+            self.client.reqAllOpenOrders()
+            time.sleep(30)
         else:
-            print("Order ID not received.  Ending application.")
+            logger.error("Order ID not received.  Ending application.")
             sys.exit()
 
     def get_open_positions(self):
