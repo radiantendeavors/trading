@@ -56,7 +56,7 @@ def start_client(args):
     elif args.order:
         sec = security.Security("AAPL")
         if args.transmit:
-            logger.info("Transmitting Order")
+            logger.info("Ordering: %s", sec)
             sec.place_order(client, "BUY", "LMT", 130.00, 1.0, transmit=True)
         else:
             sec.place_order(client, "BUY", "LMT", 130.00, 1.0)

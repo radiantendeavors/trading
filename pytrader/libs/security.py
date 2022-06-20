@@ -56,5 +56,10 @@ class Security():
                     quantity=1.0,
                     time_in_force="DAY",
                     transmit=False):
+
+        logger.info("Placing %s Order to %s %s of %s for %s %s", order_type,
+                    action, quantity, self.ticker_symbol, order_price,
+                    time_in_force)
+        logger.debug("Transmit Order: %s", transmit)
         client.place_order(self.ticker_symbol, action, order_type, order_price,
                            quantity, time_in_force, transmit)

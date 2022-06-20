@@ -86,13 +86,13 @@ class BrokerClient():
         self.req_id += 1
 
         logger.debug("BrokerClient.place_order")
-        logger.debug("Security:", security)
-        logger.debug("Action:", action)
-        logger.debug("Order Type:", order_type)
-        logger.debug("Order Price:", order_price)
-        logger.debug("Quantity:", quantity)
-        logger.debug("Time in Force:", time_in_force)
-        print("Transmit:", transmit)
+        logger.debug("Security: %s", security)
+        logger.debug("Action: %s", action)
+        logger.debug("Order Type: %s", order_type)
+        logger.debug("Order Price: %s", order_price)
+        logger.debug("Quantity: %s", quantity)
+        logger.debug("Time in Force: %s", time_in_force)
+        logger.debug("Transmit: %s", transmit)
 
         # Request details for the stock
         contract = Contract()
@@ -115,16 +115,23 @@ class BrokerClient():
 
         time.sleep(10)
 
-        logger.debug("Contract:", contract)
-        logger.debug("Order:", order)
+        logger.debug("Contract: %s", contract)
+        logger.debug("Order: %s", order)
 
         if self.client.nextValidOrderId:
-            print("Order IDs: ", self.client.nextValidOrderId)
+            logger.info("Order IDs: %s", self.client.nextValidOrderId)
             self.client.placeOrder(self.client.nextValidOrderId, contract,
                                    order)
             time.sleep(5)
+
+            logger.debug("Requesting Open Orders")
+            self.client.reqOpenOrders()
+            time.sleep(20)
+            logger.debug("Requesting All Open Orders")
+            self.client.reqAllOpenOrders()
+            time.sleep(30)
         else:
-            print("Order ID not received.  Ending application.")
+            logger.error("Order ID not received.  Ending application.")
             sys.exit()
 
     def get_open_positions(self):

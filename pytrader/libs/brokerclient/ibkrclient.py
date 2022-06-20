@@ -56,69 +56,81 @@ class IbkrClient(EWrapper, EClient):
     @iswrapper
     def error(self, req_id, code, msg):
         logger.debug10(logger)
+        logger.debug2("Interactive Brokers Error Messages")
         if req_id < 0:
-            logger.debug("Error: ID# %s: Code %s: %s", req_id, code, msg)
+            logger.debug("%s: ID# %s (%s)", code, req_id, msg)
+        elif code >= 1000 and code < 3000:
+            logger.warning("%s: ID# %s (%s)", code, req_id, msg)
         else:
-            logger.error("Error %s: %s", code, msg)
+            logger.error("%s: ID# %s (%s)", code, req_id, msg)
 
     @iswrapper
     def symbolSamples(self, req_id, descs):
 
-        logging.info("Number of descriptions: %s", len(descs))
+        logger.info("Number of descriptions: %s", len(descs))
 
         for desc in descs:
-            logging.info("Symbol: %s", desc.contract.symbol)
+            logger.info("Symbol: %s", desc.contract.symbol)
 
         self.symbol = descs[0].contract.symbol
 
     @iswrapper
     def contractDetails(self, req_id, details):
-        logging.info(
+        logger.info(
             "Long name: %s, Category: %s, Subcategory: %s, Contract ID: %s",
             details.longName, details.category, details.subcategory,
             details.contract.conId)
-        logging.debug9(details)
+        logger.debug9(details)
 
     @iswrapper
     def contractDetailsEnd(self, reqId):
-        logging.vinfo1("Contract Details End")
+        logger.vinfo1("Contract Details End")
 
     @iswrapper
     def nextValidId(self, orderId: int):
         """ Provides the next order ID """
         super().nextValidId(orderId)
 
-        logging.debug("Setting nextValidOrderId:", orderId)
+        logger.debug("Setting nextValidOrderId: %s", orderId)
         self.nextValidOrderId = orderId
-        logging.info("The next valid Order ID: ", orderId)
+        logger.info("The next valid Order ID: %s", orderId)
 
     def tickPrice(self, reqId, tickType, price, attrib):
         if tickType == 2:
-            logging.info("The current ask price is:", price)
+            logger.info("The current ask price is: %s", price)
 
     @iswrapper
     def openOrder(self, orderId, contract, order, orderState):
         """ Called in response to the submitted order """
-        logging.info("Order status: ", orderState.status)
-        logging.info("Commission charged: ", orderState.commission)
+        logger.info("Order status: %s", orderState.status)
+        logger.info("Commission charged: %s", orderState.commission)
 
     @iswrapper
     def orderStatus(self, orderId, status, filled, remaining, avgFillPrice,
                     permId, parentId, lastFillPrice, clientId, whyHeld,
                     mktCapPrice):
         """ Check the status of the subnitted order """
-        logging.info("Number of filled positions: {}".format(filled))
-        logging.info("Average fill price: {}".format(avgFillPrice))
+        logger.info("Order Id: %s", orderId)
+        logger.info("Status: %s", status)
+        logger.info("Number of filled positions: %s", filled)
+        logger.info("Number of unfilled positions: %s", remaining)
+        logger.info("Average fill price: %s", avgFillPrice)
+        logger.info("TWS ID: %s", permId)
+        logger.info("Parent Id: %s", parentId)
+        logger.info("Last Fill Price: %s", lastFillPrice)
+        logger.info("Client Id: %s", clientId)
+        logger.info("Why Held: %s", whyHeld)
+        logger.info("Market Cap Price: %s", mktCapPrice)
 
     @iswrapper
     def position(self, account, contract, pos, avgCost):
         """ Read information about the account"s open positions """
-        logging.info("Position in {}: {}".format(contract.symbol, pos))
+        logger.info("Position in {}: {}".format(contract.symbol, pos))
 
     @iswrapper
     def accountSummary(self, req_id, account, tag, value, currency):
         """ Read information about the account """
-        logging.info("Account {}: {} = {}".format(account, tag, value))
+        logger.info("Account {}: {} = {}".format(account, tag, value))
 
 
 # ==================================================================================================

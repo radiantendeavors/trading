@@ -958,11 +958,11 @@ class ConsoleLvlFormatter(Formatter):
 
     def __init__(self, fmt="%(levelno)s: %(message)s"):
         Formatter.__init__(self, fmt)
-        self.dbg_fmt = "%(name)s:%(funcName)s:%(lineno)d - %(levelname)s - %(message)s"
+        self.dbg_fmt = "%(levelname)s: %(name)s:%(funcName)s:%(lineno)d - %(message)s"
         self.info_fmt = "%(message)s"
-        self.warn_fmt = "%(message)s"
-        self.err_fmt = "%(message)s"
-        self.crit_fmt = "%(message)s"
+        self.warn_fmt = "%(levelname)s: %(message)s"
+        self.err_fmt = "%(levelname)s: %(message)s"
+        self.crit_fmt = "%(levelname)s: %(message)s"
         return
 
     #-------------------------------------------------------------------
