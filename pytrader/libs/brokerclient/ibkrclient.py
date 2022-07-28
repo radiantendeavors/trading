@@ -38,7 +38,11 @@ class IbkrClient(EWrapper, EClient):
         EClient.__init__(self, self)
 
         # Connect to TWS or IB Gateway
-        self.connect(address, port, client_id)
+        try:
+            self.connect(address, port, client_id)
+        except Exception as msg:
+            logger.error("Failed to connect")
+            logger.error(msg)
 
         self.orderId = 0
         self.con_id = 0
@@ -96,8 +100,8 @@ class IbkrClient(EWrapper, EClient):
         logger.info("The next valid Order ID: %s", orderId)
 
     def tickPrice(self, reqId, tickType, price, attrib):
-        if tickType == 2:
-            logger.info("The current ask price is: %s", price)
+        logger.info("Request Id: %s TickType: %s Price: %s Attrib: %s", reqId,
+                    tickType, price, attrib)
 
     @iswrapper
     def openOrder(self, orderId, contract, order, orderState):

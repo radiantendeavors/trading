@@ -16,8 +16,8 @@ from ibapi.order import Order
 from pytrader.libs.system import logging
 
 # Application Libraries
-from pytrader import DEBUG
 from pytrader.libs.brokerclient import ibkrclient
+from pytrader.libs.utilities import config
 
 # ==================================================================================================
 #
@@ -37,28 +37,28 @@ logger = logging.getLogger(__name__)
 # Class brokerclient
 #
 # ==================================================================================================
-class BrokerClient():
+class BrokerClient(ibkrclient.IbkrClient):
 
     def __init__(self, address, port, client_id=0):
         self.req_id = 0
         self.address = address
         self.port = port
         self.client_id = client_id
-
-    def connect(self):
-        try:
-            self.client = ibkrclient.IbkrClient(self.address, self.port,
-                                                self.client_id)
-            return 0
-        except Exception as msg:
-            logger.error(msg)
-            return 1
+        super(BrokerClient, self).__init__(address, port, client_id)
 
     def check_server(self):
-        self.client.reqCurrentTime()
-        logger.info("Server Version: %s", self.client.serverVersion())
-        logger.info("Connection time: %s",
-                    self.client.twsConnectionTime().decode())
+        self.reqCurrentTime()
+        if self.serverVersion() is not None:
+            logger.info("Server Version: %s", self.serverVersion())
+        else:
+            logger.error(
+                "Failed to connect to the server: Server Version Unknown")
+        if self.twsConnectionTime() is not None:
+            logger.info("Connection time: %s",
+                        self.twsConnectionTime().decode())
+        else:
+            logger.error(
+                "Failed to connect to the server: Connection Time Unknown")
 
     def get_security_data(self,
                           security,
@@ -72,7 +72,7 @@ class BrokerClient():
         contract.secType = security_type
         contract.exchange = exchange
         contract.currency = currency
-        self.client.reqMktData(self.req_id, contract, "233", False, False, [])
+        self.reqMktData(self.req_id, contract, "233", False, False, [])
         time.sleep(10)
 
     def place_order(self,
@@ -118,29 +118,28 @@ class BrokerClient():
         logger.debug("Contract: %s", contract)
         logger.debug("Order: %s", order)
 
-        if self.client.nextValidOrderId:
-            logger.info("Order IDs: %s", self.client.nextValidOrderId)
-            self.client.placeOrder(self.client.nextValidOrderId, contract,
-                                   order)
+        if self.nextValidOrderId:
+            logger.info("Order IDs: %s", self.nextValidOrderId)
+            self.placeOrder(self.nextValidOrderId, contract, order)
             time.sleep(5)
 
             logger.debug("Requesting Open Orders")
-            self.client.reqOpenOrders()
+            self.reqOpenOrders()
             time.sleep(20)
             logger.debug("Requesting All Open Orders")
-            self.client.reqAllOpenOrders()
+            self.reqAllOpenOrders()
             time.sleep(30)
         else:
             logger.error("Order ID not received.  Ending application.")
             sys.exit()
 
     def get_open_positions(self):
-        self.client.reqPositions()
+        self.reqPositions()
 
     def get_account_summary(self):
         self.req_id += 1
-        self.client.reqAccountSummary(self.req_id, "ALL",
-                                      "AccountType, AvailableFunds")
+        self.reqAccountSummary(self.req_id, "ALL",
+                               "AccountType, AvailableFunds")
 
     def get_security_details(self, security):
         self.req_id += 1
@@ -151,7 +150,4 @@ class BrokerClient():
         contract.exchange = "SMART"
         contract.currency = "USD"
 
-        self.client.reqContractDetails(self.req_id, security)
-
-    def disconnect(self):
-        self.client.disconnect()
+        self.reqContractDetails(self.req_id, security)
