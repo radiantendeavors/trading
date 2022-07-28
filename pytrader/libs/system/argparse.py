@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# ==================================================================================================# ==================================================================================================
+# ==================================================================================================
 #
 #
 # Argparse:
@@ -30,6 +30,7 @@ from argparse import *
 
 # Other Application Libraries
 from pytrader import __version__, DEBUG
+from pytrader.libs.utilities import config
 
 # ==================================================================================================
 #
@@ -149,14 +150,18 @@ class CommonParser(ArgumentParser):
     #
     # ==============================================================================================
     def add_ibapi_connection_options(self):
+        conf = config.Config()
+
+        default_address = conf.get_brokerclient_address()
+        default_port = conf.get_brokerclient_port()
         self.add_argument(
             '-a',
             '--address',
-            default="127.0.0.1",
+            default=default_address,
             help="TWS / IB Gateway Address (Default is localhost)")
         self.add_argument('-p',
                           '--port',
-                          default="7497",
+                          default=default_port,
                           type=int,
                           help="TWS / IB Gateway port (Default is 7497)")
         return None
