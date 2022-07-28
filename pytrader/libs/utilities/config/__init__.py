@@ -1,21 +1,19 @@
 #! /usr/bin/env python3
-#-----------------------------------------------------------------------
+# ==================================================================================================
 #
 #
 # Config:
 #
 #    Sets program configuration
 #
-#-----------------------------------------------------------------------
+# ==================================================================================================
 
-#-----------------------------------------------------------------------
+# ==================================================================================================
 #
 # Libraries
 #
-#-----------------------------------------------------------------------
-
+# ==================================================================================================
 # System Libraries
-import sys
 import os
 import yaml
 
@@ -23,21 +21,22 @@ import yaml
 from pytrader.libs.system import logging
 # Other Application Libraries
 
-#-----------------------------------------------------------------------
+# ==================================================================================================
 #
 # Global Variables
 #
-#-----------------------------------------------------------------------
+# ==================================================================================================
 # Enable Logging
 # create logger
 logger = logging.getLogger(__name__)
 consolehandler = logging.ColorizingStreamHandler()
 
-# home = os.path.expanduser("~") + "/"
-# config_dir = home + ".config/investing"
-# config_file = config_dir + "/config.yaml"
-# config_stream = open(config_file)
-# config = yaml.safe_load(config_stream)
+home = os.path.expanduser("~") + "/"
+config_dir = home + ".config/investing"
+config_file = config_dir + "/config.yaml"
+config_stream = open(config_file)
+config = yaml.safe_load(config_stream)
+database_port = {"sqlite": None, "mysql": "3306"}
 
 
 class Config():
@@ -51,6 +50,8 @@ class Config():
         self.database_port = database_port[self.database_type]
         self.database_path = config_dir
         self.database_name = "investing"
+        self.brokerclient_address = "127.0.0.1"
+        self.brokerclient_port = 7496
         self.reddit_user_agent = None
         self.reddit_client_id = None
         self.reddit_client_secret = None
@@ -114,8 +115,14 @@ class Config():
         self.database_url = url
         return url
 
+    def get_brokerclient_address(self):
+        return self.brokerclient_address
 
-#-----------------------------------------------------------------------
+    def get_brokerclient_port(self):
+        return self.brokerclient_port
+
+
+# ==================================================================================================
 #
 # configure_logging
 #
@@ -134,7 +141,7 @@ class Config():
 # ------
 #    ...
 #
-#-----------------------------------------------------------------------
+# ==================================================================================================
 def configure_logging(args, config):
     global logger
     global consolhandler
@@ -190,7 +197,7 @@ def configure_logging(args, config):
     return None
 
 
-#-----------------------------------------------------------------------
+# ==================================================================================================
 #
 # defConfiguration
 #
@@ -208,7 +215,7 @@ def configure_logging(args, config):
 # ------
 #    ...
 #
-#-----------------------------------------------------------------------
+# ==================================================================================================
 def defConfiguration():
     logging_config = {"loglevel": "info", "verbosity": 0}
 
@@ -218,7 +225,7 @@ def defConfiguration():
     return config
 
 
-#-----------------------------------------------------------------------
+# ==================================================================================================
 #
 # configure
 #
@@ -243,7 +250,7 @@ def defConfiguration():
 # ------
 #    ...
 #
-#-----------------------------------------------------------------------
+# ==================================================================================================
 def main_configure(args):
     logger.debug("Begin Function")
 
