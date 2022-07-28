@@ -39,7 +39,7 @@ from pytrader.libs.system import logging
 #
 # ==================================================================================================
 DEBUG = True
-LOGLEVEL = 1
+LOGLEVEL = 0
 
 # Enable Logging
 # create logger
