@@ -39,9 +39,8 @@ colortext = text.ConsoleText()
 def start_client(args):
     # Create the client and connect to TWS or IB Gateway
     logger.debug10("Begin Function")
-    logger.debug("Connecting to server %s:%s", args.address, args.port)
+
     client = brokerclient.BrokerClient(args.address, args.port)
-    client.connect()
 
     if args.checkserver:
         logger.debug("Checking Server time")
@@ -51,15 +50,12 @@ def start_client(args):
     elif args.security:
         logger.debug("Security info")
         sec = security.Security("AAPL")
-        sec.get_security_data(client)
+        sec.get_security_data()
 
     elif args.order:
         sec = security.Security("AAPL")
-        if args.transmit:
-            logger.info("Ordering: %s", sec)
-            sec.place_order(client, "BUY", "LMT", 130.00, 1.0, transmit=True)
-        else:
-            sec.place_order(client, "BUY", "LMT", 130.00, 1.0)
+        logger.info("Ordering: %s", sec)
+        sec.place_order("BUY", "LMT", 130.00, 1.0, args.transmit)
         time.sleep(20)
         client.get_open_positions()
         time.sleep(10)
@@ -104,6 +100,7 @@ def real_main(args):
     parser.add_argument("-t",
                         "--transmit",
                         action="store_true",
+                        default=False,
                         help="Transmit Order Automatically")
 
     parser.set_defaults(debug=False, verbosity=0, loglevel='INFO')
@@ -130,7 +127,7 @@ def real_main(args):
         start_client(args)
 
     logger.debug("End real main")
-    return None
+    return 0
 
 
 # ==================================================================================================
@@ -150,7 +147,7 @@ def main(args=None):
         real_main(args)
 
     logger.debug("End Application")
-    return None
+    return 0
 
 
 # ==================================================================================================
