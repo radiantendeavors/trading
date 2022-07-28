@@ -45,11 +45,10 @@ class Security():
         self.currency = "USD"
         return self.currency
 
-    def get_security_data(self, client):
-        client.get_security_data(self.ticker_symbol)
+    def get_security_data(self):
+        self.client.get_security_data(self.ticker_symbol)
 
     def place_order(self,
-                    client,
                     action,
                     order_type,
                     order_price=None,
@@ -61,5 +60,5 @@ class Security():
                     action, quantity, self.ticker_symbol, order_price,
                     time_in_force)
         logger.debug("Transmit Order: %s", transmit)
-        client.place_order(self.ticker_symbol, action, order_type, order_price,
-                           quantity, time_in_force, transmit)
+        self.client.place_order(self.ticker_symbol, action, order_type,
+                                order_price, quantity, time_in_force, transmit)
