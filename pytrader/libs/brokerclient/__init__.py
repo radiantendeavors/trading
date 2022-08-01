@@ -60,20 +60,44 @@ class BrokerClient(ibkrclient.IbkrClient):
             logger.error(
                 "Failed to connect to the server: Connection Time Unknown")
 
-    def get_security_data(self,
-                          security,
-                          security_type="STK",
-                          exchange="SMART",
-                          currency="USD"):
-        self.req_id += 1
-
+    def set_contract(self,
+                     security,
+                     security_type="STK",
+                     exchange="SMART",
+                     currency="USD"):
         contract = Contract()
         contract.symbol = security
         contract.secType = security_type
         contract.exchange = exchange
         contract.currency = currency
-        self.reqMktData(self.req_id, contract, "233", False, False, [])
+
+        self.contract = contract
+
+    def get_security_data(self):
+        self.req_id += 1
+
+        self.reqContractDetails(self.req_id, self.contract)
         time.sleep(10)
+
+    def get_security_pricing_data(self):
+        self.req_id += 1
+        self.reqMktData(self.req_id, self.contract, "233", False, False, [])
+
+    def get_option_chain(self):
+        self.req_id += 1
+        security = self.contract.symbol
+        security_type = self.contract.secType
+        logger.debug("Contract ID: %s", self.contract.contract_id)
+        contract_id = self.contract.contract_id
+
+        logger.debug10("Get the Option Chain")
+        logger.debug2("Request ID: %s", self.req_id)
+        logger.debug("Security:%s", security)
+        logger.debug("Security Type: %s", security_type)
+        logger.debug("Contract ID: %s", contract_id)
+        self.reqSecDefOptParams(self.req_id, security, "", security_type,
+                                contract_id)
+        time.sleep(60)
 
     def place_order(self,
                     security,

@@ -53,6 +53,11 @@ class IbkrClient(EWrapper, EClient):
         thread.start()
 
     @iswrapper
+    def accountSummary(self, req_id, account, tag, value, currency):
+        """ Read information about the account """
+        logger.info("Account {}: {} = {}".format(account, tag, value))
+
+    @iswrapper
     def currentTime(self, cur_time):
         time_now = datetime.fromtimestamp(cur_time)
         logger.info("Current time: %s", time_now)
@@ -62,7 +67,10 @@ class IbkrClient(EWrapper, EClient):
         logger.debug10(logger)
         logger.debug2("Interactive Brokers Error Messages")
         if req_id < 0:
-            logger.debug("%s: ID# %s (%s)", code, req_id, msg)
+            if code == 504 or code == 502:
+                logger.error("%s: ID# %s (%s)", code, req_id, msg)
+            else:
+                logger.debug("%s: ID# %s (%s)", code, req_id, msg)
         elif code >= 1000 and code < 3000:
             logger.warning("%s: ID# %s (%s)", code, req_id, msg)
         else:
@@ -80,15 +88,25 @@ class IbkrClient(EWrapper, EClient):
 
     @iswrapper
     def contractDetails(self, req_id, details):
-        logger.info(
-            "Long name: %s, Category: %s, Subcategory: %s, Contract ID: %s",
-            details.longName, details.category, details.subcategory,
-            details.contract.conId)
+        self.contract_id = details.contract.conId
+        logger.debug("Contract ID: %s", details.contract.conId)
+        logger.debug("Symbol: %s", details.contract.symbol)
+        logger.debug("Security Type: %s", details.contract.secType)
+        logger.debug("Exchange: %s", details.contract.exchange)
+        logger.debug("Primary Exchange: %s", details.contract.primaryExchange)
+
+        logger.debug("Long name: %s, Category: %s, Subcategory: %s",
+                     details.longName, details.category, details.subcategory)
+        logger.debug(
+            "Next Option Date: %s, Industry: %s, Primary Exchange: %s",
+            details.nextOptionDate, details.industry,
+            details.contract.primaryExchange)
+
         logger.debug9(details)
 
     @iswrapper
     def contractDetailsEnd(self, reqId):
-        logger.vinfo1("Contract Details End")
+        logger.debug("Contract Details End")
 
     @iswrapper
     def nextValidId(self, orderId: int):
@@ -132,9 +150,17 @@ class IbkrClient(EWrapper, EClient):
         logger.info("Position in {}: {}".format(contract.symbol, pos))
 
     @iswrapper
-    def accountSummary(self, req_id, account, tag, value, currency):
-        """ Read information about the account """
-        logger.info("Account {}: {} = {}".format(account, tag, value))
+    def securityDefinitionOptionParameter(self, reqId, exchange,
+                                          underlyingConId, tradingClass,
+                                          multiplier, expirations, strikes):
+        print("SecurityDefinitionOptionParameter.", "ReqId:", reqId,
+              "Exchange:", exchange, "Underlying conId:", underlyingConId,
+              "TradingClass:", tradingClass, "Multiplier:", multiplier,
+              "Expirations:", expirations, "Strikes:", str(strikes))
+
+    @iswrapper
+    def securityDefinitionOptionParameterEnd(self, reqId: int):
+        logger.debug("SecurityDefinitionOptionParameterEnd. ReqId: %s", reqId)
 
 
 # ==================================================================================================

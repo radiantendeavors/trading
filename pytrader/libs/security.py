@@ -34,8 +34,9 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 class Security():
 
-    def __init__(self, ticker_symbol):
+    def __init__(self, client, ticker_symbol):
         self.ticker_symbol = ticker_symbol
+        self.client = client
 
     def get_security_type(self):
         self.security_type = "STK"
@@ -45,8 +46,20 @@ class Security():
         self.currency = "USD"
         return self.currency
 
+    def set_security(self):
+        self.client.set_contract(self.ticker_symbol)
+
     def get_security_data(self):
-        self.client.get_security_data(self.ticker_symbol)
+        self.client.get_security_data()
+        time.sleep(60)
+
+    def get_security_pricing_data(self):
+        self.client.get_security_pricing_data()
+
+    def get_option_chain(self, contract_id):
+        logger.debug10("Get Option Chain")
+        logger.debug("Ticker is: %s", self.ticker_symbol, contract_id)
+        self.client.get_option_chain()
 
     def place_order(self,
                     action,

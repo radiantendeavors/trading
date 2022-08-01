@@ -49,11 +49,14 @@ def start_client(args):
 
     elif args.security:
         logger.debug("Security info")
-        sec = security.Security("AAPL")
+        sec = security.Security(client, "AAPL")
+        sec.set_security()
         sec.get_security_data()
+        sec.get_security_pricing_data()
+        sec.get_option_chain()
 
     elif args.order:
-        sec = security.Security("AAPL")
+        sec = security.Security(client, "AAPL")
         logger.info("Ordering: %s", sec)
         sec.place_order("BUY", "LMT", 130.00, 1.0, args.transmit)
         time.sleep(20)
