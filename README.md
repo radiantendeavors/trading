@@ -17,9 +17,12 @@ options.  It provides a framework for creating, testing, and using your own trad
 couple sample strategies are provided.
 
 ## Installation
-### Dependencies
 
-You must download the tws-api from https://interactivebrokers.github.io and extract it into the "external" folder.
+This program exists twice.  C++ is the production version.  The prototype is developed using python.
+Read the relevant README files for their installation instructions.
+
+### [C++](src/README.md)
+### [Python](pytrader/README.md)
 
 ## Usage
 

@@ -1,5 +1,4 @@
-pyTrader
-==========
+# Trader
 
 - [Description](#description)
 - [Installation](#installation)
@@ -13,14 +12,14 @@ pyTrader
 
 ## Description
 
-This is the prototype of trader written using python.  All new features will be added here before being written in C++.
-
+Trader is an automated trading/investing platform.  It works with stocks, etfs, and their related 
+options.  It provides a framework for creating, testing, and using your own trading strategies.  A 
+couple sample strategies are provided.
 
 ## Installation
-
 ### Dependencies
 
-You must download the tws-api from https://interactivebrokers.github.io and install it in accordance with their directions.
+You must download the tws-api from https://interactivebrokers.github.io and extract it into the "external" folder.
 
 ## Usage
 
@@ -39,4 +38,3 @@ This project is licensed under the [GNU Affero General Public License v3.0](LICE
 ## Author Information
 
 G Derber gd.github@radiantendeavors.com https://github.com/gderber
-
