@@ -1,4 +1,5 @@
-# Trader
+CPP Trader
+============
 
 - [Description](#description)
 - [Installation](#installation)
