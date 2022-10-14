@@ -1,9 +1,29 @@
 #!/usr/bin/env python3
-# ==================================================================================================
-#
-# pytrader
-#
-# ==================================================================================================
+"""!@package pytrader.ui.pytrader
+
+The main user interface for the trading program.
+
+@author Geoff S. derber
+@version HEAD
+@date 2022
+@copyright GNU Affero General Public License
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+@file ui/pytrader.py
+
+"""
 # System libraries
 import sys
 import time
@@ -20,14 +40,14 @@ from pytrader.libs import brokerclient
 from pytrader.libs import security
 from pytrader.libs.utilities import config
 from pytrader.libs.utilities import text
+"""!
+@var logger
+The base logger.
 
-# ==================================================================================================
-#
-# Global Variables
-#
-# ==================================================================================================
+@var colortext
+Allows Color text on the console
+"""
 logger = logging.getLogger(__name__)
-# Allow Color text on console
 colortext = text.ConsoleText()
 
 
@@ -37,6 +57,13 @@ colortext = text.ConsoleText()
 #
 # ==================================================================================================
 def start_client(args):
+    """! Starts the broker client.
+
+    @param args
+    Provides the arguments from the command line.
+
+    @return None
+    """
     # Create the client and connect to TWS or IB Gateway
     logger.debug10("Begin Function")
 
@@ -76,12 +103,14 @@ def start_client(args):
     return None
 
 
-# ==================================================================================================
-#
-# Function real_main
-#
-# ==================================================================================================
-def real_main(args):
+def init(args):
+    """! Initializates the program.
+
+    @param args
+    Provides the arguments from the command line.
+
+    @return 0
+    """
     logger.debug("Entered real main")
 
     epilog_text = """
@@ -133,30 +162,25 @@ def real_main(args):
     return 0
 
 
-# ==================================================================================================
-#
-# Function main
-#
-# ==================================================================================================
 def main(args=None):
+    """! The main program.
+
+    @param args The input from the command line.
+    @return 0
+    """
     logger.debug("Begin Application")
 
     if DEBUG is False:
         try:
-            real_main(args)
+            init(args)
         except Exception as msg:
             logger.critical(msg)
     else:
-        real_main(args)
+        init(args)
 
     logger.debug("End Application")
     return 0
 
 
-# ==================================================================================================
-#
-#
-#
-# ==================================================================================================
 if __name__ == "__main__":
     sys.exit(main())

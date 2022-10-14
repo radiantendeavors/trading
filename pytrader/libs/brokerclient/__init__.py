@@ -1,10 +1,30 @@
-# ==================================================================================================
-#
-# pytrader
-#
-# ==================================================================================================
-# System libraries
+"""!
+@package pytrader.libs.brokerclient
 
+Provides the broker client
+
+@author Geoff S. derber
+@version HEAD
+@date 2022
+@copyright GNU Affero General Public License
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+@file __init__.py
+"""
+# System libraries
 import sys
 import time
 
@@ -32,14 +52,18 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-# ==================================================================================================
-#
-# Class brokerclient
-#
-# ==================================================================================================
 class BrokerClient(ibkrclient.IbkrClient):
+    """! The Broker Client Class.
+
+    Provides the client interface."""
 
     def __init__(self, address, port, client_id=0):
+        """! Broker Client Class initializer.
+
+        @param address The IP Address for the client.
+        @param port The port for the client.
+        @param client_id The id number for the client
+        """
         self.req_id = 0
         self.address = address
         self.port = port

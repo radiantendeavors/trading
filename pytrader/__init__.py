@@ -1,10 +1,31 @@
 #!/usr/bin/env python3
+"""!@package pytrader
 
-# ==================================================================================================
-#
-# Dunders
-#
-# ==================================================================================================
+Algorithmic Trading Program
+
+@author Geoff S. derber
+@version HEAD
+@date 2022
+@copyright GNU Affero General Public License
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+@file __init__.py
+
+    Contains global variables for the pyTrader program.
+
+"""
 __all__ = [
     '__author__', '__contact__', '__copyright__', '__license__', '__status__',
     '__version__', 'DEBUG'
@@ -32,29 +53,33 @@ from pytrader.libs.system import logging
 # Other Application Libraries
 
 # Conditional Libraries
+"""! Global Constants
 
-# ==================================================================================================
-#
-# Global Variables
-#
-# ==================================================================================================
+@var bool DEBUG
+The mode of operation; False = Normal, True = Debug.
+
+@var int LOGLEVEL
+The minimum run level
+"""
 DEBUG = True
 LOGLEVEL = 0
+"""! Logging Variables
 
-# Enable Logging
-# create logger
+@var logger The base logger.
+
+@var consolehandler Sets the console handler to use color output.
+
+@var consoleformatter Sets the format for the Console Formatter.
+
+"""
+
 logger = logging.getLogger(__name__)
 logger.setLevel(LOGLEVEL)
 
 consolehandler = logging.ColorizingStreamHandler()
-
-# Define Formatters
 consoleformatter = logging.ConsoleLvlFormatter(
     "%(name)s:%(funcName)s:%(lineno)d - %(levelname)s - %(message)s")
-
-# Set handler ...
 consolehandler.setLevel(LOGLEVEL)
 consolehandler.setFormatter(consoleformatter)
 
-# Add handlers to logger
 logger.addHandler(consolehandler)

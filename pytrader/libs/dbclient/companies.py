@@ -1,7 +1,8 @@
 # ==================================================================================================
 #
-# Investing: Investing Application
-#   Copyright (C) 2021  Geoff S. Derber
+# pyTrader: Algorithmic Trading Program
+#
+#   Copyright (C) 2022  Geoff S. Derber
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU Affero General Public License as
@@ -16,7 +17,7 @@
 #   You should have received a copy of the GNU Affero General Public License
 #   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-# investing/lib/stocks.py
+# trading/libs/database/companies.py
 #
 # ==================================================================================================
 from sqlalchemy import Column, Date, ForeignKey, Float, Integer, String
