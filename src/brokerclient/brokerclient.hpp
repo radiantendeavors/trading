@@ -32,7 +32,7 @@ public:
    *
    ************************************************************************************************/
   void accountDownloadEnd(const std::string& account) {
-    std::cout << "Account Name: " << account << std::endl;
+    std::cout << "Download End for Account: " << account << std::endl;
   }
 
   /*************************************************************************************************
@@ -138,7 +138,7 @@ public:
    *
    ************************************************************************************************/
   void commissionReport(const CommissionReport& commissionReport) {
-    std::cout << "Request ID: " << reqId << std::endl;
+    std::cout << "Commission Report:" << std::endl;
   }
 
   /*************************************************************************************************
@@ -153,7 +153,7 @@ public:
   void completedOrder(const Contract& contract,
                       const Order& order,
                       const OrderState& orderState) {
-    std::cout << "Contract: " << contract << std::endl;
+    std::cout << "Order Completed." << std::endl;
   }
 
   /*************************************************************************************************
@@ -313,7 +313,7 @@ public:
    *
    ************************************************************************************************/
   void familyCodes(const std::vector<FamilyCode> &familyCodes) {
-    std::cout << "familyCodes: " << familyCodes << std::endl;
+    std::cout << "Family Codes:" << std::endl;
   }
 
   /*************************************************************************************************
@@ -372,8 +372,8 @@ public:
    *
    ************************************************************************************************/
   void historicalDataEnd(int reqId,
-                                       const std::string& startDateStr,
-                                       const std::string& endDateStr) {
+                         const std::string& startDateStr,
+                         const std::string& endDateStr) {
     std::cout << "Request ID: " << reqId << std::endl;
   }
 
@@ -399,11 +399,11 @@ public:
    *
    ************************************************************************************************/
   void historicalNews(int requestId,
-                                    const std::string& time,
-                                    const std::string& providerCode,
-                                    const std::string& articleId,
-                                    const std::string& headline) {
-    std::cout << "Request ID: " << reqId << std::endl;
+                      const std::string& time,
+                      const std::string& providerCode,
+                      const std::string& articleId,
+                      const std::string& headline) {
+    std::cout << "Request ID: " << requestId << std::endl;
   }
 
   /*************************************************************************************************
@@ -415,7 +415,7 @@ public:
    *
    ************************************************************************************************/
   void historicalNewsEnd(int requestId, bool hasMore) {
-    std::cout << "Request ID: " << reqId << std::endl;
+    std::cout << "Request ID: " << requestId << std::endl;
   }
 
   /*************************************************************************************************
@@ -430,10 +430,10 @@ public:
    *
    ************************************************************************************************/
   void historicalSchedule(int reqId,
-                                        const std::string& startDateTime,
-                                        const std::string& endDateTime,
-                                        const std::string& timeZone,
-                                        const std::vector<HistoricalSession>& sessions) {
+                          const std::string& startDateTime,
+                          const std::string& endDateTime,
+                          const std::string& timeZone,
+                          const std::vector<HistoricalSession>& sessions) {
     std::cout << "Request ID: " << reqId << std::endl;
   }
 
@@ -447,8 +447,8 @@ public:
    *
    ************************************************************************************************/
   void historicalTicks(int reqId,
-                                     const std::vector<HistoricalTick> &ticks,
-                                     bool done) {
+                       const std::vector<HistoricalTick> &ticks,
+                       bool done) {
     std::cout << "Request ID: " << reqId << std::endl;
   }
 
@@ -462,8 +462,8 @@ public:
    *
    ************************************************************************************************/
   void historicalTicksBidAsk(int reqId,
-                                           const std::vector<HistoricalTickBidAsk> &ticks,
-                                           bool done) {
+                             const std::vector<HistoricalTickBidAsk> &ticks,
+                             bool done) {
     std::cout << "Request ID: " << reqId << std::endl;
   }
 
@@ -477,8 +477,8 @@ public:
    *
    ************************************************************************************************/
   void historicalTicksLast(int reqId,
-                                         const std::vector<HistoricalTickLast> &ticks,
-                                         bool done) {
+                           const std::vector<HistoricalTickLast> &ticks,
+                           bool done) {
     std::cout << "Request ID: " << reqId << std::endl;
   }
 
@@ -490,7 +490,7 @@ public:
    *
    ************************************************************************************************/
   void managedAccounts(const std::string& accountsList) {
-    std::cout << "Account List: " << accountsList << std::endl;
+    std::cout << "Account List: " << std::endl;
   }
 
   /*************************************************************************************************
@@ -502,7 +502,7 @@ public:
    *
    ************************************************************************************************/
   void marketDataType(TickerId reqId, int marketDataType) {
-    std::cout << "Request ID: " << reqId << std::endl;
+    std::cout << "Market Data Type:" << std::endl;
   }
 
   /*************************************************************************************************
@@ -514,7 +514,7 @@ public:
    *
    ************************************************************************************************/
   void marketRule(int marketRuleId,
-                                const std::vector<PriceIncrement> &priceIncrements) {
+                  const std::vector<PriceIncrement> &priceIncrements) {
     std::cout << "Market Rule ID: " << marketRuleId << std::endl;
   }
 
@@ -526,7 +526,7 @@ public:
    *
    ************************************************************************************************/
   void mktDepthExchanges(const std::vector<DepthMktDataDescription> &depthMktDataDescriptions) {
-    std::cout << "depthMktDataDescriptions:  " << depthMktDataDescriptions << std::endl;
+    std::cout << "Market Depth Exchanges: "<< std::endl;
   }
 
   /*************************************************************************************************
@@ -550,7 +550,7 @@ public:
    *
    ************************************************************************************************/
   void newsProviders(const std::vector<NewsProvider> &newsProviders) {
-    std::cout << "News Providers: " << newsProviders << std::endl;
+    std::cout << "News Providers:" << std::endl;
   }
 
   /*************************************************************************************************
@@ -561,7 +561,7 @@ public:
    *
    ************************************************************************************************/
   void nextValidId(OrderId orderId) {
-    std::cout << "Request ID: " << reqId << std::endl;
+    std::cout << "Next Valid ID: " << std::endl;
   }
 
   /*************************************************************************************************
@@ -575,7 +575,7 @@ public:
    *
    ************************************************************************************************/
   void openOrder(OrderId orderId, const Contract&, const Order&, const OrderState&) {
-    std::cout << "Order ID: " << orderId << std::endl;
+    std::cout << "Order ID: " << std::endl;
   }
 
   /*************************************************************************************************
@@ -620,17 +620,17 @@ public:
    *
    ************************************************************************************************/
   void orderStatus(OrderId orderId,
-                                 const std::string& status,
-                                 Decimal filled,
-                                 Decimal remaining,
-                                 double avgFillPrice,
-                                 int permId,
-                                 int parentId,
-                                 double lastFillPrice,
-                                 int clientId,
-                                 const std::string& whyHeld,
-                                 double mktCapPrice) {
-    std::cout << "Request ID: " << orderId << std::endl;
+                   const std::string& status,
+                   Decimal filled,
+                   Decimal remaining,
+                   double avgFillPrice,
+                   int permId,
+                   int parentId,
+                   double lastFillPrice,
+                   int clientId,
+                   const std::string& whyHeld,
+                   double mktCapPrice) {
+    std::cout << "Order ID: " << std::endl;
   }
 
   /*************************************************************************************************
@@ -660,11 +660,11 @@ public:
    *
    ************************************************************************************************/
   void pnlSingle(int reqId,
-                               Decimal pos,
-                               double dailyPnL,
-                               double unrealizedPnL,
-                               double realizedPnL,
-                               double value) {
+                 Decimal pos,
+                 double dailyPnL,
+                 double unrealizedPnL,
+                 double realizedPnL,
+                 double value) {
     std::cout << "Request ID: " << reqId << std::endl;
   }
 
@@ -679,10 +679,10 @@ public:
    *
    ************************************************************************************************/
   void position(const std::string& account,
-                              const Contract& contract,
-                              Decimal position,
-                              double avgCost) {
-    std::cout << "Account: " << account << std::endl;
+                const Contract& contract,
+                Decimal position,
+                double avgCost) {
+    std::cout << "Position:" << std::endl;
   }
 
   /*************************************************************************************************
@@ -708,8 +708,12 @@ public:
    * @param avgCost
    *
    ************************************************************************************************/
-  void positionMulti(int reqId, const std::string& account, const std::string& modelCode,
-                       const Contract& contract, Decimal pos, double avgCost) {
+  void positionMulti(int reqId,
+                     const std::string& account,
+                     const std::string& modelCode,
+                     const Contract& contract,
+                     Decimal pos,
+                     double avgCost) {
     std::cout << "Request ID: " << reqId << std::endl;
   }
 
@@ -732,15 +736,15 @@ public:
    *
    ************************************************************************************************/
   void realtimeBar(TickerId reqId,
-                                 long time,
-                                 double open,
-                                 double high,
-                                 double low,
-                                 double close,
-                                 Decimal volume,
-                                 Decimal wap,
-                                 int count) {
-    std::cout << "Request ID: " << reqId << std::endl;
+                   long time,
+                   double open,
+                   double high,
+                   double low,
+                   double close,
+                   Decimal volume,
+                   Decimal wap,
+                   int count) {
+    std::cout << "Real Time Bar: " << std::endl;
   }
 
   /*************************************************************************************************
@@ -752,7 +756,7 @@ public:
    *
    ************************************************************************************************/
   void receiveFA(faDataType pFaDataType, const std::string& cxml) {
-    std::cout << "pFaDataType: " << pFaDataType << std::endl;
+    std::cout << "Receive FA" << std::endl;
   }
 
   /*************************************************************************************************
@@ -764,7 +768,7 @@ public:
    *
    ************************************************************************************************/
   void replaceFAEnd(int reqId, const std::string& text) {
-    std::cout << "Request ID: " << reqId << std::endl;
+    std::cout << "Receive FA End: " << reqId << std::endl;
   }
 
   /*************************************************************************************************
@@ -835,7 +839,7 @@ public:
    *
    ************************************************************************************************/
   void scannerParameters(const std::string& xml) {
-    std::cout << "Scanner Parameters:  " << xml << std::endl;
+    std::cout << "Scanner Parameters:  " << std::endl;
   }
 
   /*************************************************************************************************
@@ -843,15 +847,21 @@ public:
    * securityDefinitionOptionalParameter
    *
    * @param reqId
+   * @param exchange
+   * @param underlyingConId
+   * @param tradingClass
+   * @param multiplier
+   * @param expirations
+   * @param strikes
    *
    ************************************************************************************************/
   void securityDefinitionOptionalParameter(int reqId,
-                                                         const std::string& exchange,
-                                                         int underlyingConId,
-                                                         const std::string& tradingClass,
-                                                         const std::string& multiplier,
-                                                         const std::set<std::string>& expirations,
-                                                         const std::set<double>& strikes) {
+                                           const std::string& exchange,
+                                           int underlyingConId,
+                                           const std::string& tradingClass,
+                                           const std::string& multiplier,
+                                           const std::set<std::string>& expirations,
+                                           const std::set<double>& strikes) {
     std::cout << "Request ID: " << reqId << std::endl;
   }
 
@@ -883,6 +893,7 @@ public:
    * softDollarTiers
    *
    * @param reqId
+   * @param tiers
    *
    ************************************************************************************************/
   void softDollarTiers(int reqId, const std::vector<SoftDollarTier> &tiers) {
@@ -897,8 +908,7 @@ public:
    * @param contractDescriptions
    *
    ************************************************************************************************/
-  void symbolSamples(int reqId,
-                                   const std::vector<ContractDescription> &contractDescriptions) {
+  void symbolSamples(int reqId, const std::vector<ContractDescription> &contractDescriptions) {
     std::cout << "Request ID: " << reqId << std::endl;
   }
 
@@ -917,13 +927,13 @@ public:
    *
    ************************************************************************************************/
   void tickByTickAllLast(int reqId,
-                                       int tickType,
-                                       long time,
-                                       double price,
-                                       Decimal size,
-                                       const TickAttribLast& tickAttribLast,
-                                       const std::string& exchange,
-                                       const std::string& specialConditions) {
+                         int tickType,
+                         long time,
+                         double price,
+                         Decimal size,
+                         const TickAttribLast& tickAttribLast,
+                         const std::string& exchange,
+                         const std::string& specialConditions) {
     std::cout << "Request ID: " << reqId << std::endl;
   }
 
@@ -941,12 +951,12 @@ public:
    *
    ************************************************************************************************/
   void tickByTickBidAsk(int reqId,
-                                      long time,
-                                      double bidPrice,
-                                      double askPrice,
-                                      Decimal bidSize,
-                                      Decimal askSize,
-                                      const TickAttribBidAsk& tickAttribBidAsk) {
+                        long time,
+                        double bidPrice,
+                        double askPrice,
+                        Decimal bidSize,
+                        Decimal askSize,
+                        const TickAttribBidAsk& tickAttribBidAsk) {
     std::cout << "Request ID: " << reqId << std::endl;
   }
 
@@ -960,14 +970,14 @@ public:
    *
    ************************************************************************************************/
   void tickByTickMidPoint(int reqId,
-                                        time_t time,
-                                        double midPoint) {
+                          time_t time,
+                          double midPoint) {
     std::cout << "Request ID: " << reqId << std::endl;
   }
 
   /*************************************************************************************************
    *
-   * accountDownloadEnd
+   * tickEFP
    *
    * @param reqId
    * @param tickType
@@ -981,15 +991,15 @@ public:
    *
    ************************************************************************************************/
   void tickEFP(TickerId tickerId,
-                             TickType tickType,
-                             double basisPoints,
-                             const std::string& formattedBasisPoints,
-                             double totalDividends,
-                             int holdDays,
-                             const std::string& futureLastTradeDate,
-                             double dividendImpact,
-                             double dividendsToLastTradeDate) {
-    std::cout << "TickerId ID: " << tickerId << std::endl;
+               TickType tickType,
+               double basisPoints,
+               const std::string& formattedBasisPoints,
+               double totalDividends,
+               int holdDays,
+               const std::string& futureLastTradeDate,
+               double dividendImpact,
+               double dividendsToLastTradeDate) {
+    std::cout << "Tick EFP" << std::endl;
   }
 
   /*************************************************************************************************
@@ -1002,7 +1012,7 @@ public:
    *
    ************************************************************************************************/
   void tickGeneric(TickerId tickerId, TickType tickType, double value) {
-    std::cout << "Ticker ID: " << tickerId << std::endl;
+    std::cout << "Tick Generic" << std::endl;
   }
 
   /*************************************************************************************************
@@ -1018,11 +1028,11 @@ public:
    *
    ************************************************************************************************/
   void tickNews(int tickerId,
-                              time_t timeStamp,
-                              const std::string& providerCode,
-                              const std::string& articleId,
-                              const std::string& headline,
-                              const std::string& extraData) {
+                time_t timeStamp,
+                const std::string& providerCode,
+                const std::string& articleId,
+                const std::string& headline,
+                const std::string& extraData) {
     std::cout << "Ticker ID: " << tickerId << std::endl;
   }
 
@@ -1043,17 +1053,17 @@ public:
    *
    ************************************************************************************************/
   void tickOptionComputation(TickerId tickerId,
-                                           TickType tickType,
-                                           int tickAttrib,
-                                           double impliedVol,
-                                           double delta,
-                                           double optPrice,
-                                           double pvDividend,
-                                           double gamma,
-                                           double vega,
-                                           double theta,
-                                           double undPrice) {
-    std::cout << "Ticker ID: " << tickerId << std::endl;
+                             TickType tickType,
+                             int tickAttrib,
+                             double impliedVol,
+                             double delta,
+                             double optPrice,
+                             double pvDividend,
+                             double gamma,
+                             double vega,
+                             double theta,
+                             double undPrice) {
+    std::cout << "Tick Option Computation:" << std::endl;
   }
 
   /*************************************************************************************************
@@ -1067,10 +1077,10 @@ public:
    *
    ************************************************************************************************/
   void tickPrice(TickerId tickerId,
-                               TickType field,
-                               double price,
-                               const TickAttrib& attrib) {
-    std::cout << "Ticker ID: " << reqId << std::endl;
+                 TickType field,
+                 double price,
+                 const TickAttrib& attrib) {
+    std::cout << "Tick Price: " << std::endl;
   }
 
   /*************************************************************************************************
@@ -1084,9 +1094,9 @@ public:
    *
    ************************************************************************************************/
   void tickReqParams(int tickerId,
-                                   double minTick,
-                                   const std::string& bboExchange,
-                                   int snapshotPermissions) {
+                     double minTick,
+                     const std::string& bboExchange,
+                     int snapshotPermissions) {
     std::cout << "Ticker ID: " << tickerId << std::endl;
   }
 
@@ -1100,7 +1110,7 @@ public:
    *
    ************************************************************************************************/
   void tickSize(TickerId tickerId, TickType field, Decimal size) {
-    std::cout << "Ticker ID: " << TickerId << std::endl;
+    std::cout << "Tick Size:" << std::endl;
   }
 
   /*************************************************************************************************
@@ -1122,7 +1132,7 @@ public:
    *
    ************************************************************************************************/
   void tickString(TickerId tickerId, TickType tickType, const std::string& value) {
-    std::cout << "Ticker ID: " << tickerId << std::endl;
+    std::cout << "Tick String." << std::endl;
   }
 
   /*************************************************************************************************
@@ -1133,7 +1143,7 @@ public:
    *
    ************************************************************************************************/
   void updateAccountTime(const std::string& timeStamp) {
-    std::cout << "Time Stamp: " << timeStamp << std::endl;
+    std::cout << "Update Account Time." << std::endl;
   }
 
   /*************************************************************************************************
@@ -1144,10 +1154,10 @@ public:
    *
    ************************************************************************************************/
   void updateAccountValue(const std::string& key,
-                                        const std::string& val,
-                                        const std::string& currency,
-                                        const std::string& accountName) {
-    std::cout << "Key: " << key << std::endl;
+                          const std::string& val,
+                          const std::string& currency,
+                          const std::string& accountName) {
+    std::cout << "Update Account Value" << std::endl;
   }
 
   /*************************************************************************************************
@@ -1158,12 +1168,12 @@ public:
    *
    ************************************************************************************************/
   void updateMktDepth(TickerId id,
-                                    int position,
-                                    int operation,
-                                    int side,
-                                    double price,
-                                    Decimal size) {
-    std::cout << "Ticker ID: " << id << std::endl;
+                      int position,
+                      int operation,
+                      int side,
+                      double price,
+                      Decimal size) {
+    std::cout << "Update Market Depth" << std::endl;
   }
 
   /*************************************************************************************************
@@ -1181,14 +1191,14 @@ public:
    *
    ************************************************************************************************/
   void updateMktDepthL2(TickerId id,
-                                      int position,
-                                      const std::string& marketMaker,
-                                      int operation,
-                                      int side,
-                                      double price,
-                                      Decimal size,
-                                      bool isSmartDepth) {
-    std::cout << "Ticker ID: " << id << std::endl;
+                        int position,
+                        const std::string& marketMaker,
+                        int operation,
+                        int side,
+                        double price,
+                        Decimal size,
+                        bool isSmartDepth) {
+    std::cout << "Update Market Depth L2: " << std::endl;
   }
 
   /*************************************************************************************************
@@ -1202,9 +1212,9 @@ public:
    *
    ************************************************************************************************/
   void updateNewsBulletin(int msgId,
-                                        int msgType,
-                                        const std::string& newsMessage,
-                                        const std::string& originExch) {
+                          int msgType,
+                          const std::string& newsMessage,
+                          const std::string& originExch) {
     std::cout << "Message ID: " << msgId << std::endl;
   }
 
@@ -1223,14 +1233,14 @@ public:
    *
    ************************************************************************************************/
   void updatePortfolio(const Contract& contract,
-                                     Decimal position,
-                                     double marketPrice,
-                                     double marketValue,
-                                     double averageCost,
-                                     double unrealizedPNL,
-                                     double realizedPNL,
-                                     const std::string& accountName) {
-    std::cout << "Contract: " << contract << std::endl;
+                       Decimal position,
+                       double marketPrice,
+                       double marketValue,
+                       double averageCost,
+                       double unrealizedPNL,
+                       double realizedPNL,
+                       const std::string& accountName) {
+    std::cout << "Update Portfolio:" << std::endl;
   }
 
   /*************************************************************************************************
@@ -1255,11 +1265,10 @@ public:
    ************************************************************************************************/
   void verifyAndAuthCompleted(bool isSuccessful, const std::string& errorText) {
     if (isSuccessful) {
-        std::cout << "Success" << std::endl;
-      }
-    else {
+      std::cout << "Success" << std::endl;
+    } else {
       std::cout << "Failed" << std::endl;
-      std::cout << "Error Message: " << errorText << std::endl;
+      //std::cout << "Error Message: " << errorText << std::endl;
     }
   }
 
@@ -1272,8 +1281,8 @@ public:
    *
    ************************************************************************************************/
   void verifyAndAuthMessageAPI(const std::string& apiData,
-                                             const std::string& xyzChallange) {
-    std::cout << "API Data: " << apiData << std::endl;
+                               const std::string& xyzChallange) {
+    std::cout << "Verify And Auth Message API" << std::endl;
   }
 
   /*************************************************************************************************
@@ -1286,11 +1295,10 @@ public:
    ************************************************************************************************/
   void verifyCompleted(bool isSuccessful, const std::string& errorText) {
     if (isSuccessful) {
-        std::cout << "Success" << std::endl;
-          }
-    else {
+      std::cout << "Success" << std::endl;
+    } else {
       std::cout << "Failed" << std::endl;
-      std::cout << "Error Message: " << errorText << std::endl;
+      //std::cout << "Error Message: " << errorText << std::endl;
     }
   }
 
@@ -1302,7 +1310,7 @@ public:
    *
    ************************************************************************************************/
   void verifyMessageAPI(const std::string& apiData) {
-    std::cout << "API Data: " << apiData << std::endl;
+    std::cout << "Verify Message API: " << std::endl;
   }
 
   /*************************************************************************************************
