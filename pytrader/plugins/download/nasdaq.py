@@ -25,18 +25,20 @@ Algorithmic Trading Program
     Contains global variables for the pyTrader program.
 
 """
+
 # System Libraries
-import os
-import sys
+# import os
+# import sys
 
 # 3rd Party Libraries
 
 # Application Libraries
 # System Library Overrides
-from pytrader.libs.system import argparse
+# from pytrader.libs.system import argparse
 
 # Other Application Libraries
-from pytrader import *
+# from pytrader.lib.utilities import config
+# from pytrader.lib import dbclient
 
 # Conditional Libraries
 
@@ -47,7 +49,11 @@ from pytrader import *
 #
 # ==================================================================================================
 def nasdaq_download(args):
-    print("Downloading data from NASDAQ")
+    print("Nasdaq Download")
+    config = config.Config()
+
+    database = dbclient.MySQLDatabase(db_host="db.home.drbr.org",
+                                      db_user="olympus_investing")
 
 
 def parser(*args, **kwargs):
