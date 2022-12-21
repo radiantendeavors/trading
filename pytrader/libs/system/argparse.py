@@ -221,8 +221,8 @@ class CommonParser(ArgumentParser):
             'WARNING', 'ERROR', 'CRITICAL'
         ]
 
-        # Create Parent Parsur
-        # self.parent = ArgumentParser(add_help=False)
+        # Create Parent Parser
+        self.parent = ArgumentParser(add_help=False)
 
         # Parser Groups
         # Logging Group
@@ -276,8 +276,7 @@ class CommonParser(ArgumentParser):
             #                                  action='store_true',
             #                                  help=debug_help)
 
-        #return self.parent_logging
-        return None
+        return self.parent
 
 
 # ==================================================================================================
