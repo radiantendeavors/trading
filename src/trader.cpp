@@ -3,10 +3,13 @@
  * @file trader.cpp
  *
  * This file is part of trader.
+ *
  * @author G Derber
  * @version HEAD
  * @date 2022
- * Copyright (C) by G Derber <gd.github@radiantendeavors.com>
+ * @author G Derber <gd.github@radiantendeavors.com>
+ *
+ * @copyright GNU Affero General Public License
  *
  * This program is free software; you can redistribute and/or modify it under the terms of the
  * GNU Affero General Public License v3.0 as published by the Free Software Foundation
@@ -30,7 +33,7 @@
 
 /**************************************************************************************************
  *
- * @fn Main
+ * main
  *
  * @param argc Provides number of arguments.
  * @param argv Provides the actual arguments.
