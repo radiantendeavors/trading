@@ -7,12 +7,14 @@
 #include <thread>
 #include <vector>
 
-#include <twsapi/EReader.h>
-#include <twsapi/EReaderOSSignal.h>
-#include <twsapi/EWrapper.h>
-#include <twsapi/EClientSocket.h>
+#include "twsapi/source/cppclient/client/EReader.h"
+#include "twsapi/source/cppclient/client/EReaderOSSignal.h"
+#include "twsapi/source/cppclient/client/EWrapper.h"
+#include "twsapi/source/cppclient/client/EClientSocket.h"
 
+template<class ItemType>
 class BrokerClient : public EWrapper, public EClientSocket {
+
 
 public:
   BrokerClient(const char* host, int port, int clientId = 0);
@@ -910,6 +912,10 @@ public:
    ************************************************************************************************/
   void symbolSamples(int reqId, const std::vector<ContractDescription> &contractDescriptions) {
     std::cout << "Request ID: " << reqId << std::endl;
+    std::cout << "Number of descriptions: " << contractDescriptions.size() << std::endl;
+    for (ContractDescription desc: contractDescriptions) {
+      std::cout << "Symbol: " << desc.contract.symbol << std::endl;
+    }
   }
 
   /*************************************************************************************************
@@ -1393,4 +1399,5 @@ public:
 	void whatIfSamples();
 	void reqCurrentTime();
 };
+
 #endif // BROKER_CLIENT_H
