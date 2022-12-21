@@ -3,7 +3,7 @@
 
 The main user interface for the trading program.
 
-@author Geoff S. derber
+@author Geoff S. Derber
 @version HEAD
 @date 2022
 @copyright GNU Affero General Public License
@@ -40,6 +40,12 @@ from pytrader.libs import brokerclient
 from pytrader.libs import security
 from pytrader.libs.utilities import config
 from pytrader.libs.utilities import text
+
+# ==================================================================================================
+#
+# Global Variables
+#
+# ==================================================================================================
 """!
 @var logger
 The base logger.
