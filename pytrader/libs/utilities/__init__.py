@@ -27,14 +27,14 @@ def get_plugin_function(*args, **kwargs):
     command = kwargs['cmd']
     import_path = kwargs['import_path']
 
-    logger.debug3("Program: %s", program)
-    logger.debug3("Program: %s", command)
-    logger.debug3("Program: %s", import_path)
+    logger.debug("Program: %s", program)
+    logger.debug("Program: %s", command)
+    logger.debug("Program: %s", import_path)
 
     module_name = import_path + program
 
     try:
-        logger.debug2("Attempting to import module: %s", module_name)
+        logger.debug("Attempting to import module: %s", module_name)
         module = importlib.import_module(module_name, __name__)
         return getattr(module, command)
     except ImportError as msg:
