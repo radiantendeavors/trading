@@ -24,15 +24,33 @@ Provides the database client
 
 @file __init__.py
 """
-import mysql.connector
+# System Libraries
+import pymysql
 
-from trader.libs.util import config
+# 3rd Party Libraries
+
+# Application Libraries
+# System Library Overrides
+from pytrader.libs.system import logging
+
+# Other Application Libraries
+from pytrader.libs.utilities import config
+from pytrader.libs.utilities import text
 
 # ==================================================================================================
 #
 # Global Variables
 #
 # ==================================================================================================
+"""!
+@var logger
+The base logger.
+
+@var colortext
+Allows Color text on the console
+"""
+logger = logging.getLogger(__name__)
+colortext = text.ConsoleText()
 
 
 # ==================================================================================================
@@ -46,18 +64,37 @@ class MySQLDatabase():
     """
 
     def __init__(self, *args, **kwargs):
-        self.host = kwargs["database_host"]
-        self.user = kwargs["database_user"]
-        self.password = kwargs["database_password"]
-        self.mydb = mysql.connector.connect(host=self.host,
-                                            user=self.user,
-                                            password=self.password)
+        conf = config.Config()
+        conf.read_config()
 
-    def create_database(self, database_name):
-        mycursor = self.mydb.cursor()
+        self.host = conf.database_host
+        self.user = conf.database_username
+        self.password = conf.database_password
 
-        for x in mycursor:
-            print(x)
+        try:
+            with pymysql.connect(host=self.host,
+                                 user=self.user,
+                                 password=self.password) as mydb:
+                print(mydb)
+        except pymysql.Error as e:
+            logger.error(e)
+
+        self.mydb = mydb
+        self.mycursor = self.mydb.cursor()
+
+    def create_database(self):
+        sql = "CREATE DATABASE IF NOT EXISTS " + conf.database_name
+        logger.debug("Create Database SQL: ", sql)
+
+        try:
+            self.mycursor.execute(sql)
+        except mysql.connector.Error as e:
+            logger.error(e)
+
+    def check_database_exists(self):
+        sql = "SHOW DATABASES LIKE " + conf.database_name
+        row = self.mycursor.execute(sql)
+        logger.debug("Row: ", row)
 
 
 # class Investments():
