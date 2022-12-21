@@ -25,18 +25,19 @@ Algorithmic Trading Program
     Contains global variables for the pyTrader program.
 
 """
+
 # System Libraries
-import os
-import sys
+# import os
+# import sys
 
 # 3rd Party Libraries
 
 # Application Libraries
 # System Library Overrides
-from pytrader.libs.system import argparse
+# from pytrader.libs.system import argparse
 
 # Other Application Libraries
-from pytrader import *
+# from pytrader import *
 
 # Conditional Libraries
 
@@ -53,7 +54,6 @@ def broker_download(args):
 def parser(*args, **kwargs):
     subparsers = args[0]
     parent_parsers = list(args[1:])
-
     cmd = subparsers.add_parser("broker",
                                 aliases=["b"],
                                 parents=parent_parsers,
