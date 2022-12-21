@@ -21,6 +21,8 @@ couple sample strategies are provided.
 This program exists twice.  C++ is the production version.  The prototype is developed using python.
 Read the relevant README files for their installation instructions.
 
+Both C++ and Python target TWSAPI v10.19.
+
 ### [C++](./src/README.md)
 ### [Python](./pytrader/README.md)
 
