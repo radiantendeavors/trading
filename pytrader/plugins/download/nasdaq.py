@@ -37,7 +37,8 @@ Algorithmic Trading Program
 # from pytrader.libs.system import argparse
 
 # Other Application Libraries
-# from pytrader.lib.utilities import config
+from pytrader.libs.utilities import config
+
 # from pytrader.lib import dbclient
 
 # Conditional Libraries
@@ -50,10 +51,15 @@ Algorithmic Trading Program
 # ==================================================================================================
 def nasdaq_download(args):
     print("Nasdaq Download")
-    config = config.Config()
+    conf = config.Config()
 
-    database = dbclient.MySQLDatabase(db_host="db.home.drbr.org",
-                                      db_user="olympus_investing")
+    conf.read_config()
+
+    db_host = conf.database_host
+    db_user = conf.database_username
+    db_table = conf.database_name
+
+    database = dbclient.MySQLDatabase(db_host=db_host, db_user=db_user)
 
 
 def parser(*args, **kwargs):
