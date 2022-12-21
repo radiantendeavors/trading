@@ -35,13 +35,28 @@ Algorithmic Trading Program
 # Application Libraries
 # System Library Overrides
 # from pytrader.libs.system import argparse
+from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs.utilities import config
-
-# from pytrader.lib import dbclient
+from pytrader.libs import dbclient
+from pytrader.libs.utilities import text
 
 # Conditional Libraries
+
+# ==================================================================================================
+#
+# Global Variables
+#
+# ==================================================================================================
+"""!
+@var logger
+The base logger.
+
+@var colortext
+Allows Color text on the console
+"""
+logger = logging.getLogger(__name__)
+colortext = text.ConsoleText()
 
 
 # ==================================================================================================
@@ -50,16 +65,9 @@ from pytrader.libs.utilities import config
 #
 # ==================================================================================================
 def nasdaq_download(args):
-    print("Nasdaq Download")
-    conf = config.Config()
-
-    conf.read_config()
-
-    db_host = conf.database_host
-    db_user = conf.database_username
-    db_table = conf.database_name
-
-    database = dbclient.MySQLDatabase(db_host=db_host, db_user=db_user)
+    logging.debug("Begin Function: nasdaq_download")
+    database = dbclient.MySQLDatabase()
+    database.check_database_exists()
 
 
 def parser(*args, **kwargs):
