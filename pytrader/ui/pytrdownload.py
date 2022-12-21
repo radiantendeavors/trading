@@ -1,4 +1,29 @@
 #!/usr/bin/env python3
+"""!@package pytrader.ui.pytrdownload
+
+The user interface for downloading data.
+
+@author Geoff S. Derber
+@version HEAD
+@date 2022
+@copyright GNU Affero General Public License
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+@file ui/pytrdownload.py
+
+"""
 # ==================================================================================================
 #
 # pytrader
@@ -16,6 +41,7 @@ from pytrader.libs.system import logging
 
 # Application Libraries
 from pytrader import DEBUG
+from pytrader.libs import brokerclient
 from pytrader.libs import utilities
 from pytrader.libs.utilities import config
 from pytrader.libs.utilities import text
@@ -25,17 +51,23 @@ from pytrader.libs.utilities import text
 # Global Variables
 #
 # ==================================================================================================
+"""!
+@var logger
+The base logger.
+
+@var colortext
+Allows Color text on the console
+"""
 logger = logging.getLogger(__name__)
-# Allow Color text on console
 colortext = text.ConsoleText()
 
 
 # ==================================================================================================
 #
-# Function real_main
+# Function init
 #
 # ==================================================================================================
-def real_main(args):
+def init(args):
     logger.debug("Entered real main")
 
     import_path = "pytrader.plugins.download."
@@ -46,8 +78,8 @@ def real_main(args):
     Report bugs to ...
     """
 
-    parser = argparse.ArgParser(description="Automated trading system",
-                                epilog=epilog_text)
+    parser = argparse.CommonParser(description="Automated trading system",
+                                   epilog=epilog_text)
 
     parser.add_version_option()
     parser.add_ibapi_connection_options()
@@ -65,15 +97,13 @@ def real_main(args):
 
     parser.set_defaults(func=False, debug=False, verbosity=0, loglevel='INFO')
 
-    parser.add_logging_option()
-
     args = parser.parse_args()
 
     configuration = config.main_configure(args)
 
-    logger.debug2('Configuration set')
-    logger.debug3('Configuration Settings: ' + str(configuration))
-    logger.debug4('Arguments: ' + str(args))
+    logger.debug('Configuration set')
+    logger.debug('Configuration Settings: ' + str(configuration))
+    logger.debug('Arguments: ' + str(args))
 
     # 'application' code
     if DEBUG is False:
@@ -100,13 +130,14 @@ def real_main(args):
 #
 # ==================================================================================================
 def main(args=None):
+    logger.debug("Begin Application")
     if DEBUG is False:
         try:
-            real_main(args)
+            init(args)
         except Exception as msg:
             logger.critical(msg)
     else:
-        real_main(args)
+        init(args)
 
     logger.debug("End Application")
     return None
