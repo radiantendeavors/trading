@@ -133,34 +133,21 @@ class EtfInfo(mysql.MySQLDatabase):
         logger.debug("End Function")
         return None
 
-    def update_last_seen(self, ticker, name, first_listed=None):
+    def update_last_seen(self, ticker, name):
         logger.debug("Begin Function")
         last_seen = date.today()
         cursor = self.mycursor
 
-        if first_listed is None:
-            sql = """
-            UPDATE `etf_info`
-            SET `last_seen`=%s, `name`=%s
-            WHERE `ticker`=%s
-            """
+        sql = """
+        UPDATE `etf_info`
+        SET `last_seen`=%s, `name`=%s
+        WHERE `ticker`=%s
+        """
 
-            logger.debug("Last Seen: %s", last_seen)
-            try:
-                cursor.execute(sql, (last_seen, name, ticker))
-            except pymysql.Error as e:
-                logger.error("Update Error 1: %s", e)
-        else:
-            sql = """
-            UPDATE `etf_info`
-            SET `last_seen`=%s, `name`=%s, `first_listed`=%s
-            WHERE `ticker`=%s
-            """
-
-            try:
-                cursor.execute(sql, (last_seen, name, first_listed, ticker))
-            except pymysql.Error as e:
-                logger.error("Update Error 2: %s", e)
+        try:
+            cursor.execute(sql, (last_seen, name, ticker))
+        except pymysql.Error as e:
+            logger.error("Update Error 2: %s", e)
 
         logger.debug("SQL: %s", sql)
         self.mydb.commit()

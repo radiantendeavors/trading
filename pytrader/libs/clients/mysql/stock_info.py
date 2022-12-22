@@ -136,40 +136,23 @@ class StockInfo(mysql.MySQLDatabase):
         logger.debug("End Function")
         return None
 
-    def update_last_seen(self,
-                         ticker,
-                         name,
-                         country,
-                         industry,
-                         sector,
-                         first_listed=None):
+    def update_last_seen(self, ticker, name, country, industry, sector):
         logger.debug("Begin Function")
         last_seen = date.today()
         cursor = self.mycursor
 
-        if first_listed is None:
-            sql = """
-            UPDATE `stock_info`
-            SET `last_seen`=%s, `name`=%s
-            WHERE `ticker`=%s
-            """
+        sql = """
+        UPDATE `stock_info`
+        SET `last_seen`=%s, `name`=%s, `country`=%s, `industry`=%s, `sector`=%s
+        WHERE `ticker`=%s
+        """
 
-            logger.debug("Last Seen: %s", last_seen)
-            try:
-                cursor.execute(sql, (last_seen, name, ticker))
-            except pymysql.Error as e:
-                logger.error("Update Error 1: %s", e)
-        else:
-            sql = """
-            UPDATE `stock_info`
-            SET `last_seen`=%s, `name`=%s, `first_listed`=%s
-            WHERE `ticker`=%s
-            """
-
-            try:
-                cursor.execute(sql, (last_seen, name, first_listed, ticker))
-            except pymysql.Error as e:
-                logger.error("Update Error 2: %s", e)
+        logger.debug("Last Seen: %s", last_seen)
+        try:
+            cursor.execute(
+                sql, (last_seen, name, country, industry, sector, ticker))
+        except pymysql.Error as e:
+            logger.error("Update Error 1: %s", e)
 
         logger.debug("SQL: %s", sql)
         self.mydb.commit()
@@ -194,6 +177,9 @@ class StockInfo(mysql.MySQLDatabase):
 
         logger.debug("Days Since Last Seen: %s", days_since_last_seen.days)
 
+        # We only want to mark them as delisted if there has been some time since
+        # the ticker was last seen.  This is an attempt to reduce false delistings from
+        # bad data downloads.
         if days_since_last_seen.days > 7:
             sql = """
             UPDATE `stock_info`
@@ -205,8 +191,8 @@ class StockInfo(mysql.MySQLDatabase):
             except pymysql.Error as e:
                 logger.error("Update Delisting Error: %s", e)
 
-        logger.debug("SQL: %s", sql)
-        self.mydb.commit()
+            logger.debug("SQL: %s", sql)
+            self.mydb.commit()
 
         logger.debug("End Function")
         return None

@@ -88,10 +88,7 @@ class NasdaqClient():
         if row is None:
             db.insert(ticker, name)
         else:
-            if row["first_listed"] is None:
-                db.update_last_seen(ticker, name, first_listed=date.today())
-            else:
-                db.update_last_seen(ticker, name)
+            db.update_last_seen(ticker, name)
 
     def update_stock_database(self, table_row):
         ticker = table_row["symbol"]
@@ -106,15 +103,7 @@ class NasdaqClient():
         if row is None:
             db.insert(ticker, name, country, industry, sector)
         else:
-            if row["first_listed"] is None:
-                db.update_last_seen(ticker,
-                                    name,
-                                    country,
-                                    industry,
-                                    sector,
-                                    first_listed=date.today())
-            else:
-                db.update_last_seen(ticker, name, country, industry, sector)
+            db.update_last_seen(ticker, name, country, industry, sector)
 
     def update_database(self, table_row):
         if self.investments == "stocks":
@@ -128,7 +117,11 @@ class NasdaqClient():
 
     def mark_delisted(self, table):
         logger.debug("Begin Function")
-        db = etf_info.EtfInfo()
+        if self.investments == "stocks":
+            db = stock_info.StockInfo()
+        elif self.investments == "etf":
+            db = etf_info.EtfInfo()
+
         all_tickers = db.select_all_tickers()
         # logger.debug("All tickers: %s", all_tickers)
 
@@ -162,7 +155,7 @@ class NasdaqClient():
             logger.debug("Table Row: %s", table_row)
             self.update_database(table_row)
 
-        #self.mark_delisted(table)
+        self.mark_delisted(table)
 
 
 # class Stocks(Investments):
