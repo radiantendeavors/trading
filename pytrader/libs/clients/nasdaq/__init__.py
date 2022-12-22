@@ -40,6 +40,7 @@ from pytrader.libs.system import logging
 
 # Other Application Libraries
 from pytrader.libs.clients.mysql import etf_info
+from pytrader.libs.clients.mysql import stock_info
 from pytrader.libs.utilities import text
 
 # Conditional Libraries
@@ -76,17 +77,11 @@ class NasdaqClient():
 
         return None
 
-    def update_database(self, table_row):
+    def update_etf_database(self, table_row):
         ticker = table_row["symbol"]
         name = table_row["companyName"]
 
-        if self.investments == "stocks":
-            logger.debug("Updating Stock Info")
-
-        elif self.investments == "etf":
-            logger.debug("Updating ETF info")
-            db = etf_info.EtfInfo()
-
+        db = etf_info.EtfInfo()
         row = db.select(ticker)
         logger.debug("Row: %s", row)
 
@@ -97,6 +92,36 @@ class NasdaqClient():
                 db.update_last_seen(ticker, name, first_listed=date.today())
             else:
                 db.update_last_seen(ticker, name)
+
+    def update_stock_database(self, table_row):
+        ticker = table_row["symbol"]
+        name = table_row["name"]
+        country = table_row["country"]
+        industry = table_row["industry"]
+        sector = table_row["sector"]
+
+        db = stock_info.StockInfo()
+        row = db.select(ticker)
+
+        if row is None:
+            db.insert(ticker, name, country, industry, sector)
+        else:
+            if row["first_listed"] is None:
+                db.update_last_seen(ticker,
+                                    name,
+                                    country,
+                                    industry,
+                                    sector,
+                                    first_listed=date.today())
+            else:
+                db.update_last_seen(ticker, name, country, industry, sector)
+
+    def update_database(self, table_row):
+        if self.investments == "stocks":
+            self.update_stock_database(table_row)
+        elif self.investments == "etf":
+            logger.debug("Updating ETF info")
+            self.update_etf_database(table_row)
 
     def check_symbol(self, data, ticker):
         return any(row["symbol"] == ticker for row in data["rows"])
@@ -137,7 +162,7 @@ class NasdaqClient():
             logger.debug("Table Row: %s", table_row)
             self.update_database(table_row)
 
-        self.mark_delisted(table)
+        #self.mark_delisted(table)
 
 
 # class Stocks(Investments):
