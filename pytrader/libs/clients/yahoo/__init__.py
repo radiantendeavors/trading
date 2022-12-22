@@ -1,7 +1,6 @@
-"""!
-@package pytrader.libs.dbclient
+"""!@package pytrader
 
-Provides the database client
+Algorithmic Trading Program
 
 @author Geoff S. derber
 @version HEAD
@@ -21,121 +20,11 @@ Provides the database client
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+@file lib/nasdaqclient/__init__.py
 
-@file __init__.py
+    Contains global variables for the pyTrader program.
+
 """
-# System Libraries
-import pymysql
-
-# 3rd Party Libraries
-
-# Application Libraries
-# System Library Overrides
-from pytrader.libs.system import logging
-
-# Other Application Libraries
-from pytrader.libs.utilities import config
-from pytrader.libs.utilities import text
-
-# ==================================================================================================
-#
-# Global Variables
-#
-# ==================================================================================================
-"""!
-@var logger
-The base logger.
-
-@var colortext
-Allows Color text on the console
-"""
-logger = logging.getLogger(__name__)
-colortext = text.ConsoleText()
-
-
-# ==================================================================================================
-#
-# Classes
-#
-# ==================================================================================================
-class MySQLDatabase():
-    """!Class MySQLDatabase
-
-    """
-
-    def __init__(self, *args, **kwargs):
-        conf = config.Config()
-        conf.read_config()
-
-        self.host = conf.database_host
-        self.user = conf.database_username
-        self.password = conf.database_password
-
-        try:
-            with pymysql.connect(host=self.host,
-                                 user=self.user,
-                                 password=self.password) as mydb:
-                print(mydb)
-        except pymysql.Error as e:
-            logger.error(e)
-
-        self.mydb = mydb
-        self.mycursor = self.mydb.cursor()
-
-    def create_database(self):
-        sql = "CREATE DATABASE IF NOT EXISTS " + conf.database_name
-        logger.debug("Create Database SQL: ", sql)
-
-        try:
-            self.mycursor.execute(sql)
-        except mysql.connector.Error as e:
-            logger.error(e)
-
-    def check_database_exists(self):
-        sql = "SHOW DATABASES LIKE " + conf.database_name
-        row = self.mycursor.execute(sql)
-        logger.debug("Row: ", row)
-
-
-# class Investments():
-
-#     def __init__(self, *args, **kwargs):
-#         self.tickers = []
-#         if self.investments == "stocks":
-#             stocks.init_sqlalchemy()
-#         elif self.investments == "etf":
-#             etfs.init_sqlalchemy()
-
-#         return None
-
-#     def download_list(self, *args, **kwargs):
-#         headers = {
-#             "User-Agent":
-#             "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0",
-#         }
-
-#         url = "https://api.nasdaq.com/api/screener/"
-#         url = url + self.investments
-#         url = url + "?tableonly=true&limit=25&offset=0&download=true"
-#         investments_url = requests.get(url, headers=headers, timeout=5)
-
-#         json_data = investments_url.json()
-#         table = json_data["data"]
-
-#         if self.investments == "etf":
-#             table = table["data"]
-
-#         for table_row in table["rows"]:
-#             if self.investments == "stocks":
-#                 stock = stocks.StockInfo()
-#                 stock.add_stock_info(ticker=table_row["symbol"])
-#             elif self.investments == "etf":
-#                 etf = etfs.EtfInfo()
-#                 etf.add_etf_info(ticker=table_row["symbol"])
-
-#             self.tickers.append(table_row["symbol"])
-
-#         return self.tickers
 
 #     def download_daily(self, *args, **kwargs):
 #         midnight = int(
@@ -189,40 +78,6 @@ class MySQLDatabase():
 #             ystock.get_info()
 
 #         return None
-
-# class Stocks(Investments):
-
-#     def __init__(self):
-#         self.investments = "stocks"
-#         super(Stocks, self).__init__()
-#         return None
-
-#     def get_ticker_list(self, *args, **kwargs):
-#         tickers = []
-#         investments = stocks.StockInfo()
-#         self.tickers = investments.get_ticker_list()
-
-#         if len(tickers) > 0:
-#             return self.tickers
-#         else:
-#             return self.download_list()
-
-# class Etfs(Investments):
-
-#     def __init__(self):
-#         self.investments = "etf"
-#         super(Etfs, self).__init__()
-#         return None
-
-#     def get_ticker_list(self, *args, **kwargs):
-#         tickers = []
-#         investments = etfs.EtfInfo()
-#         self.tickers = investments.get_ticker_list()
-
-#         if len(tickers) > 0:
-#             return self.tickers
-#         else:
-#             return self.download_list()
 
 # class YahooStock():
 
@@ -391,119 +246,3 @@ class MySQLDatabase():
 #         #     'logo_url': 'https://logo.clearbit.com/agilent.com'
 #         #}
 #         return None
-
-#     def get_history(self, *args, **kwargs):
-#         if "period" in kwargs:
-#             period = kwargs["period"]
-#         else:
-#             period = "1d"
-
-#         if "interval" in kwargs:
-#             interval = kwargs["interval"]
-#         elif period == "1d":
-#             interval = "1m"
-#         else:
-#             interval = "1d"
-
-#         history_data = self.stock.history(period=period,
-#                                           interval=interval,
-#                                           prepost=True)
-
-#         # download_data = self.stock.download(period=period,
-#         #                                    interval=interval,
-#         #                                    prepost=True)
-
-#         return history_data
-
-#     def get_option_chain(self, *args, **kwargs):
-#         expiry_dates = self.stock.options
-
-#         for item in expiry_dates:
-#             option_chain = self.stock.option_chain(item)
-#             print(option_chain)
-#         return None
-
-#     def get_shares_outstanding(self, *args, **kwargs):
-#         return self.stock.info["sharesOutstanding"]
-
-#     def print_history(self, *args, **kwargs):
-#         if "period" in kwargs:
-#             period = kwargs["period"]
-#         else:
-#             period = "1d"
-
-#         for item in self.stock.download(period=period):
-#             print(item)
-
-#         return None
-
-# # class RedditStock():
-# #     def __init__(self, *args, **kwargs):
-# #         self.ticker = kwargs["ticker"]
-# #         config = investing.lib.util.config.InvestingConfig()
-# #         config.read_config()
-# #         self.user_agent = conf.get_reddit_user_agent()
-# #         self.client_id = conf.get_reddit_client_id()
-# #         self.client_secret = conf.get_reddit_client_secret()
-# #         self.username = conf.get_reddit_username()
-# #         self.password = conf.get_reddit_password()
-# #         self.subreddits = conf.get_reddit_subreddits()
-
-# #         #reddit =
-
-# #     def get_reddit_sentiment(self, *args, **kwargs):
-# #         reddit = praw.Reddit(user_agent=self.user_agent,
-# #                              client_id=self.client_id,
-# #                              client_secret=self.client_secret,
-# #                              username=self.username,
-# #                              password=self.password)
-
-# # def submissions_pushshift_praw(subreddit,
-# #                                start=None,
-# #                                end=None,
-# #                                limit=100,
-# #                                extra_query=""):
-# #     """
-# #     A simple function that returns a list of PRAW submission objects during a particular period from a defined sub.
-# #     This function serves as a replacement for the now deprecated PRAW `submissions()` method.
-
-# #     :param subreddit: A subreddit name to fetch submissions from.
-# #     :param start: A Unix time integer. Posts fetched will be AFTER this time. (default: None)
-# #     :param end: A Unix time integer. Posts fetched will be BEFORE this time. (default: None)
-# #     :param limit: There needs to be a defined limit of results (default: 100), or Pushshift will return only 25.
-# #     :param extra_query: A query string is optional. If an extra_query string is not supplied,
-# #                         the function will just grab everything from the defined time period. (default: empty string)
-
-# #     Submissions are yielded newest first.
-
-# #     For more information on PRAW, see: https://github.com/praw-dev/praw
-# #     For more information on Pushshift, see: https://github.com/pushshift/api
-# #     """
-# #     matching_praw_submissions = []
-
-# #     # Default time values if none are defined (credit to u/bboe's PRAW `submissions()` for this section)
-# #     utc_offset = 28800
-# #     now = int(time.time())
-# #     start = max(int(start) + utc_offset if start else 0, 0)
-# #     end = min(int(end) if end else now, now) + utc_offset
-
-# #     # Format our search link properly.
-# #     search_link = (
-# #         'https://api.pushshift.io/reddit/submission/search/'
-# #         '?subreddit={}&after={}&before={}&sort_type=score&sort=asc&limit={}&q={}'
-# #     )
-# #     search_link = search_link.format(subreddit, start, end, limit, extra_query)
-
-# #     # Get the data from Pushshift as JSON.
-# #     retrieved_data = requests.get(search_link)
-# #     returned_submissions = retrieved_data.json()['data']
-
-# #     # Iterate over the returned submissions to convert them to PRAW submission objects.
-# #     for submission in returned_submissions:
-
-# #         # Take the ID, fetch the PRAW submission object, and append to our list
-# #         praw_submission = reddit.submission(id=submission['id'])
-# #         matching_praw_submissions.append(praw_submission)
-
-# #     # Return all PRAW submissions that were obtained.
-# #     return matching_praw_submissions

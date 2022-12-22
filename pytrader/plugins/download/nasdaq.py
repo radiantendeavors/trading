@@ -38,7 +38,7 @@ Algorithmic Trading Program
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs import dbclient
+from pytrader.libs.clients import nasdaq
 from pytrader.libs.utilities import text
 
 # Conditional Libraries
@@ -64,10 +64,30 @@ colortext = text.ConsoleText()
 # Functions
 #
 # ==================================================================================================
+def client(investments):
+    client = nasdaq.NasdaqClient(investments=investments)
+    client.download_list()
+
+
 def nasdaq_download(args):
     logging.debug("Begin Function: nasdaq_download")
-    database = dbclient.MySQLDatabase()
-    database.check_database_exists()
+    investments = "None"
+
+    if args.etfs:
+        investments = "etf"
+        client(investments)
+    elif args.stocks:
+        investments = "stocks"
+        client(investments)
+    elif args.investments:
+        investments = args.investments
+        client(investments)
+    else:
+        investments = ["stocks", "etf"]
+        for investment in investments:
+            client(investment)
+
+    return None
 
 
 def parser(*args, **kwargs):
@@ -78,6 +98,11 @@ def parser(*args, **kwargs):
                                 aliases=["n"],
                                 parents=parent_parsers,
                                 help="Downloads data from NASDAQ")
+    cmd.add_argument("-i",
+                     "--investments",
+                     nargs=1,
+                     choices=["etfs", "stocks"],
+                     help="Type of investments to download")
     cmd.add_argument("-e",
                      "--etfs",
                      action="store_true",

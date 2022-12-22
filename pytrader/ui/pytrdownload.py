@@ -31,7 +31,6 @@ The user interface for downloading data.
 # ==================================================================================================
 # System libraries
 import sys
-import pkg_resources
 
 # 3rd Party libraries
 
@@ -41,7 +40,6 @@ from pytrader.libs.system import logging
 
 # Application Libraries
 from pytrader import DEBUG
-from pytrader.libs import brokerclient
 from pytrader.libs import utilities
 from pytrader.libs.utilities import config
 from pytrader.libs.utilities import text
