@@ -108,6 +108,15 @@ class StockInfo(mysql.MySQLDatabase):
         first_listed = date.today()
         last_seen = date.today()
 
+        if country == "":
+            country = None
+
+        if industry == "":
+            industry = None
+
+        if sector == "":
+            sector = None
+
         sql = """
         INSERT INTO `stock_info`
         (`ticker`, `name`, `country`, `industry`, `sector`, `first_listed`, `last_seen`)
@@ -140,6 +149,15 @@ class StockInfo(mysql.MySQLDatabase):
         logger.debug("Begin Function")
         last_seen = date.today()
         cursor = self.mycursor
+
+        if country == "":
+            country = None
+
+        if industry == "":
+            industry = None
+
+        if sector == "":
+            sector = None
 
         sql = """
         UPDATE `stock_info`
