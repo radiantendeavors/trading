@@ -183,8 +183,8 @@ class EtfInfo(mysql.MySQLDatabase):
             except pymysql.Error as e:
                 logger.error("Update Delisting Error: %s", e)
 
-        logger.debug("SQL: %s", sql)
-        self.mydb.commit()
+            logger.debug("SQL: %s", sql)
+            self.mydb.commit()
 
         logger.debug("End Function")
         return None
