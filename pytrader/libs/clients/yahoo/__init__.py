@@ -25,6 +25,116 @@ Algorithmic Trading Program
     Contains global variables for the pyTrader program.
 
 """
+# System Libraries
+
+# 3rd Party Libraries
+import yfinance
+
+# Application Libraries
+# System Library Overrides
+from pytrader.libs.system import logging
+
+# Other Application Libraries
+from pytrader.libs.clients.mysql import etf_info
+from pytrader.libs.clients.mysql import stock_info
+from pytrader.libs.utilities import text
+
+# Conditional Libraries
+
+# ==================================================================================================
+#
+# Global Variables
+#
+# ==================================================================================================
+"""!
+@var logger
+The base logger.
+
+@var colortext
+Allows Color text on the console
+"""
+logger = logging.getLogger(__name__)
+colortext = text.ConsoleText()
+
+#class YahooClient():
+# class Stocks(Investments):
+
+#     def __init__(self):
+#         self.investments = "stocks"
+#         super(Stocks, self).__init__()
+#         return None
+
+#     def get_ticker_list(self, *args, **kwargs):
+#         tickers = []
+#         investments = stocks.StockInfo()
+#         self.tickers = investments.get_ticker_list()
+
+#         if len(tickers) > 0:
+#             return self.tickers
+#         else:
+#             return self.download_list()
+
+# class Etfs(Investments):
+
+#     def __init__(self):
+#         self.investments = "etf"
+#         super(Etfs, self).__init__()
+#         return None
+
+#     def get_ticker_list(self, *args, **kwargs):
+#         tickers = []
+#         investments = etfs.EtfInfo()
+#         self.tickers = investments.get_ticker_list()
+
+#         if len(tickers) > 0:
+#             return self.tickers
+#         else:
+#             return self.download_list()
+
+#     def get_history(self, *args, **kwargs):
+#         if "period" in kwargs:
+#             period = kwargs["period"]
+#         else:
+#             period = "1d"
+
+#         if "interval" in kwargs:
+#             interval = kwargs["interval"]
+#         elif period == "1d":
+#             interval = "1m"
+#         else:
+#             interval = "1d"
+
+#         history_data = self.stock.history(period=period,
+#                                           interval=interval,
+#                                           prepost=True)
+
+#         # download_data = self.stock.download(period=period,
+#         #                                    interval=interval,
+#         #                                    prepost=True)
+
+#         return history_data
+
+#     def get_option_chain(self, *args, **kwargs):
+#         expiry_dates = self.stock.options
+
+#         for item in expiry_dates:
+#             option_chain = self.stock.option_chain(item)
+#             print(option_chain)
+#         return None
+
+#     def get_shares_outstanding(self, *args, **kwargs):
+#         return self.stock.info["sharesOutstanding"]
+
+#     def print_history(self, *args, **kwargs):
+#         if "period" in kwargs:
+#             period = kwargs["period"]
+#         else:
+#             period = "1d"
+
+#         for item in self.stock.download(period=period):
+#             print(item)
+
+#         return None
 
 #     def download_daily(self, *args, **kwargs):
 #         midnight = int(
