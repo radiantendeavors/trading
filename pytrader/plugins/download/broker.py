@@ -73,7 +73,7 @@ def client(investments):
         all_tickers = etfinfo.select_all_tickers()
     elif investments == "stocks":
         stockinfo = stock_info.StockInfo()
-        all_tickers = stockinfo.select_all_tickers()
+        all_tickers = stockinfo.select_current_tickers()
     else:
         logger.error("No investments were selected")
         sys.exit(1)

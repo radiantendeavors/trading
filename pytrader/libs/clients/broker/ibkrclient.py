@@ -136,13 +136,17 @@ class IbkrClient(EWrapper, EClient):
         logger.debug("SecIdList: %s", details.secIdList)
         logger.debug("Underlying Symbol: %s", details.underSymbol)
         logger.debug("Stock Type: %s", details.stockType)
-        logger.debug("Cusip", details.cusip)
+        #logger.debug("Cusip", details.cusip)
         logger.debug("Next Option Date: %s", details.nextOptionDate)
         logger.debug("Details: %s", details)
 
-        # if details.stockType == "ETF":
-        #     db = etf_info.EtfInfo()
-        #     row = db.select(details.contract.symbol)
+        if details.stockType == "ETF":
+            db = etf_info.EtfInfo()
+            row = db.select(details.contract.symbol)
+            db.update_ibkr_info(details.contract.symbol,
+                                details.contract.conId,
+                                details.contract.primaryExchange,
+                                details.contract.exchange)
 
     @iswrapper
     def contractDetailsEnd(self, reqId):

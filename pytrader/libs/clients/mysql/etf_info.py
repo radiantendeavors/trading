@@ -103,6 +103,25 @@ class EtfInfo(mysql.MySQLDatabase):
             logger.error("Select Error: %s", e)
             return None
 
+    def select_current_tickers(self):
+        logger.debug("Begin Function")
+        sql = """
+        SELECT `ticker`
+        FROM `etf_info`
+        WHERE `delisted_date` IS NULL
+        """
+        logger.debug("SQL: %s", sql)
+
+        cursor = self.mycursor
+        try:
+            cursor.execute(sql)
+            result = cursor.fetchall()
+            # logger.debug("Result: %s", result)
+            return result
+        except pymysql.Error as e:
+            logger.error("Select Error: %s", e)
+            return None
+
     def insert(self, ticker, name):
         logger.debug("Begin Function")
         sql = """
@@ -188,3 +207,23 @@ class EtfInfo(mysql.MySQLDatabase):
 
         logger.debug("End Function")
         return None
+
+    def update_ibkr_info(self, symbol, contract_id, primary_exchange,
+                         exchange):
+        logger.debug("Begin Function")
+        cursor = self.mycursor
+
+        sql = """
+        UPDATE `etf_info`
+        SET `ibkr_contract_id`=%s, `ibkr_primary_exchange`=%s, `ibkr_exchange`=%s
+        WHERE `ticker`=%s
+        """
+
+        try:
+            cursor.execute(sql,
+                           (contract_id, primary_exchange, exchange, symbol))
+        except pymysql.Error as e:
+            logger.error("Update Delisting Error: %s", e)
+
+        logger.debug("SQL: %s", sql)
+        self.mydb.commit()
