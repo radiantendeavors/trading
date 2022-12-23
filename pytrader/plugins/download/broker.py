@@ -27,19 +27,35 @@ Algorithmic Trading Program
 """
 
 # System Libraries
+import time
 # import os
-# import sys
+import sys
 
 # 3rd Party Libraries
 
 # Application Libraries
 # System Library Overrides
-# from pytrader.libs.system import argparse
+from pytrader.libs.system import logging
 
 # Other Application Libraries
-# from pytrader import *
+from pytrader.libs.clients import broker
+from pytrader.libs.clients.mysql import etf_info
+from pytrader.libs.clients.mysql import stock_info
+from pytrader.libs.utilities import config
 
 # Conditional Libraries
+
+# ==================================================================================================
+#
+# Global Variables
+#
+# ==================================================================================================
+"""!
+@var logger
+The base logger.
+
+"""
+logger = logging.getLogger(__name__)
 
 
 # ==================================================================================================
@@ -47,8 +63,39 @@ Algorithmic Trading Program
 # Functions
 #
 # ==================================================================================================
+def client(investments):
+    logger.debug("Begin Function")
+
+    brokerclient = broker.BrokerClient()
+
+    if investments == "etf":
+        etfinfo = etf_info.EtfInfo()
+        all_tickers = etfinfo.select_all_tickers()
+    elif investments == "stocks":
+        stockinfo = stock_info.StockInfo()
+        all_tickers = stockinfo.select_all_tickers()
+    else:
+        logger.error("No investments were selected")
+        sys.exit(1)
+
+    for item in all_tickers:
+        ticker = item["ticker"]
+        logger.debug("Ticker: %s", ticker)
+        brokerclient.set_contract(ticker)
+        brokerclient.get_security_data()
+        time.sleep(10)
+
+    logger.debug("End Function")
+
+
 def broker_download(args):
-    print("Downloading data from broker")
+    logging.debug("Begin Function")
+
+    investments = ["etf"]
+    for investment in investments:
+        client(investment)
+
+    return None
 
 
 def parser(*args, **kwargs):

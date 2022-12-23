@@ -62,7 +62,7 @@ The mode of operation; False = Normal, True = Debug.
 The minimum run level
 """
 DEBUG = True
-LOGLEVEL = 0
+LOGLEVEL = 20
 """! Logging Variables
 
 @var logger The base logger.
@@ -77,9 +77,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(LOGLEVEL)
 
 consolehandler = logging.ColorizingStreamHandler()
-consoleformatter = logging.ConsoleLvlFormatter(
-    "%(name)s:%(funcName)s:%(lineno)d - %(levelname)s - %(message)s")
 consolehandler.setLevel(LOGLEVEL)
+consoleformatter = logging.ConsoleLvlFormatter()
 consolehandler.setFormatter(consoleformatter)
 
 logger.addHandler(consolehandler)

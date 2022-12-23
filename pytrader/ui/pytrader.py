@@ -36,7 +36,7 @@ from pytrader.libs.system import logging
 
 # Application Libraries
 from pytrader import DEBUG
-from pytrader.libs import brokerclient
+from pytrader.libs.clients import broker
 from pytrader.libs import security
 from pytrader.libs.utilities import config
 from pytrader.libs.utilities import text
@@ -73,7 +73,7 @@ def start_client(args):
     # Create the client and connect to TWS or IB Gateway
     logger.debug10("Begin Function")
 
-    client = brokerclient.BrokerClient(args.address, args.port)
+    client = broker.BrokerClient()
 
     if args.checkserver:
         logger.debug("Checking Server time")
@@ -145,10 +145,12 @@ def init(args):
 
     args = parser.parse_args()
 
-    configuration = config.main_configure(args)
+    conf = config.Config()
+    conf.read_config()
+    conf.set_loglevel(args)
 
     logger.debug2('Configuration set')
-    logger.debug3('Configuration Settings: ' + str(configuration))
+    logger.debug3('Configuration Settings: ' + str(conf))
     logger.debug4('Arguments: ' + str(args))
 
     # 'application' code

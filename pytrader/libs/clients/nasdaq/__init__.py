@@ -30,7 +30,6 @@ Algorithmic Trading Program
 # import os
 import requests
 # import sys
-from datetime import date
 
 # 3rd Party Libraries
 
@@ -41,7 +40,7 @@ from pytrader.libs.system import logging
 # Other Application Libraries
 from pytrader.libs.clients.mysql import etf_info
 from pytrader.libs.clients.mysql import stock_info
-from pytrader.libs.utilities import text
+# from pytrader.libs.utilities import text
 
 # Conditional Libraries
 
@@ -53,14 +52,15 @@ from pytrader.libs.utilities import text
 """!
 @var logger
 The base logger.
-
-@var colortext
-Allows Color text on the console
 """
 logger = logging.getLogger(__name__)
-colortext = text.ConsoleText()
 
 
+# ==================================================================================================
+#
+# Classes
+#
+# ==================================================================================================
 class NasdaqClient():
     """
     NasdaqClient

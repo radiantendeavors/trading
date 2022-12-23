@@ -14,12 +14,11 @@
 # ==================================================================================================
 # System Libraries
 import os
-import yaml
 
 # System Overrides
 from pytrader.libs.system import logging
+
 # Other Application Libraries
-from pytrader.libs.utilities.config import config
 
 # ==================================================================================================
 #
@@ -29,7 +28,9 @@ from pytrader.libs.utilities.config import config
 # Enable Logging
 # create logger
 logger = logging.getLogger(__name__)
-consolehandler = logging.ColorizingStreamHandler()
+database_port = {"sqlite": None, "mysql": "3306"}
+home = os.path.expanduser("~") + "/"
+config_dir = home + ".config/investing"
 
 
 # ==================================================================================================
@@ -50,6 +51,8 @@ class DatabaseConfig():
         self.database_name = "investing"
 
     def read_config(self, *args, **kwargs):
+        config = kwargs["config"]
+
         if "database_type" in config:
             self.database_type = config["database_type"]
             self.database_port = database_port[self.database_type]
@@ -75,3 +78,30 @@ class DatabaseConfig():
 
         if "database_host" in config:
             self.database_host = config["database_host"]
+
+    def set_database_url(self, *args, **kwargs):
+        url = self.database_type
+
+        if self.database_driver is not None:
+            url = url + "+" + self.database_driver + "://"
+        else:
+            url = url + "://"
+
+        if self.database_type == "sqlite":
+            if self.database_name != "memory":
+                url = url + "/" + self.database_path
+                url = url + "/" + self.database_name
+                url = url + ".db"
+        else:
+            if self.database_username is not None:
+                if self.database_password is not None:
+                    url = url + self.database_username + ":" + self.database_password
+                else:
+                    url = url + self.database_username
+
+            url = url + "@" + self.database_host
+            url = url + ":" + self.database_port
+            url = url + "/" + self.database_name
+
+        self.database_url = url
+        return url

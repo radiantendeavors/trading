@@ -39,7 +39,6 @@ from pytrader.libs.system import logging
 
 # Other Application Libraries
 from pytrader.libs.clients import nasdaq
-from pytrader.libs.utilities import text
 
 # Conditional Libraries
 
@@ -56,7 +55,6 @@ The base logger.
 Allows Color text on the console
 """
 logger = logging.getLogger(__name__)
-colortext = text.ConsoleText()
 
 
 # ==================================================================================================
@@ -70,7 +68,8 @@ def client(investments):
 
 
 def nasdaq_download(args):
-    logging.debug("Begin Function: nasdaq_download")
+    logging.debug("Begin Function")
+
     investments = "None"
 
     if args.etfs:
@@ -87,6 +86,7 @@ def nasdaq_download(args):
         for investment in investments:
             client(investment)
 
+    logging.debug("End Fuction")
     return None
 
 

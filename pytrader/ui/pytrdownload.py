@@ -42,7 +42,6 @@ from pytrader.libs.system import logging
 from pytrader import DEBUG
 from pytrader.libs import utilities
 from pytrader.libs.utilities import config
-from pytrader.libs.utilities import text
 
 # ==================================================================================================
 #
@@ -52,12 +51,8 @@ from pytrader.libs.utilities import text
 """!
 @var logger
 The base logger.
-
-@var colortext
-Allows Color text on the console
 """
 logger = logging.getLogger(__name__)
-colortext = text.ConsoleText()
 
 
 # ==================================================================================================
@@ -66,8 +61,6 @@ colortext = text.ConsoleText()
 #
 # ==================================================================================================
 def init(args):
-    logger.debug("Entered real main")
-
     import_path = "pytrader.plugins.download."
 
     epilog_text = """
@@ -97,11 +90,18 @@ def init(args):
 
     args = parser.parse_args()
 
-    configuration = config.main_configure(args)
+    conf = config.Config()
+    conf.read_config()
+    conf.set_loglevel(args)
 
     logger.debug('Configuration set')
-    logger.debug('Configuration Settings: ' + str(configuration))
+    logger.debug('Configuration Settings: ' + str(conf))
     logger.debug('Arguments: ' + str(args))
+
+    logger.debug2("Desired Log Level: %s", conf.loglevel)
+
+    level = logger.getEffectiveLevel()
+    logger.debug2("Set Log Level: %s", level)
 
     # 'application' code
     if DEBUG is False:

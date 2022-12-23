@@ -64,18 +64,19 @@ class MySQLDatabase():
     """
 
     def __init__(self, *args, **kwargs):
-        self.conf = config.Config()
-        self.conf.read_config()
+        conf = config.Config()
+        conf.read_config()
 
-        self.host = self.conf.database_host
-        self.user = self.conf.database_username
-        self.password = self.conf.database_password
+        self.host = conf.database_host
+        self.user = conf.database_username
+        self.password = conf.database_password
+        self.database_name = conf.database_name
 
         try:
             mydb = pymysql.connect(host=self.host,
                                    user=self.user,
                                    password=self.password,
-                                   database=self.conf.database_name,
+                                   database=self.database_name,
                                    cursorclass=pymysql.cursors.DictCursor)
             logger.debug("MyDB: %s", mydb)
             self.mydb = mydb

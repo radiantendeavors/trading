@@ -39,8 +39,8 @@
 # ==================================================================================================
 # System Libraries
 import logging
-from logging import *
 import copy
+from logging import *
 
 # 3rd Party Libraries
 
@@ -117,7 +117,7 @@ logging.addLevelName(29, "INFO9")
 
 colortext = text.ConsoleText()
 
-#-----------------------------------------------------------------------
+# ==================================================================================================
 #
 # Classes
 #
@@ -125,10 +125,10 @@ colortext = text.ConsoleText()
 # ConsoleLvlFormatter
 # ColorizingStreamHandler
 #
-#-----------------------------------------------------------------------
+# ==================================================================================================
 
 
-#-----------------------------------------------------------------------
+# ==================================================================================================
 #
 # Class LocalLogger
 #
@@ -146,7 +146,7 @@ colortext = text.ConsoleText()
 # ------
 #    ...
 #
-#-----------------------------------------------------------------------
+# ==================================================================================================
 class LocalLogger(Logger):
     #-------------------------------------------------------------------
     #
@@ -959,11 +959,11 @@ class ConsoleLvlFormatter(Formatter):
 
     def __init__(self, fmt="%(levelno)s: %(message)s"):
         Formatter.__init__(self, fmt)
-        self.dbg_fmt = "%(levelname)s: %(name)s:%(funcName)s:%(lineno)d - %(message)s"
+        self.dbg_fmt = "%(levelname)-8s: %(name)s:%(funcName)s:%(lineno)d - %(message)s"
         self.info_fmt = "%(message)s"
-        self.warn_fmt = "%(levelname)s: %(message)s"
-        self.err_fmt = "%(levelname)s: %(message)s"
-        self.crit_fmt = "%(levelname)s: %(message)s"
+        self.warn_fmt = "%(levelname)-8s: %(message)s"
+        self.err_fmt = "%(levelname)-8s: %(message)s"
+        self.crit_fmt = "%(levelname)-8s: %(message)s"
         return
 
     #-------------------------------------------------------------------
@@ -1038,7 +1038,7 @@ class ConsoleLvlFormatter(Formatter):
 #    ...
 #
 #-----------------------------------------------------------------------
-class ColorizingStreamHandler(StreamHandler, text.ConsoleText):
+class ColorizingStreamHandler(logging.StreamHandler, text.ConsoleText):
 
     def __init__(self, *args, **kwargs):
         self._colors = {
@@ -1139,7 +1139,7 @@ class ColorizingStreamHandler(StreamHandler, text.ConsoleText):
             self.flush()
         except (KeyboardInterrupt, SystemExit):
             raise
-        except:
+        except Exception:
             self.handleError(record)
 
         return

@@ -37,8 +37,7 @@ from ibapi.order import Order
 from pytrader.libs.system import logging
 
 # Application Libraries
-from pytrader import DEBUG
-from pytrader.libs import brokerclient
+from pytrader.libs.clients import broker
 
 # ==================================================================================================
 #

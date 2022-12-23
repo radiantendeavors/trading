@@ -36,7 +36,7 @@ from ibapi.order import Order
 from pytrader.libs.system import logging
 
 # Application Libraries
-from pytrader.libs.brokerclient import ibkrclient
+from pytrader.libs.clients.broker import ibkrclient
 from pytrader.libs.utilities import config
 
 # ==================================================================================================
@@ -57,16 +57,28 @@ class BrokerClient(ibkrclient.IbkrClient):
 
     Provides the client interface."""
 
-    def __init__(self, address, port, client_id=0):
+    def __init__(self, address=None, port=None, client_id=0):
         """! Broker Client Class initializer.
 
         @param address The IP Address for the client.
         @param port The port for the client.
         @param client_id The id number for the client
         """
+
+        conf = config.Config()
+        conf.read_config()
+
+        if address is None:
+            address = conf.brokerclient_address
+        else:
+            address = address
+
+        if port is None:
+            port = conf.brokerclient_port
+        else:
+            port = port
+
         self.req_id = 0
-        self.address = address
-        self.port = port
         self.client_id = client_id
         super(BrokerClient, self).__init__(address, port, client_id)
 
