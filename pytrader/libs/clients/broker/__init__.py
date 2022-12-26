@@ -129,9 +129,11 @@ class BrokerClient(ibkrclient.IbkrClient):
                      use_regular_trading_hours=1,
                      format_date=1):
         self.req_id += 1
-        self.reqHeadTimeStamp(self.contract.symbol, self.contract,
-                              what_to_show, use_regular_trading_hours,
-                              format_date)
+
+        logger.debug("Ticker: %s", self.contract.symbol)
+        self.reqHeadTimeStamp(self.req_id, self.contract, what_to_show,
+                              use_regular_trading_hours, format_date)
+        return self.contract.symbol, self.req_id
 
     def get_security_data(self):
         self.req_id += 1
