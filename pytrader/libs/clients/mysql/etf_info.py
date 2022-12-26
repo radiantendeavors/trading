@@ -1,5 +1,5 @@
 """!
-@package pytrader.libs.dbclient
+@package pytrader.libs.clients.mysql.etf_info
 
 Provides the database client
 
@@ -22,7 +22,7 @@ Provides the database client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file __init__.py
+@file pytrader/libs/clients/mysql/etf_info.py
 """
 # System Libraries
 import pymysql
@@ -85,7 +85,7 @@ class EtfInfo(mysql.MySQLDatabase):
             logger.error("Select Error: %s", e)
             return None
 
-    def select_all_tickers(self):
+    def select_all_tickers(self, where=None):
         logger.debug("Begin Function")
         sql = """
         SELECT `ticker`
@@ -93,25 +93,10 @@ class EtfInfo(mysql.MySQLDatabase):
         """
         logger.debug("SQL: %s", sql)
 
-        cursor = self.mycursor
-        try:
-            cursor.execute(sql)
-            result = cursor.fetchall()
-            # logger.debug("Result: %s", result)
-            return result
-        except pymysql.Error as e:
-            logger.error("Select Error: %s", e)
-            return None
+        if where:
+            sql += "WHERE " + where
 
-    def select_current_tickers(self):
-        logger.debug("Begin Function")
-        sql = """
-        SELECT `ticker`
-        FROM `etf_info`
-        WHERE `delisted_date` IS NULL
-        """
         logger.debug("SQL: %s", sql)
-
         cursor = self.mycursor
         try:
             cursor.execute(sql)
@@ -215,13 +200,13 @@ class EtfInfo(mysql.MySQLDatabase):
 
         sql = """
         UPDATE `etf_info`
-        SET `ibkr_contract_id`=%s, `ibkr_primary_exchange`=%s, `ibkr_exchange`=%s
+        SET `ibkr_contract_id`=%s, `ibkr_symbol`=%s, `ibkr_primary_exchange`=%s, `ibkr_exchange`=%s
         WHERE `ticker`=%s
         """
 
         try:
-            cursor.execute(sql,
-                           (contract_id, primary_exchange, exchange, symbol))
+            cursor.execute(
+                sql, (contract_id, symbol, primary_exchange, exchange, symbol))
         except pymysql.Error as e:
             logger.error("Update Delisting Error: %s", e)
 
