@@ -68,7 +68,11 @@ class NasdaqClient():
     """
 
     def __init__(self, *args, **kwargs):
-        self.investments = kwargs['investments']
+        if kwargs["investments"] == "etfs":
+            self.investments = "etf"
+        else:
+            self.investments = kwargs['investments']
+
         if self.investments == "stocks":
             logger.debug("Investments: Stocks")
         elif self.investments == "etf":

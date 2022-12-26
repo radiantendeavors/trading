@@ -73,14 +73,13 @@ def nasdaq_download(args):
     investments = "None"
 
     if args.etfs:
-        investments = "etf"
-        client(investments)
+        client("etfs")
     elif args.stocks:
-        investments = "stocks"
-        client(investments)
-    elif args.investments:
-        investments = args.investments
-        client(investments)
+        client("stocks")
+    elif args.type:
+        logger.debug("Type: %s", args.type)
+        for investment in args.type:
+            client(investment)
     else:
         investments = ["stocks", "etf"]
         for investment in investments:
@@ -98,8 +97,8 @@ def parser(*args, **kwargs):
                                 aliases=["n"],
                                 parents=parent_parsers,
                                 help="Downloads data from NASDAQ")
-    cmd.add_argument("-i",
-                     "--investments",
+    cmd.add_argument("-t",
+                     "--type",
                      nargs=1,
                      choices=["etfs", "stocks"],
                      help="Type of investments to download")
