@@ -28,7 +28,7 @@
 // TWS API Specific Headers
 
 // Local Headers
-#include "version/version.h"
+#include "version/version.hpp"
 #include "brokerclient/brokerclient.hpp"
 
 /**************************************************************************************************
