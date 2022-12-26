@@ -112,7 +112,7 @@ class BrokerClient(ibkrclient.IbkrClient):
         """!@fn set_contract
 
         @param security The ticker symbol for the contract
-        @param security_type The type of security for the contract.  Can be one of "CASH, CRYPTO, STK, IND, CFD, FUT, CONTFUT, FUT+CONTFUT, OPT, FOP, BOND, FUND
+        @param security_type The type of security for the contract.  Can be one of: CASH, CRYPTO, STK, IND, CFD, FUT, CONTFUT, FUT+CONTFUT, OPT, FOP, BOND, FUND
         @param exchange
         @param currency
         """
