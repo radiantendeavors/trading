@@ -1,32 +1,37 @@
-#!/usr/bin/env python3
-# ==================================================================================================
-#
-# pyTrader: Algorithmic Trading Program
-#
-#   Copyright (C) 2022  Geoff S. Derber
-#
-#   This program is free software: you can redistribute it and/or modify
-#   it under the terms of the GNU Affero General Public License as
-#   published by the Free Software Foundation, either version 3 of the
-#   License, or (at your option) any later version.
-#
-#   This program is distributed in the hope that it will be useful,
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#   GNU Affero General Public License for more details.
-#
-#   You should have received a copy of the GNU Affero General Public License
-#   along with this program.  If not, see <https://www.gnu.org/licenses/>.
-#
-# trading/libs/brokerclient/ibkrclient.py
-#
-#
-# ==================================================================================================
+"""!
+@package pytrader.libs.clients.broker.ibkrclient
+
+Provides the client for Interactive Brokers
+
+@author Geoff S. derber
+@version HEAD
+@date 2022
+@copyright GNU Affero General Public License
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+@file lib/clients/broker/ibrkrclient.py
+
+  Creates a basic interface for interacting with Interactive Brokers.
+
+"""
 # System Libraries
+import sys
+import time
 from datetime import datetime
 from threading import Thread
-import time
-import sys
 
 # IB API
 from ibapi.client import EClient
@@ -77,35 +82,6 @@ class IbkrClient(EWrapper, EClient):
         logger.info("Account {}: {} = {}".format(account, tag, value))
 
     @iswrapper
-    def currentTime(self, cur_time):
-        time_now = datetime.fromtimestamp(cur_time)
-        logger.info("Current time: %s", time_now)
-
-    @iswrapper
-    def error(self, req_id, code, msg):
-        logger.debug10(logger)
-        logger.debug2("Interactive Brokers Error Messages")
-        if req_id < 0:
-            if code == 504 or code == 502:
-                logger.error("%s: ID# %s (%s)", code, req_id, msg)
-            else:
-                logger.debug("%s: ID# %s (%s)", code, req_id, msg)
-        elif code >= 1000 and code < 3000:
-            logger.warning("%s: ID# %s (%s)", code, req_id, msg)
-        else:
-            logger.error("%s: ID# %s (%s)", code, req_id, msg)
-
-    @iswrapper
-    def symbolSamples(self, req_id, descs):
-
-        logger.info("Number of descriptions: %s", len(descs))
-
-        for desc in descs:
-            logger.info("Symbol: %s", desc.contract.symbol)
-
-        self.symbol = descs[0].contract.symbol
-
-    @iswrapper
     def contractDetails(self, req_id, details):
         self.contract_id = details.contract.conId
         logger.debug("Contract Info")
@@ -118,8 +94,6 @@ class IbkrClient(EWrapper, EClient):
         logger.debug("Local Symbol: %s", details.contract.localSymbol)
         logger.debug("Security ID Type: %s", details.contract.secIdType)
         logger.debug("Security ID: %s", details.contract.secId)
-        #logger.debug("Description: %s", details.contract.description)
-        #logger.debug("Issuer ID: %s", details.contract.issuerId)
 
         logger.debug("Contract Detail Info")
         logger.debug("Market name: %s", details.marketName)
@@ -136,13 +110,23 @@ class IbkrClient(EWrapper, EClient):
         logger.debug("SecIdList: %s", details.secIdList)
         logger.debug("Underlying Symbol: %s", details.underSymbol)
         logger.debug("Stock Type: %s", details.stockType)
-        #logger.debug("Cusip", details.cusip)
         logger.debug("Next Option Date: %s", details.nextOptionDate)
         logger.debug("Details: %s", details)
 
-        if details.stockType == "ETF":
+        if details.contract.secType == "Bond":
+            logger.debug("Description: %s", details.contract.description)
+            logger.debug("Issuer ID: %s", details.contract.issuerId)
+            logger.debug("Cusip", details.cusip)
+
+        if details.stockType == "ETF" or details.stockType == "ETN":
             db = etf_info.EtfInfo()
-            row = db.select(details.contract.symbol)
+            db.update_ibkr_info(details.contract.symbol,
+                                details.contract.conId,
+                                details.contract.primaryExchange,
+                                details.contract.exchange)
+
+        elif details.stockType == "STK":
+            db = stock_info.EtfInfo()
             db.update_ibkr_info(details.contract.symbol,
                                 details.contract.conId,
                                 details.contract.primaryExchange,
@@ -153,6 +137,34 @@ class IbkrClient(EWrapper, EClient):
         logger.debug("Contract Details End")
 
     @iswrapper
+    def currentTime(self, cur_time):
+        time_now = datetime.fromtimestamp(cur_time)
+        logger.info("Current time: %s", time_now)
+
+    @iswrapper
+    def error(self, req_id, code, msg):
+        logger.debug2("Interactive Brokers Error Messages")
+        error_codes = [
+            100, 102, 103, 104, 105, 106, 320, 502, 503, 504, 2100, 2101, 2102,
+            2103, 2168, 2169, 10038
+        ]
+        warning_codes = [101, 2105, 2107, 2108, 2109, 2110, 2137]
+
+        if code in error_codes:
+            logger.error("ReqID# %s, Code: %s (%s)", req_id, code, msg)
+        elif code in warning_codes:
+            logger.warning("ReqID# %s, Code: %s (%s)", req_id, code, msg)
+        else:
+            logger.debug("ReqID# %s, Code: %s (%s)", req_id, code, msg)
+
+        logger.debug10("End Function")
+        return None
+
+    @iswrapper
+    def headTimestamp(self, req_id, head_time_stamp):
+        logger.debug("ReqID: %s, IPO Date: %s", req_id, head_time_stamp)
+
+    @iswrapper
     def nextValidId(self, orderId: int):
         """ Provides the next order ID """
         super().nextValidId(orderId)
@@ -160,10 +172,6 @@ class IbkrClient(EWrapper, EClient):
         logger.debug("Setting nextValidOrderId: %s", orderId)
         self.nextValidOrderId = orderId
         logger.info("The next valid Order ID: %s", orderId)
-
-    def tickPrice(self, reqId, tickType, price, attrib):
-        logger.info("Request Id: %s TickType: %s Price: %s Attrib: %s", reqId,
-                    tickType, price, attrib)
 
     @iswrapper
     def openOrder(self, orderId, contract, order, orderState):
@@ -205,6 +213,20 @@ class IbkrClient(EWrapper, EClient):
     @iswrapper
     def securityDefinitionOptionParameterEnd(self, reqId: int):
         logger.debug("SecurityDefinitionOptionParameterEnd. ReqId: %s", reqId)
+
+    @iswrapper
+    def symbolSamples(self, req_id, descs):
+
+        logger.info("Number of descriptions: %s", len(descs))
+
+        for desc in descs:
+            logger.info("Symbol: %s", desc.contract.symbol)
+
+        self.symbol = descs[0].contract.symbol
+
+    def tickPrice(self, reqId, tickType, price, attrib):
+        logger.info("Request Id: %s TickType: %s Price: %s Attrib: %s", reqId,
+                    tickType, price, attrib)
 
 
 # ==================================================================================================
