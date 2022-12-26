@@ -63,27 +63,56 @@ logger = logging.getLogger(__name__)
 # Functions
 #
 # ==================================================================================================
-def client(investments):
-    logger.debug("Begin Function")
+def get_data_tickers(brokerclient, info):
+    where = "`delisted_date` IS NULL"
+    return info.select_all_tickers(where=where)
 
-    brokerclient = broker.BrokerClient()
 
-    if investments == "etf":
-        etfinfo = etf_info.EtfInfo()
-        all_tickers = etfinfo.select_all_tickers()
-    elif investments == "stocks":
-        stockinfo = stock_info.StockInfo()
-        all_tickers = stockinfo.select_current_tickers()
-    else:
-        logger.error("No investments were selected")
-        sys.exit(1)
+def get_ipo_tickers(brokerclient, info):
+    where = "`delisted_date` IS NULL AND `ibkr_contract_id` IS NOT NULL"
+    return info.select_all_tickers(where=where)
 
+
+def update_data_info(brokerclient, all_tickers):
     for item in all_tickers:
         ticker = item["ticker"]
         logger.debug("Ticker: %s", ticker)
         brokerclient.set_contract(ticker)
         brokerclient.get_security_data()
         time.sleep(10)
+
+
+def update_ipo_info(brokerclient, all_tickers):
+    for item in all_tickers:
+        ticker = item["ticker"]
+        logger.debug("Ticker: %s", ticker)
+        brokerclient.set_contract(ticker)
+        ticker, req_id = brokerclient.get_ipo_date()
+        logger.debug("Request ID: %s, Ticker: %s", req_id, ticker)
+        time.sleep(10)
+
+
+def client(investments):
+    logger.debug("Begin Function")
+
+    brokerclient = broker.BrokerClient()
+    time.sleep(10)
+
+    if investments == "etf":
+        info = etf_info.EtfInfo()
+    elif investments == "stocks":
+        info = stock_info.StockInfo()
+    else:
+        logger.error("No investments were selected")
+        sys.exit(1)
+
+    for item in ["data", "ipo_date"]:
+        if item == "data":
+            all_tickers = get_data_tickers(brokerclient, info)
+            update_data_info(brokerclient, all_tickers)
+        if item == "ipo_date":
+            all_tickers = get_ipo_tickers(brokerclient, info)
+            update_ipo_info(brokerclient, all_tickers)
 
     logger.debug("End Function")
 
