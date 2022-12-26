@@ -1,5 +1,5 @@
 """!
-@package pytrader.libs.brokerclient
+@package pytrader.libs.clients.broker
 
 Provides the broker client
 
@@ -22,7 +22,10 @@ Provides the broker client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file __init__.py
+@file lib/clients/broker/__init__.py
+
+  Creates a basic interface for interacting with a broker
+
 """
 # System libraries
 import sys
@@ -53,9 +56,9 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class BrokerClient(ibkrclient.IbkrClient):
-    """! The Broker Client Class.
+    """! @class BrokerClient
 
-    Provides the client interface."""
+    @brief Provides the client interface to the broker"""
 
     def __init__(self, address=None, port=None, client_id=0):
         """! Broker Client Class initializer.
@@ -78,11 +81,16 @@ class BrokerClient(ibkrclient.IbkrClient):
         else:
             port = port
 
+        logger.debug("Address: %s Port: %s", address, port)
+
         self.req_id = 0
         self.client_id = client_id
         super(BrokerClient, self).__init__(address, port, client_id)
 
     def check_server(self):
+        """! @fn check_server
+
+        """
         self.reqCurrentTime()
         if self.serverVersion() is not None:
             logger.info("Server Version: %s", self.serverVersion())
@@ -101,6 +109,13 @@ class BrokerClient(ibkrclient.IbkrClient):
                      security_type="STK",
                      exchange="SMART",
                      currency="USD"):
+        """!@fn set_contract
+
+        @param security The ticker symbol for the contract
+        @param security_type The type of security for the contract.  Can be one of "CASH, CRYPTO, STK, IND, CFD, FUT, CONTFUT, FUT+CONTFUT, OPT, FOP, BOND, FUND
+        @param exchange
+        @param currency
+        """
         contract = Contract()
         contract.symbol = security
         contract.secType = security_type
@@ -108,6 +123,15 @@ class BrokerClient(ibkrclient.IbkrClient):
         contract.currency = currency
 
         self.contract = contract
+
+    def get_ipo_date(self,
+                     what_to_show="TRADES",
+                     use_regular_trading_hours=1,
+                     format_date=1):
+        self.req_id += 1
+        self.reqHeadTimeStamp(self.contract.symbol, self.contract,
+                              what_to_show, use_regular_trading_hours,
+                              format_date)
 
     def get_security_data(self):
         self.req_id += 1

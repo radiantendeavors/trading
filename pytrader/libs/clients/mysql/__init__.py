@@ -1,5 +1,5 @@
 """!
-@package pytrader.libs.dbclient
+@package pytrader.libs.clients.mysql
 
 Provides the database client
 
@@ -22,7 +22,7 @@ Provides the database client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file __init__.py
+@file pytrader/libs/clients/mysql/__init__.py
 """
 # System Libraries
 import pymysql

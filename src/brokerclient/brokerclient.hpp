@@ -13,6 +13,15 @@
 #include "twsapi/source/cppclient/client/EClientSocket.h"
 
 template<class ItemType>
+/***************************************************************************************************
+ *
+ * BrokerClient
+ *
+ * @param host
+ * @param port
+ * @param clientID
+ *
+ **************************************************************************************************/
 class BrokerClient : public EWrapper, public EClientSocket {
 
 
