@@ -20,9 +20,9 @@ Algorithmic Trading Program
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file lib/nasdaqclient/__init__.py
+@file libs/clients/nasdaq/__init__.py
 
-    Contains global variables for the pyTrader program.
+    Creates a client interface for downloading NASDAQ data.
 
 """
 
@@ -62,7 +62,7 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class NasdaqClient():
-    """
+    """!
     NasdaqClient
 
     """
