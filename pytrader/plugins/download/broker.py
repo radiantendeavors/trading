@@ -40,6 +40,7 @@ from pytrader.libs.system import logging
 # Other Application Libraries
 from pytrader.libs.clients import broker
 from pytrader.libs.clients.mysql import etf_info
+from pytrader.libs.clients.mysql import index_info
 from pytrader.libs.clients.mysql import stock_info
 from pytrader.libs.utilities import config
 
@@ -63,26 +64,53 @@ logger = logging.getLogger(__name__)
 # Functions
 #
 # ==================================================================================================
-def get_data_tickers(brokerclient, info):
-    where = "`delisted_date` IS NULL"
-    return info.select_all_tickers(where=where)
+def get_data_tickers(brokerclient, info, contract_id=1):
+    if contract_id == 1:
+        where = "`delisted_date` IS NULL AND `ibkr_symbol` IS NULL"
+    else:
+        where = "`delisted_date` IS NULL"
+    return info.select(where_clause=where)
 
 
 def get_ipo_tickers(brokerclient, info):
     where = "`delisted_date` IS NULL AND `ibkr_contract_id` IS NOT NULL"
-    return info.select_all_tickers(where=where)
+    return info.select(where_clause=where)
 
 
-def update_data_info(brokerclient, all_tickers):
+def update_data_info(brokerclient, all_tickers, investments):
+    logger.debug10("Begin Function")
     for item in all_tickers:
+        logger.debug2("Item: %s", item)
         ticker = item["ticker"]
+        if investments == "indexes":
+            security_type = "IND"
+        else:
+            security_type = "STK"
+
+        if item["ibkr_exchange"]:
+            exchange = item["ibkr_exchange"]
+        else:
+            exchange = "SMART"
+
         logger.debug("Ticker: %s", ticker)
-        brokerclient.set_contract(ticker)
+        logger.debug("Security Type: %s", security_type)
+        logger.debug("Exchange: %s", exchange)
+
+        if investments == "indexes":
+            brokerclient.set_contract(ticker,
+                                      security_type=security_type,
+                                      exchange=exchange)
+        else:
+            brokerclient.set_contract(ticker)
         brokerclient.get_security_data()
         time.sleep(10)
+    logger.debug10("End Function")
+    return None
 
 
 def update_ipo_info(brokerclient, all_tickers):
+    logger.debug10("Begin Function")
+
     for item in all_tickers:
         ticker = item["ticker"]
         logger.debug("Ticker: %s", ticker)
@@ -91,14 +119,19 @@ def update_ipo_info(brokerclient, all_tickers):
         logger.debug("Request ID: %s, Ticker: %s", req_id, ticker)
         time.sleep(10)
 
+    logger.debug10("End Function")
+    return None
 
-def client(investments):
+
+def basic_info(investments, security=None):
     logger.debug("Begin Function")
 
     brokerclient = broker.BrokerClient()
     time.sleep(10)
 
-    if investments == "etf":
+    if investments == "indexes":
+        info = index_info.IndexInfo()
+    elif investments == "etfs":
         info = etf_info.EtfInfo()
     elif investments == "stocks":
         info = stock_info.StockInfo()
@@ -108,11 +141,18 @@ def client(investments):
 
     for item in ["data", "ipo_date"]:
         if item == "data":
-            all_tickers = get_data_tickers(brokerclient, info)
-            update_data_info(brokerclient, all_tickers)
+            if security:
+                update_data_info(brokerclient, [security], investments)
+            else:
+                all_tickers = get_data_tickers(brokerclient, info)
+                logger.debug("All tickers: %s", all_tickers)
+                update_data_info(brokerclient, all_tickers, investments)
         if item == "ipo_date":
-            all_tickers = get_ipo_tickers(brokerclient, info)
-            update_ipo_info(brokerclient, all_tickers)
+            if security:
+                update_ipo_info(brokerclient, [security])
+            else:
+                all_tickers = get_ipo_tickers(brokerclient, info)
+                update_ipo_info(brokerclient, all_tickers)
 
     logger.debug("End Function")
 
@@ -120,9 +160,17 @@ def client(investments):
 def broker_download(args):
     logging.debug("Begin Function")
 
-    investments = ["etf"]
-    for investment in investments:
-        client(investment)
+    if args.type:
+        investments = args.type
+    else:
+        investments = ["indexes", "etfs", "stocks"]
+
+    if args.info:
+        if args.security:
+            basic_info("stocks", security=args.security)
+        else:
+            for investment in investments:
+                basic_info(investment)
 
     return None
 
@@ -133,10 +181,18 @@ def parser(*args, **kwargs):
     cmd = subparsers.add_parser("broker",
                                 aliases=["b"],
                                 parents=parent_parsers,
-                                help="Downloads historical data from broker")
+                                help="Downloads data from broker")
     cmd.add_argument("-b", "--bar-size", help="Bar Size")
+    cmd.add_argument("-i",
+                     "--info",
+                     action="store_true",
+                     help="Get Basic Security information.")
     cmd.add_argument("-s", "--security", help="Security to download")
-
+    cmd.add_argument("-t",
+                     "--type",
+                     nargs=1,
+                     choices=["etfs", "indexes", "stocks"],
+                     help="Investment type to download information")
     cmd.set_defaults(func=broker_download)
 
     return cmd
