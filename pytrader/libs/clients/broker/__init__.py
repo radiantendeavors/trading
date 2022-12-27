@@ -122,6 +122,8 @@ class BrokerClient(ibkrclient.IbkrClient):
         contract.exchange = exchange
         contract.currency = currency
 
+        logger.debug("Contract: %s", contract)
+
         self.contract = contract
 
     def get_ipo_date(self,
