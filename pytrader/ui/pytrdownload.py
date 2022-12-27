@@ -77,7 +77,7 @@ def init(args):
     parent_parser = parser.add_logging_option()
     subparsers = parser.create_subparsers()
 
-    subcommands = ["broker", "init", "nasdaq"]
+    subcommands = ["broker", "init", "nasdaq", "yahoo"]
 
     for i in subcommands:
         subcommand = utilities.get_plugin_function(scmd='download',
@@ -95,8 +95,8 @@ def init(args):
     conf.set_loglevel(args)
 
     logger.debug('Configuration set')
-    logger.debug('Configuration Settings: ' + str(conf))
-    logger.debug('Arguments: ' + str(args))
+    logger.debug3('Configuration Settings: ' + str(conf))
+    logger.debug3('Arguments: ' + str(args))
 
     logger.debug2("Desired Log Level: %s", conf.loglevel)
 

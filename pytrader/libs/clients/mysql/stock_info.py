@@ -65,42 +65,29 @@ class StockInfo(mysql.MySQLDatabase):
         self.table_name = "stock_info"
         super().__init__()
 
-    def select(self, ticker):
+    def select(self, select_clause=None, where_clause=None):
         logger.debug("Begin Function")
-        sql = """
-        SELECT *
-        FROM `stock_info`
-        WHERE `ticker`=%s
-        """
-        logger.debug("Ticker: %s", ticker)
+
+        if select_clause:
+            sql = """
+            SELECT""" + select_clause + "\n"
+        else:
+            sql = """
+            SELECT *
+            """
+
+        sql += "FROM `stock_info`\n"
+
+        if where_clause:
+            sql += "WHERE " + where_clause
+
         logger.debug("SQL: %s", sql)
-
-        cursor = self.mycursor
-        try:
-            cursor.execute(sql, (ticker))
-            result = cursor.fetchone()
-            logger.debug("Result: %s", result)
-            return result
-        except pymysql.Error as e:
-            logger.error("Select Error: %s", e)
-            return None
-
-    def select_all_tickers(self, where=None):
-        logger.debug("Begin Function")
-        sql = """
-        SELECT `ticker`
-        FROM `stock_info`
-        """
-        logger.debug("SQL: %s", sql)
-
-        if where:
-            sql += "WHERE " + where
 
         cursor = self.mycursor
         try:
             cursor.execute(sql)
             result = cursor.fetchall()
-            # logger.debug("Result: %s", result)
+            logger.debug("Result: %s", result)
             return result
         except pymysql.Error as e:
             logger.error("Select Error: %s", e)
@@ -237,3 +224,26 @@ class StockInfo(mysql.MySQLDatabase):
 
         logger.debug("SQL: %s", sql)
         self.mydb.commit()
+
+    def update_yahoo_info(self, ticker, yahoo_security=None):
+        logger.debug("Begin Function")
+
+        cursor = self.mycursor
+        if yahoo_security is None:
+            yahoo_security = ticker
+
+        sql = """
+        UPDATE `stock_info`
+        SET `yahoo_symbol`=%s
+        WHERE `ticker`=%s
+        """
+
+        try:
+            cursor.execute(sql, (yahoo_security, ticker))
+        except pymysql.Error as e:
+            logger.error("Update Interactive Brokers Information Error: %s", e)
+
+        logger.debug("SQL: %s", sql)
+        self.mydb.commit()
+        logger.debug("End Function")
+        return None

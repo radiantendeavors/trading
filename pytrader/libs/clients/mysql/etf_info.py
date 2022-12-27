@@ -65,43 +65,31 @@ class EtfInfo(mysql.MySQLDatabase):
         self.table_name = "etf_info"
         super().__init__()
 
-    def select(self, ticker):
+    def select(self, select_clause=None, where_clause=None):
         logger.debug("Begin Function")
-        sql = """
-        SELECT *
-        FROM `etf_info`
-        WHERE `ticker`=%s
-        """
-        logger.debug("Ticker: %s", ticker)
-        logger.debug("SQL: %s", sql)
 
-        cursor = self.mycursor
-        try:
-            cursor.execute(sql, (ticker))
-            result = cursor.fetchone()
-            logger.debug("Result: %s", result)
-            return result
-        except pymysql.Error as e:
-            logger.error("Select Error: %s", e)
-            return None
+        if select_clause:
+            sql = """
+            SELECT""" + select_clause + "\n"
+        else:
+            sql = """
+            SELECT *
+            """
 
-    def select_all_tickers(self, where=None):
-        logger.debug("Begin Function")
-        sql = """
-        SELECT `ticker`
+        sql += """
         FROM `etf_info`
         """
+
+        if where_clause:
+            sql += "WHERE " + where_clause
+
         logger.debug("SQL: %s", sql)
 
-        if where:
-            sql += "WHERE " + where
-
-        logger.debug("SQL: %s", sql)
         cursor = self.mycursor
         try:
             cursor.execute(sql)
             result = cursor.fetchall()
-            # logger.debug("Result: %s", result)
+            logger.debug("Result: %s", result)
             return result
         except pymysql.Error as e:
             logger.error("Select Error: %s", e)
@@ -190,7 +178,7 @@ class EtfInfo(mysql.MySQLDatabase):
             logger.debug("SQL: %s", sql)
             self.mydb.commit()
 
-        logger.debug("End Function")
+        logger.debug10("End Function")
         return None
 
     def update_ibkr_info(self, symbol, contract_id, primary_exchange,
@@ -212,3 +200,31 @@ class EtfInfo(mysql.MySQLDatabase):
 
         logger.debug("SQL: %s", sql)
         self.mydb.commit()
+        logger.debug10("End Function")
+        return None
+
+    def update_yahoo_info(self, ticker, yahoo_security=None):
+        logger.debug10("Begin Function")
+
+        cursor = self.mycursor
+        if yahoo_security is None:
+            yahoo_security = ticker
+
+        sql = """
+        UPDATE `etf_info`
+        SET `yahoo_symbol`=%s
+        WHERE `ticker`=%s
+        """
+
+        logger.debug("Ticker: %s", ticker)
+        logger.debug("Yahoo Security: %s", yahoo_security)
+
+        try:
+            cursor.execute(sql, (yahoo_security, ticker))
+        except pymysql.Error as e:
+            logger.error("Update Interactive Brokers Information Error: %s", e)
+
+        logger.debug("SQL: %s", sql)
+        self.mydb.commit()
+        logger.debug10("End Function")
+        return None

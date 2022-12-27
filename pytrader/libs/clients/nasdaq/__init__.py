@@ -126,7 +126,7 @@ class NasdaqClient():
         elif self.investments == "etf":
             db = etf_info.EtfInfo()
 
-        all_tickers = db.select_all_tickers()
+        all_tickers = db.select()
         # logger.debug("All tickers: %s", all_tickers)
 
         if all_tickers:
