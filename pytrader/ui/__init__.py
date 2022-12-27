@@ -1,5 +1,5 @@
 """!
-@package pytrader.libs
+@package pytrader.ui
 
 Provides the user interfaces for pytrader
 

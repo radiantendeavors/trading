@@ -1,7 +1,6 @@
-"""!
-@package pytrader.libs
+"""!@package pytrader
 
-Provides the user interfaces for pytrader
+Algorithmic Trading Program
 
 @author Geoff S. derber
 @version HEAD
@@ -21,6 +20,8 @@ Provides the user interfaces for pytrader
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+@file plugins/download/__init__.py
 
-@file __init__.py
+    Contains global variables for the pyTrader program.
+
 """

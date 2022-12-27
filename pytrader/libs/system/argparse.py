@@ -1,29 +1,24 @@
 #!/usr/bin/env python3
-# ==================================================================================================# ==================================================================================================
+# ==================================================================================================
 #
-# Original BASH version
-# Original version Copyright 2001 by Kyle Sallee
-# Additions/corrections Copyright 2002 by the Source Mage Team
+# pyTrader: Algorithmic Trading Program
 #
-# Python rewrite
-# Copyright 2017 Geoff S Derber
+#   Copyright (C) 2022  Geoff S. Derber
 #
-# This file is part of Sorcery.
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU Affero General Public License as
+#   published by the Free Software Foundation, either version 3 of the
+#   License, or (at your option) any later version.
 #
-# File: pysorcery/lib/system/argparse.py
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU Affero General Public License for more details.
 #
-#    Sorcery is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published
-#    by the Free Software Foundation, either version 3 of the License,
-#    or (at your option) any later version.
+#   You should have received a copy of the GNU Affero General Public License
+#   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-#    Sorcery is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
-#
-#    You should have received a copy of the GNU General Public License
-#    along with Sorcery.  If not, see <http://www.gnu.org/licenses/>.
+# trading/libs/dbclient/etfs.py
 #
 # Argparse:
 #
@@ -53,6 +48,7 @@ from argparse import *
 
 # Other Application Libraries
 from pytrader import __version__, DEBUG
+from pytrader.libs.utilities import config
 
 # ==================================================================================================
 #
@@ -89,6 +85,13 @@ from pytrader import __version__, DEBUG
 #
 # ==================================================================================================
 class CommonParser(ArgumentParser):
+    """
+    Class CommonParser
+
+    Inputs
+
+
+    """
 
     def __init__(self, *args, **kwargs):
         super(CommonParser, self).__init__(*args, **kwargs)
@@ -147,15 +150,43 @@ class CommonParser(ArgumentParser):
                           version='%(prog)s ' + __version__)
         return None
 
+    # ==============================================================================================
+    #
+    # Function add_ibapi_connection_options
+    #
+    # Inputs
+    # ------
+    #    @param: self
+    #
+    # Returns
+    # -------
+    #    @return: None
+    #
+    # Raises
+    # ------
+    #    ...
+    #
+    #
+    # Defaults Ports:
+    #         | Live | Demo |
+    # --------+------+------|
+    # TWS     | 7496 | 7497 |
+    # Gateway | 4001 | 4002 |
+    #
+    # ==============================================================================================
     def add_ibapi_connection_options(self):
+        conf = config.Config()
+
+        default_address = conf.get_brokerclient_address()
+        default_port = conf.get_brokerclient_port()
         self.add_argument(
             '-a',
             '--address',
-            default="127.0.0.1",
+            default=default_address,
             help="TWS / IB Gateway Address (Default is localhost)")
         self.add_argument('-p',
                           '--port',
-                          default="7497",
+                          default=default_port,
                           type=int,
                           help="TWS / IB Gateway port (Default is 7497)")
         return None
@@ -190,12 +221,13 @@ class CommonParser(ArgumentParser):
             'WARNING', 'ERROR', 'CRITICAL'
         ]
 
-        # Create Parent Parsur
+        # Create Parent Parser
         self.parent = ArgumentParser(add_help=False)
 
         # Parser Groups
         # Logging Group
-        self.logging = self.parent.add_argument_group('Logging Options')
+        # self.parent_logging = self.parent.add_argument_group("Logging Options")
+        self.logging = self.add_argument_group('Logging Options')
 
         # Quiet Settings
         self.logging.add_argument('-q',
@@ -203,12 +235,24 @@ class CommonParser(ArgumentParser):
                                   action='count',
                                   default=0,
                                   help=quiet_help)
+        # self.parent_logging.add_argument('-q',
+        #                                  '--quiet',
+        #                                  action='count',
+        #                                  default=0,
+        #                                  help=quiet_help)
+
         # Verbose Options
         self.logging.add_argument('-v',
                                   '--verbosity',
                                   action='count',
                                   default=0,
                                   help=verbose_help)
+
+        # self.parent_logging.add_argument('-v',
+        #                                  '--verbosity',
+        #                                  action='count',
+        #                                  default=0,
+        #                                  help=verbose_help)
 
         # If debugging is enabled
         if DEBUG:
@@ -221,6 +265,16 @@ class CommonParser(ArgumentParser):
             self.logging.add_argument('--debug',
                                       action='store_true',
                                       help=debug_help)
+
+            # # Set Loglevel
+            # self.parent_logging.add_argument('--loglevel',
+            #                                  choices=loglevel_choices,
+            #                                  default='INFO',
+            #                                  help=loglevel_help)
+            # # Maximize logging
+            # self.parent_logging.add_argument('--debug',
+            #                                  action='store_true',
+            #                                  help=debug_help)
 
         return self.parent
 

@@ -12,11 +12,19 @@
 
 ## Description
 
-Trader is an automated trading/investing platform.  It works with stocks, etfs, and their related 
-options.  It provides a framework for creating, testing, and using your own trading strategies.  A 
+Trader is an automated trading/investing platform.  It works with stocks, etfs, and their related
+options.  It provides a framework for creating, testing, and using your own trading strategies.  A
 couple sample strategies are provided.
 
 ## Installation
+
+This program exists twice.  C++ is the production version.  The prototype is developed using python.
+Read the relevant README files for their installation instructions.
+
+Both C++ and Python target TWSAPI v10.19.
+
+### [C++](./src/README.md)
+### [Python](./pytrader/README.md)
 
 ## Usage
 
@@ -25,6 +33,10 @@ couple sample strategies are provided.
 ## Similar Projects
 
 ## References
+- [TWS API v9.72+](https://interactivebrokers.github.io/tws-api/index.html)
+- [Algorithmic Trading with Interactive Brokers](https://algo-book.com/)
+- [Interactive Brokers Python API](https://algotrading101.com/learn/interactive-brokers-python-api-native-guide/)
+- [Getting Started with the TWS C++ API Guide](https://brokerpoint.de/wp-content/uploads/2020/05/TWS_Getting_Started_CAPI.pdf)
 
 ## [Contributing](CONTRIBUTING.md)
 
