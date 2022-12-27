@@ -53,14 +53,19 @@ bin
 
 # Emacs related
 *.~undo-tree
-*~
-\#*\#
+*~\
+#*\#
 /.emacs.desktop
 /.emacs.desktop.lock
 *.elc
 auto-save-list
 tramp
 .\#*
+
+# gtags related
+GPATH
+GRTAGS
+GTAGS
 
 # Org-mode
 .org-id-locations
