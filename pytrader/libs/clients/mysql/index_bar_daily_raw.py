@@ -1,5 +1,5 @@
 """!
-@package pytrader.libs.clients.mysql.index_info
+@package pytrader.libs.clients.mysql.index_bar_daily_raw
 
 Provides the database client
 
@@ -22,7 +22,7 @@ Provides the database client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file pytrader/libs/clients/mysql/etf_info.py
+@file pytrader/libs/clients/mysql/index_bar_daily_raw.py
 """
 # System Libraries
 import pymysql
@@ -98,33 +98,32 @@ class IndexBarDailyRaw(mysql.MySQLDatabase):
 
         where = "`ticker`='" + ticker + "' AND `date`='" + str(date_time) + "'"
         item = self.select(where_clause=where)
-        logger.debug("Item: %s", item[0])
-
-        logger.debug("Today is: %s", today)
-        logger.debug("Date time is: %s", str(date_time).split(" ")[0])
-
-        if str(date_time).split(" ")[0] == str(today):
-            if item[0]["data_source"] == data_source:
-
-                sql = """
-                UPDATE `index_bar_daily_raw`
-                SET `open`=%s, `high`=%s, `low`=%s, `close`=%s, `adjusted_close`=%s, `volume`=%s
-                WHERE `ticker`=%s AND `date`=%s AND `data_source`=%s
-                """
-
-                logger.debug("SQL: %s", sql)
-                cursor = self.mycursor
-                try:
-                    cursor.execute(
-                        sql, (p_open, p_high, p_low, p_close, p_adjusted_close,
-                              volume, ticker, date_time, data_source))
-                except pymysql.Error as e:
-                    logger.error("Insert Error: %s", e)
-
-                self.mydb.commit()
 
         if item:
             logger.debug("Item: %s", item)
+            logger.debug("Today is: %s", today)
+            logger.debug("Date time is: %s", str(date_time).split(" ")[0])
+
+            if str(date_time).split(" ")[0] == str(today):
+                if item[0]["data_source"] == data_source:
+
+                    sql = """
+                    UPDATE `index_bar_daily_raw`
+                    SET `open`=%s, `high`=%s, `low`=%s, `close`=%s, `adjusted_close`=%s, `volume`=%s
+                    WHERE `ticker`=%s AND `date`=%s AND `data_source`=%s
+                    """
+
+                    logger.debug("SQL: %s", sql)
+                    cursor = self.mycursor
+                    try:
+                        cursor.execute(
+                            sql,
+                            (p_open, p_high, p_low, p_close, p_adjusted_close,
+                             volume, ticker, date_time, data_source))
+                    except pymysql.Error as e:
+                        logger.error("Insert Error: %s", e)
+
+                    self.mydb.commit()
         else:
             logger.debug("Empty Item")
 
@@ -138,7 +137,7 @@ class IndexBarDailyRaw(mysql.MySQLDatabase):
             try:
                 cursor.execute(
                     sql,
-                    (ticker, date, p_open, p_high, p_low, p_close,
+                    (ticker, date_time, p_open, p_high, p_low, p_close,
                      p_adjusted_close, volume, data_source, date_downloaded))
             except pymysql.Error as e:
                 logger.error("Insert Error: %s", e)
