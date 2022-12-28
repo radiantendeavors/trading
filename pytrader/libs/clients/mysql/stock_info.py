@@ -70,7 +70,7 @@ class StockInfo(mysql.MySQLDatabase):
 
         if select_clause:
             sql = """
-            SELECT""" + select_clause + "\n"
+            SELECT """ + select_clause + "\n"
         else:
             sql = """
             SELECT *
@@ -175,7 +175,8 @@ class StockInfo(mysql.MySQLDatabase):
         logger.debug("Delisted: %s", delisted)
         cursor = self.mycursor
 
-        ticker_info = self.select(ticker)
+        where = "`ticker`='" + ticker + "'"
+        ticker_info = self.select(where_clause=where)
 
         logger.debug("Ticker Info: %s", ticker_info)
         last_seen = ticker_info["last_seen"]
@@ -188,7 +189,8 @@ class StockInfo(mysql.MySQLDatabase):
         # We only want to mark them as delisted if there has been some time since
         # the ticker was last seen.  This is an attempt to reduce false delistings from
         # bad data downloads.
-        if days_since_last_seen.days > 7:
+        if days_since_last_seen.days > 7 and ticker_info[
+                "delisted_date"] is None:
             sql = """
             UPDATE `stock_info`
             SET `delisted_date`=%s

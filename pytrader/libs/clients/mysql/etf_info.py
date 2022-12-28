@@ -70,7 +70,7 @@ class EtfInfo(mysql.MySQLDatabase):
 
         if select_clause:
             sql = """
-            SELECT""" + select_clause + "\n"
+            SELECT """ + select_clause + "\n"
         else:
             sql = """
             SELECT *
@@ -154,7 +154,8 @@ class EtfInfo(mysql.MySQLDatabase):
         logger.debug("Delisted: %s", delisted)
         cursor = self.mycursor
 
-        ticker_info = self.select(ticker)
+        where = "`ticker`='" + ticker + "'"
+        ticker_info = self.select(where_clause=where)
 
         logger.debug("Ticker Info: %s", ticker_info)
         last_seen = ticker_info["last_seen"]
@@ -164,7 +165,8 @@ class EtfInfo(mysql.MySQLDatabase):
 
         logger.debug("Days Since Last Seen: %s", days_since_last_seen.days)
 
-        if days_since_last_seen.days > 7:
+        if days_since_last_seen.days > 7 and ticker_info[
+                "delisted_date"] is None:
             sql = """
             UPDATE `etf_info`
             SET `delisted_date`=%s
