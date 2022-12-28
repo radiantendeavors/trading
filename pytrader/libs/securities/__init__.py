@@ -26,12 +26,9 @@ Provides the broker client
 """
 # System libraries
 import random
-import sys
 import time
 
 # 3rd Party libraries
-from ibapi.client import Contract
-from ibapi.order import Order
 
 # System Library Overrides
 from pytrader.libs.system import logging
@@ -60,6 +57,14 @@ class Securities():
 
     def __init__(self, *args, **kwargs):
         self.index_list = {}
+
+    def __update_info_broker(self):
+        logger.debug10("Begin Function")
+        if self.investment_type == "etfs":
+            logger.debug("Updating ETFs")
+
+        logger.debug10("End Function")
+        return None
 
     def __update_info_nasdaq(self):
         logger.debug10("Begin Function")
