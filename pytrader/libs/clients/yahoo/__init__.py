@@ -37,7 +37,10 @@ import yfinance
 from pytrader.libs.system import logging
 
 # Other Application Libraries
+from pytrader.libs.clients.mysql import etf_info, index_info, stock_info
+from pytrader.libs.clients.mysql import etf_bar_daily_raw
 from pytrader.libs.clients.mysql import index_bar_daily_raw
+from pytrader.libs.clients.mysql import stock_bar_daily_raw
 
 # Conditional Libraries
 
@@ -75,7 +78,7 @@ class YahooClient():
         return info.select(where_clause=where)
 
     def get_bar_history(self,
-                        history,
+                        investment_type,
                         ticker,
                         yahoo_symbol,
                         interval="1d",
@@ -84,32 +87,41 @@ class YahooClient():
         session = requests_cache.CachedSession('yfinance.cache')
         session.headers[
             "User-agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
-        security = yfinance.Ticker(yahoo_symbol, session=session)
-        #data = security.history(interval=interval, period=period)
+        # security = yfinance.Ticker(yahoo_symbol, session=session)
+        # data = security.history(interval=interval, period=period)
         data = yfinance.download(yahoo_symbol,
                                  interval=interval,
                                  period=period)
         logger.debug("Data:\n%s", data)
         today = date.today()
-        history = index_bar_daily_raw.IndexBarDailyRaw()
+
+        if investment_type == "stocks":
+            history_table = stock_bar_daily_raw.StockBarDailyRaw()
+        elif investment_type == "etfs":
+            history_table = etf_bar_daily_raw.EtfBarDailyRaw()
+        elif investment_type == "indexes":
+            history_table = index_bar_daily_raw.IndexBarDailyRaw()
 
         logger.debug("Data Keys: %s", data.keys())
         logger.debug("Data Index: %s", data.index)
 
         for index, row in data.iterrows():
             logger.debug("Index: %s", index)
-            history.insert(ticker, index, row["Open"], row["High"], row["Low"],
-                           row["Close"], row["Adj Close"], row["Volume"],
-                           "yahoo", today)
+            history_table.insert(ticker, index, row["Open"], row["High"],
+                                 row["Low"], row["Close"], row["Adj Close"],
+                                 row["Volume"], "yahoo", today)
 
         return None
 
-    def get_info(self, ticker, info_table=None):
+    def get_info(self, investment_type, ticker):
         logger.debug10("Begin Function")
         logger.debug("Ticker: %s", ticker)
+        logger.debug2("Ticker[0]: %s", ticker[0])
 
         if "/" in ticker:
             yahoo_symbol = ticker.replace("/", "-")
+        elif "^" in ticker and ticker[0] != "^":
+            yahoo_symbol = ticker.replace("^", "-")
         else:
             yahoo_symbol = ticker
 
@@ -119,14 +131,30 @@ class YahooClient():
         session.headers[
             "User-agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
 
+        if investment_type == "stocks":
+            info_table = stock_info.StockInfo()
+        elif investment_type == "etfs":
+            info_table = etf_info.EtfInfo()
+        elif investment_type == "indexes":
+            info_table = index_info.IndexInfo()
+
         try:
             security = yfinance.Ticker(yahoo_symbol, session=session)
-            data = security.shares
-            if info_table:
+            logger.debug("Security: %s", security)
+            share_data = security.shares
+            info_data = security.info
+
+            logger.debug("Share Data: %s", share_data)
+            logger.debug("Info Data: %s", info_data)
+
+            if share_data is None and info_data is None:
+                logger.error("No Share Data Found.  Data = %s", share_data)
+                logger.error("No Info Data Found. Data = %s", info_data)
+            else:
                 info_table.update_yahoo_info(ticker, yahoo_symbol)
         except Exception as e:
             logger.error("Error updating yahoo data: %s", e)
-            for index, row in data.iterrows():
+            for index, row in share_data.iterrows():
                 logger.debug2("Security: %s %s", index, row)
 
         logger.debug10("End Function")
