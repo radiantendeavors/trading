@@ -178,8 +178,8 @@ class StockInfo(mysql.MySQLDatabase):
         where = "`ticker`='" + ticker + "'"
         ticker_info = self.select(where_clause=where)
 
-        logger.debug("Ticker Info: %s", ticker_info)
-        last_seen = ticker_info["last_seen"]
+        logger.debug("Ticker Info: %s", ticker_info[0])
+        last_seen = ticker_info[0]["last_seen"]
         logger.debug("Last Seen: %s", last_seen)
 
         days_since_last_seen = delisted - last_seen
@@ -189,7 +189,7 @@ class StockInfo(mysql.MySQLDatabase):
         # We only want to mark them as delisted if there has been some time since
         # the ticker was last seen.  This is an attempt to reduce false delistings from
         # bad data downloads.
-        if days_since_last_seen.days > 7 and ticker_info[
+        if days_since_last_seen.days > 7 and ticker_info[0][
                 "delisted_date"] is None:
             sql = """
             UPDATE `stock_info`
