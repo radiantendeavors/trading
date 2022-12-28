@@ -86,7 +86,8 @@ class NasdaqClient():
         name = table_row["companyName"]
 
         db = etf_info.EtfInfo()
-        row = db.select(ticker)
+        where = "`ticker`='" + ticker + "'"
+        row = db.select(where_clause=where)
         logger.debug("Row: %s", row)
 
         if row is None:
@@ -102,7 +103,8 @@ class NasdaqClient():
         sector = table_row["sector"]
 
         db = stock_info.StockInfo()
-        row = db.select(ticker)
+        where = "`ticker`='" + ticker + "'"
+        row = db.select(where_clause=where)
 
         if row is None:
             db.insert(ticker, name, country, industry, sector)
