@@ -38,8 +38,7 @@ Algorithmic Trading Program
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs.clients import nasdaq
-
+from pytrader.libs.securities import etfs, stocks
 # Conditional Libraries
 
 # ==================================================================================================
@@ -62,28 +61,23 @@ logger = logging.getLogger(__name__)
 # Functions
 #
 # ==================================================================================================
-def client(investments):
-    client = nasdaq.NasdaqClient(investments=investments)
-    client.download_list()
-
-
 def nasdaq_download(args):
     logging.debug("Begin Function")
 
     investments = "None"
 
-    if args.etfs:
-        client("etfs")
-    elif args.stocks:
-        client("stocks")
-    elif args.type:
-        logger.debug("Type: %s", args.type)
-        for investment in args.type:
-            client(investment)
+    if args.type:
+        investments = args.type
     else:
-        investments = ["stocks", "etf"]
-        for investment in investments:
-            client(investment)
+        investments = ["stocks", "etfs"]
+
+    for investment in investments:
+        if investment == "etfs":
+            info = etfs.Etfs()
+        elif investment == "stocks":
+            info = stocks.Stocks()
+
+        info.update_info("nasdaq")
 
     logging.debug("End Fuction")
     return None
@@ -102,14 +96,6 @@ def parser(*args, **kwargs):
                      nargs=1,
                      choices=["etfs", "stocks"],
                      help="Type of investments to download")
-    cmd.add_argument("-e",
-                     "--etfs",
-                     action="store_true",
-                     help="Download list of ETFs")
-    cmd.add_argument("-s",
-                     "--stocks",
-                     action="store_true",
-                     help="Download list of Stocks")
 
     cmd.set_defaults(func=nasdaq_download)
 
