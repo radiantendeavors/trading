@@ -157,15 +157,15 @@ class EtfInfo(mysql.MySQLDatabase):
         where = "`ticker`='" + ticker + "'"
         ticker_info = self.select(where_clause=where)
 
-        logger.debug("Ticker Info: %s", ticker_info)
-        last_seen = ticker_info["last_seen"]
+        logger.debug("Ticker Info: %s", ticker_info[0])
+        last_seen = ticker_info[0]["last_seen"]
         logger.debug("Last Seen: %s", last_seen)
 
         days_since_last_seen = delisted - last_seen
 
         logger.debug("Days Since Last Seen: %s", days_since_last_seen.days)
 
-        if days_since_last_seen.days > 7 and ticker_info[
+        if days_since_last_seen.days > 7 and ticker_info[0][
                 "delisted_date"] is None:
             sql = """
             UPDATE `etf_info`
