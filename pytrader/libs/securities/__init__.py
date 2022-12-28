@@ -113,9 +113,9 @@ class Securities():
             self.get_list()
 
         if source == "yahoo":
-            self.__update_history_yahoo()
+            self.__update_history_yahoo(bar_size, period)
         else:
-            self.__update_history_yahoo()
+            self.__update_history_yahoo(bar_size, period)
 
         logger.debug("End Function")
         return None
