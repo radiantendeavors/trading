@@ -85,7 +85,10 @@ class YahooClient():
         session.headers[
             "User-agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
         security = yfinance.Ticker(yahoo_symbol, session=session)
-        data = security.history(interval=interval, period=period)
+        #data = security.history(interval=interval, period=period)
+        data = yfinance.download(yahoo_symbol,
+                                 interval=interval,
+                                 period=period)
         logger.debug("Data:\n%s", data)
         today = date.today()
         history = index_bar_daily_raw.IndexBarDailyRaw()
