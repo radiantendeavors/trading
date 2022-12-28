@@ -139,7 +139,7 @@ def broker_download(args):
 
     for investment in investments:
         information(investment, args)
-        #history(investment, args)
+        history(investment, args)
 
     logger.debug10("End Function")
 
