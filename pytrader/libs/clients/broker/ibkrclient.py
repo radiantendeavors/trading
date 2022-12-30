@@ -31,16 +31,18 @@ Provides the client for Interactive Brokers
 import sys
 import time
 from datetime import datetime
-from threading import Thread
 
 # IB API
 from ibapi.client import EClient
-from ibapi.wrapper import EWrapper
 from ibapi.utils import iswrapper
+from ibapi.wrapper import EWrapper
 
 # System Library Overrides
-from pytrader.libs.system import logging
 from pytrader.libs.clients.mysql import etf_info, index_info, stock_info
+from pytrader.libs.system import logging
+
+# Other Libraries
+
 # ==================================================================================================
 #
 # Global Variables
@@ -57,24 +59,89 @@ logger = logging.getLogger(__name__)
 class IbkrClient(EWrapper, EClient):
     """ Serves as the client and the wrapper"""
 
-    def __init__(self, address, port, client_id):
+    def __init__(self, *args, **kwargs):
         EWrapper.__init__(self)
         EClient.__init__(self, self)
 
-        # Connect to TWS or IB Gateway
-        try:
-            self.connect(address, port, client_id)
-        except Exception as msg:
-            logger.error("Failed to connect")
-            logger.error(msg)
+        self.req_id = 0
+        self.data = {}
 
-        self.orderId = 0
-        self.con_id = 0
-        self.exchange = ""
+    def check_server(self):
+        """! @fn check_server
 
-        # Launch client thread
-        thread = Thread(target=self.run)
-        thread.start()
+        """
+        self.reqCurrentTime()
+        if self.serverVersion() is not None:
+            logger.info("Server Version: %s", self.serverVersion())
+        else:
+            logger.error(
+                "Failed to connect to the server: Server Version Unknown")
+        if self.twsConnectionTime() is not None:
+            logger.info("Connection time: %s",
+                        self.twsConnectionTime().decode())
+        else:
+            logger.error(
+                "Failed to connect to the server: Connection Time Unknown")
+
+    def get_data(self, req_id=None):
+        if req_id:
+            return self.data[req_id]
+        else:
+            return self.data
+
+    def get_ipo_date(self,
+                     contract,
+                     what_to_show="TRADES",
+                     use_regular_trading_hours=1,
+                     format_date=1):
+        self.req_id += 1
+
+        logger.debug("Ticker: %s", contract.symbol)
+        self.reqHeadTimeStamp(self.req_id, contract, what_to_show,
+                              use_regular_trading_hours, format_date)
+        return self.req_id
+
+    def get_account_summary(self):
+        self.req_id += 1
+        self.reqAccountSummary(self.req_id, "ALL",
+                               "AccountType, AvailableFunds")
+        return self.req_id
+
+    def get_security_data(self, contract):
+        logger.debug10("Begin Function")
+        self.req_id += 1
+        logger.debug("Requesting Contract Details")
+        logger.debug("Contract: %s", contract)
+        self.reqContractDetails(self.req_id, contract)
+        time.sleep(5)
+        logger.debug10("End Function")
+        return self.req_id
+
+    def get_security_pricing_data(self, contract):
+        logger.debug10("Begin Function")
+        self.req_id += 1
+        self.reqMktData(self.req_id, contract, "233", False, False, [])
+        logger.debug10("End Function")
+        return self.req_id
+
+    def get_option_chain(self, contract):
+        logger.debug10("Begin Function")
+        self.req_id += 1
+        security = contract.symbol
+        security_type = contract.secType
+        logger.debug("Contract ID: %s", contract.contract_id)
+        contract_id = contract.contract_id
+
+        logger.debug10("Get the Option Chain")
+        logger.debug2("Request ID: %s", self.req_id)
+        logger.debug("Security:%s", security)
+        logger.debug("Security Type: %s", security_type)
+        logger.debug("Contract ID: %s", contract_id)
+        self.reqSecDefOptParams(self.req_id, security, "", security_type,
+                                contract_id)
+        time.sleep(60)
+        logger.debug10("End Function")
+        return self.req_id
 
     @iswrapper
     def accountSummary(self, req_id, account, tag, value, currency):
@@ -83,6 +150,7 @@ class IbkrClient(EWrapper, EClient):
 
     @iswrapper
     def contractDetails(self, req_id, details):
+        self.data[req_id] = details
         self.contract_id = details.contract.conId
         logger.debug("Contract Info")
         logger.debug("Contract ID: %s", details.contract.conId)
@@ -142,7 +210,7 @@ class IbkrClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def contractDetailsEnd(self, reqId):
+    def contractDetailsEnd(self, req_id):
         logger.debug("Contract Details End")
 
     @iswrapper
@@ -189,13 +257,13 @@ class IbkrClient(EWrapper, EClient):
         logger.debug("ReqID: %s, IPO Date: %s", req_id, head_time_stamp)
 
     @iswrapper
-    def nextValidId(self, orderId: int):
+    def nextValidId(self, order_id: int):
         """ Provides the next order ID """
-        super().nextValidId(orderId)
+        super().nextValidId(order_id)
 
-        logger.debug("Setting nextValidOrderId: %s", orderId)
-        self.nextValidOrderId = orderId
-        logger.info("The next valid Order ID: %s", orderId)
+        logger.debug("Setting nextValidOrderId: %s", order_id)
+        self.nextValidOrderId = order_id
+        logger.info("The next valid Order ID: %s", order_id)
 
     @iswrapper
     def openOrder(self, orderId, contract, order, orderState):
@@ -251,6 +319,63 @@ class IbkrClient(EWrapper, EClient):
     def tickPrice(self, reqId, tickType, price, attrib):
         logger.info("Request Id: %s TickType: %s Price: %s Attrib: %s", reqId,
                     tickType, price, attrib)
+
+
+# class IbkrInit(IbkrClient):
+
+#     def __init__(self, address=None, port=None, client_id=0):
+#         conf = config.Config()
+#         conf.read_config()
+#         logger.debug("Client ID Initial: %s", client_id)
+
+#         if address:
+#             self.address = address
+#         else:
+#             self.address = conf.brokerclient_address
+
+#         if port:
+#             self.port = port
+#         else:
+#             self.port = conf.brokerclient_port
+
+#         logger.debug("Address: %s Port: %s", self.address, self.port)
+
+#         self.client_id = client_id
+
+#         if self.client_id < 1:
+#             logger.warning("Self.Client ID: %s", self.client_id)
+
+#     def run_loop(self):
+#         self.app.run()
+
+#     def begin_connect(self):
+#         self.app = IbkrClient(client_id=self.client_id)
+#         # Connect to TWS or IB Gateway
+#         try:
+#             self.app.connect(self.address, self.port, self.client_id)
+#         except Exception as msg:
+#             logger.error("Failed to connect")
+#             logger.error(msg)
+#             sys.exit(1)
+
+#         logger.debug("Start Threads")
+#         # Launch client thread
+#         thread = threading.Thread(target=self.run_loop)
+#         thread.start()
+#         logger.debug("Threads Started")
+
+#         time.sleep(1)
+
+#         # Check if API is connected
+#         # while True:
+#         #     if isinstance(self.nextValidOrderId, int):
+#         #         logger.debug("Connected")
+#         #     else:
+#         #         logger.info("Waiting on connection")
+#         #         time.sleep(1)
+
+#     def end_connect(self):
+#         self.app.disconnect()
 
 
 # ==================================================================================================

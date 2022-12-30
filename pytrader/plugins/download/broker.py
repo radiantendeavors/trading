@@ -27,9 +27,10 @@ Algorithmic Trading Program
 """
 
 # System Libraries
-import time
 # import os
 import sys
+#import threading
+import time
 
 # 3rd Party Libraries
 
@@ -38,11 +39,11 @@ import sys
 from pytrader.libs.system import logging
 
 # Other Application Libraries
+from pytrader.libs import indexes
 from pytrader.libs.clients import broker
-from pytrader.libs.clients.mysql import etf_info
-from pytrader.libs.clients.mysql import index_info
-from pytrader.libs.clients.mysql import stock_info
+from pytrader.libs.securities import etfs, stocks
 from pytrader.libs.utilities import config
+from pytrader.ui.pytrdownload import client_id
 
 # Conditional Libraries
 
@@ -64,101 +65,69 @@ logger = logging.getLogger(__name__)
 # Functions
 #
 # ==================================================================================================
-def get_data_tickers(brokerclient, info, contract_id=1):
-    if contract_id == 1:
-        where = "`delisted_date` IS NULL AND `ibkr_symbol` IS NULL"
+def broker_connect(address, port, client_id=0):
+    logger.debug10("Begin Function")
+    logger.debug("Address: %s Port: %s", address, port)
+    if client_id < 1:
+        logger.warning("Self.Client ID: %s", client_id)
     else:
-        where = "`delisted_date` IS NULL"
-    return info.select(where_clause=where)
+        logger.debug("Client ID: %s", client_id)
 
+    # Connect to TWS or IB Gateway
+    try:
+        brokerclient = broker.BrokerClient()
+        brokerclient.connect(address, port, client_id)
+        time.sleep(1)
+    except Exception as msg:
+        logger.error("Failed to connect")
+        logger.error(msg)
+        sys.exit(1)
 
-def get_ipo_tickers(brokerclient, info):
-    where = "`delisted_date` IS NULL AND `ibkr_contract_id` IS NOT NULL"
-    return info.select(where_clause=where)
+    # logger.debug("Start Threads")
+    # Launch client thread
+    # broker_thread = threading.Thread(target=brokerclient.run())
+    # broker_thread.start()
+    # logger.debug("Threads Started")
 
-
-def update_data_info(brokerclient, all_tickers, investments):
-    logger.debug10("Begin Function")
-    for item in all_tickers:
-        logger.debug2("Item: %s", item)
-        ticker = item["ticker"]
-        if investments == "indexes":
-            security_type = "IND"
-        else:
-            security_type = "STK"
-
-        if item["ibkr_exchange"]:
-            exchange = item["ibkr_exchange"]
-        else:
-            exchange = "SMART"
-
-        logger.debug("Ticker: %s", ticker)
-        logger.debug("Security Type: %s", security_type)
-        logger.debug("Exchange: %s", exchange)
-
-        if investments == "indexes":
-            brokerclient.set_contract(ticker,
-                                      security_type=security_type,
-                                      exchange=exchange)
-        else:
-            brokerclient.set_contract(ticker)
-        brokerclient.get_security_data()
-        time.sleep(10)
-    logger.debug10("End Function")
-    return None
-
-
-def update_ipo_info(brokerclient, all_tickers):
-    logger.debug10("Begin Function")
-
-    for item in all_tickers:
-        ticker = item["ticker"]
-        logger.debug("Ticker: %s", ticker)
-        brokerclient.set_contract(ticker)
-        ticker, req_id = brokerclient.get_ipo_date()
-        logger.debug("Request ID: %s, Ticker: %s", req_id, ticker)
-        time.sleep(10)
+    brokerclient.check_server()
 
     logger.debug10("End Function")
-    return None
+    return brokerclient
 
 
-def basic_info(investments, security=None):
+def basic_info(investments, brokerclient, security=None):
     logger.debug("Begin Function")
 
-    brokerclient = broker.BrokerClient()
-    time.sleep(10)
-
     if investments == "indexes":
-        info = index_info.IndexInfo()
+        info = indexes.Indexes(brokerclient=brokerclient)
     elif investments == "etfs":
-        info = etf_info.EtfInfo()
+        info = etfs.Etfs(brokerclient=brokerclient)
     elif investments == "stocks":
-        info = stock_info.StockInfo()
+        info = stocks.Stocks(brokerclient=brokerclient)
     else:
         logger.error("No investments were selected")
         sys.exit(1)
 
-    for item in ["data", "ipo_date"]:
-        if item == "data":
-            if security:
-                update_data_info(brokerclient, [security], investments)
-            else:
-                all_tickers = get_data_tickers(brokerclient, info)
-                logger.debug("All tickers: %s", all_tickers)
-                update_data_info(brokerclient, all_tickers, investments)
-        if item == "ipo_date":
-            if security:
-                update_ipo_info(brokerclient, [security])
-            else:
-                all_tickers = get_ipo_tickers(brokerclient, info)
-                update_ipo_info(brokerclient, all_tickers)
-
+    info.update_info("broker")
     logger.debug("End Function")
 
 
 def broker_download(args):
     logging.debug("Begin Function")
+    conf = config.Config()
+    conf.read_config()
+
+    if args.address:
+        address = args.address
+    else:
+        address = conf.brokerclient_address
+
+    if args.port:
+        port = args.port
+    else:
+        port = conf.brokerclient_port
+
+    brokerclient = broker_connect(address, port, client_id=client_id)
 
     if args.type:
         investments = args.type
@@ -167,10 +136,10 @@ def broker_download(args):
 
     if args.info:
         if args.security:
-            basic_info("stocks", security=args.security)
+            basic_info("stocks", brokerclient, security=args.security)
         else:
             for investment in investments:
-                basic_info(investment)
+                basic_info(investment, brokerclient)
 
     return None
 
