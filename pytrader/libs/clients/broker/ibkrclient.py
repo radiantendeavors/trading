@@ -110,10 +110,9 @@ class IbkrClient(EWrapper, EClient):
     def get_security_data(self, contract):
         logger.debug10("Begin Function")
         self.req_id += 1
-        logger.debug("Requesting Contract Details")
-        logger.debug("Contract: %s", contract)
+        logger.debug("Requesting Contract Details for contract: %s", contract)
         self.reqContractDetails(self.req_id, contract)
-        time.sleep(5)
+        time.sleep(10)
         logger.debug10("End Function")
         return self.req_id
 
@@ -151,7 +150,7 @@ class IbkrClient(EWrapper, EClient):
     @iswrapper
     def contractDetails(self, req_id, details):
         self.data[req_id] = details
-        self.contract_id = details.contract.conId
+
         logger.debug("Contract Info")
         logger.debug("Contract ID: %s", details.contract.conId)
         logger.debug("Symbol: %s", details.contract.symbol)
