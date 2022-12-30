@@ -82,6 +82,7 @@ class Security():
             contract.primaryExchange = primary_exchange
 
         logger.debug("Contract: %s", contract)
+        self.contract = contract
 
         logger.debug10("End Function")
         return contract
