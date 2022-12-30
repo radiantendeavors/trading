@@ -84,8 +84,11 @@ class IbkrClient(EWrapper, EClient):
                 "Failed to connect to the server: Connection Time Unknown")
 
     def get_data(self, req_id=None):
+        logger.debug10("Begin Function")
+
         if req_id:
-            return self.data[req_id]
+            # Pop the key because otherwise this variable could become large with many requests
+            return self.data.pop(req_id)
         else:
             return self.data
 
@@ -112,7 +115,7 @@ class IbkrClient(EWrapper, EClient):
         self.req_id += 1
         logger.debug("Requesting Contract Details for contract: %s", contract)
         self.reqContractDetails(self.req_id, contract)
-        time.sleep(10)
+        time.sleep(5)
         logger.debug10("End Function")
         return self.req_id
 
