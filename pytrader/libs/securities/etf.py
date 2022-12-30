@@ -66,13 +66,11 @@ class Etf(security.Security):
         if result[0]["ibkr_exchange"] == "SMART" and result[0][
                 "ibkr_primary_exchange"]:
             self.primary_exchange = result[0]["ibkr_primary_exchange"]
-            self.contract = self.set_contract(
-                self.ticker_symbol,
-                self.security_type,
-                primary_exchange=self.primary_exchange)
+            self.set_contract(self.ticker_symbol,
+                              self.security_type,
+                              primary_exchange=self.primary_exchange)
         else:
-            self.contract = self.set_contract(self.ticker_symbol,
-                                              self.security_type)
+            self.set_contract(self.ticker_symbol, self.security_type)
 
         logger.debug("Get Security Data")
         req_id = self.brokerclient.get_security_data(self.contract)
