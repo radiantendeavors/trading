@@ -68,3 +68,17 @@ class Index(security.Security):
         result = info.select(where_clause=where_clause)
 
         logger.debug("Result: %s", result)
+
+        self.exchange = result[0]["ibkr_exchange"]
+        self.set_contract(self.ticker_symbol,
+                          self.security_type,
+                          exchange=self.exchange)
+
+        logger.debug("Get Security Data")
+        req_id = self.brokerclient.get_security_data(self.contract)
+        logger.debug("Request ID: %s", req_id)
+        data = self.brokerclient.get_data(req_id)
+        logger.debug("Data: %s", data)
+
+        logger.debug10("End Function")
+        return None

@@ -79,3 +79,4 @@ class Etf(security.Security):
         logger.debug("Data: %s", data)
 
         logger.debug10("End Function")
+        return None
