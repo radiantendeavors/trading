@@ -1,5 +1,8 @@
-"""!
-@file __init__.py
+"""
+@package pytrader.libs.clients.broker
+Creates a basic interface for interacting with a broker
+
+@file pytrader/libs/clients/broker/__init__.py
 
 Creates a basic interface for interacting with a broker
 
@@ -20,12 +23,6 @@ Creates a basic interface for interacting with a broker
 
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-"""
-"""!
-@namespace broker
-
-Provides the BrokeClient class
 
 """
 # System libraries
@@ -54,9 +51,7 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class BrokerClient(ibkrclient.IbkrClient):
-    """! @class BrokerClient __init__.py "pytrader.libs.clients import broker"
-
-
+    """
     @brief Short term, this class does absolutely nothing.  Long term, I'd like to add the ability
     to interface with multiple brokers.  This class will act as the interface between the different
     brokers.
@@ -64,8 +59,7 @@ class BrokerClient(ibkrclient.IbkrClient):
     """
 
     def __init__(self, *args, **kwargs):
-        """! @func init
-
+        """
         Broker Client Class initializer.
 
         @param *args
@@ -76,7 +70,8 @@ class BrokerClient(ibkrclient.IbkrClient):
 
 
 def broker_connect(address, port, client_id=0):
-    """! @fn broker_connect
+    """
+    Used to initialize the broker connection.
 
     @param address
     @param port

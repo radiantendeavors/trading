@@ -1,6 +1,6 @@
-"""!@file broker.py
+"""!@package pytrader.plugins.download.broker
 
-Algorithmic Trading Program
+The Broker SubCommand for pytrdownload
 
 @author Geoff S. derber
 @version HEAD
@@ -61,6 +61,13 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 def basic_info(investments, brokerclient, security=None):
+    """
+    basic_info
+
+    @param investments
+    @param brokerclient
+    @param security
+    """
     logger.debug("Begin Function")
 
     if investments == "indexes":
@@ -78,6 +85,11 @@ def basic_info(investments, brokerclient, security=None):
 
 
 def broker_download(args):
+    """
+    broker_download
+
+    @param args
+    """
     logging.debug("Begin Function")
     conf = config.Config()
     conf.read_config()

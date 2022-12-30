@@ -1,4 +1,5 @@
-"""!@file pytrader/libs/system/argparse.py
+"""
+@file pytrader/libs/system/argparse.py
 
 Argparse:
 
@@ -79,7 +80,7 @@ from pytrader.libs.utilities import config
 # ==================================================================================================
 class CommonParser(ArgumentParser):
     """
-    Class CommonParser
+    class CommonParser
 
     Inputs
 
