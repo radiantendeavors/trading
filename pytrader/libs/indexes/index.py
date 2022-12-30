@@ -25,19 +25,15 @@ Provides Market Index Information
 @file security.py
 """
 # System libraries
-import sys
-import time
 
 # 3rd Party libraries
-from ibapi.client import Contract
-from ibapi.order import Order
 
 # System Library Overrides
 from pytrader.libs.system import logging
 
 # Application Libraries
-from pytrader.libs.clients import broker
 from pytrader.libs.clients.mysql import index_info
+from pytrader.libs.securities import security
 
 # ==================================================================================================
 #
@@ -52,17 +48,13 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class Index():
+class Index(security.Security):
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         logger.debug("Begin Function")
-        self.ticker = None
-        self.name = None
-        self.ibkr_symbol = None
-        self.ibkr_contract_id = None
-        self.ibkr_primary_exchange = None
-        self.yahoo_symbol = None
-        self.ipo_date = None
+        self.req_id = 30000
+        self.security_type = "IND"
+        super().__init__(*args, **kwargs)
         logger.debug("End Function")
         return None
 
@@ -70,25 +62,9 @@ class Index():
         return logger.info("Index(Ticker: %s, Name: %s)", self.ticker,
                            self.name)
 
-    def get_information(self, ticker=None):
-        logger.debug("Begin Function")
-        if self.ticker is None and ticker:
-            self.set_information(ticker)
-        logger.debug("End Function")
-        return self
-
-    def set_information(self, ticker):
-        logger.debug("Begin Function")
+    def update_info(self):
         info = index_info.IndexInfo()
-        where = "`ticker`='" + ticker + "'"
-        item = info.select(where_clause=where)
-        logger.debug("Index Info: %s", item)
-        self.ticker = item[0]["ticker"]
-        self.name = item[0]["name"]
-        self.ibkr_symbol = item[0]["ibkr_symbol"]
-        self.ibkr_contract_id = item[0]["ibkr_contract_id"]
-        self.ibkr_primary_exchange = item[0]["ibkr_primary_exchange"]
-        self.yahoo_symbol = item[0]["yahoo_symbol"]
-        self.ipo_date = item[0]["ipo_date"]
-        logger.debug("End Function")
-        return None
+        where_clause = "`ticker`='" + self.ticker_symbol + "'"
+        result = info.select(where_clause=where_clause)
+
+        logger.debug("Result: %s", result)
