@@ -25,18 +25,14 @@ Provides the broker client
 @file security.py
 """
 # System libraries
-import sys
-import time
 
 # 3rd Party libraries
-from ibapi.client import Contract
-from ibapi.order import Order
+from ibapi.contract import Contract
 
 # System Library Overrides
 from pytrader.libs.system import logging
 
-# Application Libraries
-from pytrader.libs.clients import broker
+# Other Application Libraries
 
 # ==================================================================================================
 #
@@ -53,44 +49,39 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 class Security():
 
-    def __init__(self, client, ticker_symbol):
-        self.ticker_symbol = ticker_symbol
-        self.client = client
+    def __init__(self, *args, **kwargs):
+        logger.debug10("Begin Function")
+        logger.debug("Kwargs: %s", kwargs)
+        if kwargs.get("ticker_symbol"):
+            self.ticker_symbol = kwargs["ticker_symbol"]
+        if kwargs.get("brokerclient"):
+            self.brokerclient = kwargs["brokerclient"]
 
-    def get_security_type(self):
-        self.security_type = "STK"
-        return self.security_type
+        logger.debug10("End Function")
 
-    def get_security_currency(self):
-        self.currency = "USD"
-        return self.currency
+    def set_contract(self,
+                     ticker_symbol,
+                     security_type,
+                     primary_exchange=None,
+                     exchange="SMART"):
+        """!@fn set_contract
 
-    def set_security(self):
-        self.client.set_contract(self.ticker_symbol)
+        @param security The ticker symbol for the contract
+        @param security_type The type of security for the contract.  Can be one of: CASH, CRYPTO, STK, IND, CFD, FUT, CONTFUT, FUT+CONTFUT, OPT, FOP, BOND, FUND
+        @param exchange
+        @param currency
+        """
+        logger.debug10("Begin Function")
+        contract = Contract()
+        contract.symbol = ticker_symbol
+        contract.secType = security_type
+        contract.exchange = exchange
+        contract.currency = "USD"
+        logger.debug("Primary Exchange: %s", primary_exchange)
+        if primary_exchange:
+            contract.primaryExchange = primary_exchange
 
-    def get_security_data(self):
-        self.client.get_security_data()
-        time.sleep(60)
+        logger.debug("Contract: %s", contract)
 
-    def get_security_pricing_data(self):
-        self.client.get_security_pricing_data()
-
-    def get_option_chain(self, contract_id):
-        logger.debug10("Get Option Chain")
-        logger.debug("Ticker is: %s", self.ticker_symbol, contract_id)
-        self.client.get_option_chain()
-
-    def place_order(self,
-                    action,
-                    order_type,
-                    order_price=None,
-                    quantity=1.0,
-                    time_in_force="DAY",
-                    transmit=False):
-
-        logger.info("Placing %s Order to %s %s of %s for %s %s", order_type,
-                    action, quantity, self.ticker_symbol, order_price,
-                    time_in_force)
-        logger.debug("Transmit Order: %s", transmit)
-        self.client.place_order(self.ticker_symbol, action, order_type,
-                                order_price, quantity, time_in_force, transmit)
+        logger.debug10("End Function")
+        return contract
