@@ -1,6 +1,7 @@
-"""!@package pytrader
+"""!
+@package pytrader.libs.clients.database
 
-Algorithmic Trading Program
+Provides the database client
 
 @author Geoff S. derber
 @version HEAD
@@ -20,26 +21,19 @@ Algorithmic Trading Program
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file plugins/download/nasdaq.py
 
-    Contains global variables for the pyTrader program.
-
+@file pytrader/libs/clients/database/__init__.py
 """
-
-# System Libraries
-# import os
-# import sys
+from sqlalchemy import Column, Date, Float, Integer, String
 
 # 3rd Party Libraries
 
 # Application Libraries
 # System Library Overrides
-# from pytrader.libs.system import argparse
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs.securities import etfs, stocks
-# Conditional Libraries
+from pytrader.libs.clients.database import Base
 
 # ==================================================================================================
 #
@@ -58,45 +52,18 @@ logger = logging.getLogger(__name__)
 
 # ==================================================================================================
 #
-# Functions
+# Classes
 #
 # ==================================================================================================
-def nasdaq_download(args):
-    logging.debug("Begin Function")
-
-    investments = "None"
-
-    if args.type:
-        investments = args.type
-    else:
-        investments = ["stocks", "etfs"]
-
-    for investment in investments:
-        if investment == "etfs":
-            info = etfs.Etfs()
-        elif investment == "stocks":
-            info = stocks.Stocks()
-
-        info.update_info("nasdaq")
-
-    logging.debug("End Fuction")
-    return None
-
-
-def parser(*args, **kwargs):
-    subparsers = args[0]
-    parent_parsers = list(args[1:])
-
-    cmd = subparsers.add_parser("nasdaq",
-                                aliases=["n"],
-                                parents=parent_parsers,
-                                help="Downloads data from NASDAQ")
-    cmd.add_argument("-t",
-                     "--type",
-                     nargs=1,
-                     choices=["etfs", "stocks"],
-                     help="Type of investments to download")
-
-    cmd.set_defaults(func=nasdaq_download)
-
-    return cmd
+class IndexBarDailyRaw(Base):
+    __tablename__ = "index_bar_daily_raw"
+    id = Column(Integer, Primary=True)
+    ticker = Column(String, nullable=False)
+    open = Column(Float, nullable=True, default=None)
+    high = Column(Float, nullable=True, default=None)
+    low = Column(Float, nullable=True, default=None)
+    close = Column(Float, nullable=True, default=None)
+    adjusted_close = Column(Float, nullable=True, default=None)
+    volume = Column(Float, nullable=True, default=None)
+    data_source = Column(String)
+    date_downloaded = Column(Date)

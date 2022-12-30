@@ -1,7 +1,7 @@
 """!
 @package pytrader.libs.clients.mysql
 
-Provides the database client
+Provides the mysql/mariadb database client
 
 @author Geoff S. derber
 @version HEAD
@@ -35,7 +35,6 @@ from pytrader.libs.system import logging
 
 # Other Application Libraries
 from pytrader.libs.utilities import config
-from pytrader.libs.utilities import text
 
 # ==================================================================================================
 #
@@ -50,7 +49,6 @@ The base logger.
 Allows Color text on the console
 """
 logger = logging.getLogger(__name__)
-colortext = text.ConsoleText()
 
 
 # ==================================================================================================

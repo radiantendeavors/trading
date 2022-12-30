@@ -1,7 +1,7 @@
 """!
-@package pytrader.libs.clients.broker
+@package pytrader.libs.indexes
 
-Provides the broker client
+Provides Market Index Information
 
 @author Geoff S. derber
 @version HEAD
@@ -22,10 +22,7 @@ Provides the broker client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file lib/clients/broker/__init__.py
-
-  Creates a basic interface for interacting with a broker
-
+@file security.py
 """
 # System libraries
 
@@ -35,7 +32,8 @@ Provides the broker client
 from pytrader.libs.system import logging
 
 # Application Libraries
-from pytrader.libs.clients.broker import ibkrclient
+from pytrader.libs.clients.mysql import index_info
+from pytrader.libs.securities import security
 
 # ==================================================================================================
 #
@@ -50,17 +48,37 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class BrokerClient(ibkrclient.IbkrClient):
-    """! @class BrokerClient
-
-    @brief Provides the client interface to the broker"""
+class Index(security.Security):
 
     def __init__(self, *args, **kwargs):
-        """! Broker Client Class initializer.
-
-        @param address The IP Address for the client.
-        @param port The port for the client.
-        @param client_id The id number for the client
-        """
-
+        logger.debug("Begin Function")
+        self.req_id = 30000
+        self.security_type = "IND"
         super().__init__(*args, **kwargs)
+        logger.debug("End Function")
+        return None
+
+    def __repr__(self):
+        return logger.info("Index(Ticker: %s, Name: %s)", self.ticker,
+                           self.name)
+
+    def update_info(self):
+        info = index_info.IndexInfo()
+        where_clause = "`ticker`='" + self.ticker_symbol + "'"
+        result = info.select(where_clause=where_clause)
+
+        logger.debug("Result: %s", result)
+
+        self.exchange = result[0]["ibkr_exchange"]
+        self.set_contract(self.ticker_symbol,
+                          self.security_type,
+                          exchange=self.exchange)
+
+        logger.debug("Get Security Data")
+        req_id = self.brokerclient.get_security_data(self.contract)
+        logger.debug("Request ID: %s", req_id)
+        data = self.brokerclient.get_data(req_id)
+        logger.debug("Data: %s", data)
+
+        logger.debug10("End Function")
+        return None

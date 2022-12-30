@@ -1,5 +1,5 @@
 """!
-@package pytrader.libs.clients.broker
+@package pytrader.libs.security
 
 Provides the broker client
 
@@ -22,20 +22,17 @@ Provides the broker client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file lib/clients/broker/__init__.py
-
-  Creates a basic interface for interacting with a broker
-
+@file security.py
 """
 # System libraries
 
 # 3rd Party libraries
+from ibapi.contract import Contract
 
 # System Library Overrides
 from pytrader.libs.system import logging
 
-# Application Libraries
-from pytrader.libs.clients.broker import ibkrclient
+# Other Application Libraries
 
 # ==================================================================================================
 #
@@ -50,17 +47,42 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class BrokerClient(ibkrclient.IbkrClient):
-    """! @class BrokerClient
-
-    @brief Provides the client interface to the broker"""
+class Security():
 
     def __init__(self, *args, **kwargs):
-        """! Broker Client Class initializer.
+        logger.debug10("Begin Function")
+        logger.debug("Kwargs: %s", kwargs)
+        if kwargs.get("ticker_symbol"):
+            self.ticker_symbol = kwargs["ticker_symbol"]
+        if kwargs.get("brokerclient"):
+            self.brokerclient = kwargs["brokerclient"]
 
-        @param address The IP Address for the client.
-        @param port The port for the client.
-        @param client_id The id number for the client
+        logger.debug10("End Function")
+
+    def set_contract(self,
+                     ticker_symbol,
+                     security_type,
+                     primary_exchange=None,
+                     exchange="SMART"):
+        """!@fn set_contract
+
+        @param security The ticker symbol for the contract
+        @param security_type The type of security for the contract.  Can be one of: CASH, CRYPTO, STK, IND, CFD, FUT, CONTFUT, FUT+CONTFUT, OPT, FOP, BOND, FUND
+        @param exchange
+        @param currency
         """
+        logger.debug10("Begin Function")
+        contract = Contract()
+        contract.symbol = ticker_symbol
+        contract.secType = security_type
+        contract.exchange = exchange
+        contract.currency = "USD"
+        logger.debug("Primary Exchange: %s", primary_exchange)
+        if primary_exchange:
+            contract.primaryExchange = primary_exchange
 
-        super().__init__(*args, **kwargs)
+        logger.debug("Contract: %s", contract)
+        self.contract = contract
+
+        logger.debug10("End Function")
+        return contract

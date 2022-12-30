@@ -1,5 +1,5 @@
 """!
-@package pytrader.libs.clients.broker
+@package pytrader.libs.security
 
 Provides the broker client
 
@@ -22,20 +22,17 @@ Provides the broker client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file lib/clients/broker/__init__.py
-
-  Creates a basic interface for interacting with a broker
-
+@file security.py
 """
 # System libraries
 
 # 3rd Party libraries
+# from ibapi.order import Order
 
 # System Library Overrides
 from pytrader.libs.system import logging
 
-# Application Libraries
-from pytrader.libs.clients.broker import ibkrclient
+# Other Application Libraries
 
 # ==================================================================================================
 #
@@ -50,17 +47,10 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class BrokerClient(ibkrclient.IbkrClient):
-    """! @class BrokerClient
+class Orders():
 
-    @brief Provides the client interface to the broker"""
+    def __init__(self):
+        logger.debug("Begin Function")
 
-    def __init__(self, *args, **kwargs):
-        """! Broker Client Class initializer.
-
-        @param address The IP Address for the client.
-        @param port The port for the client.
-        @param client_id The id number for the client
-        """
-
-        super().__init__(*args, **kwargs)
+    def get_open_positions(self):
+        self.reqPositions()

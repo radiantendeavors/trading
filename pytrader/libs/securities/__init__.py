@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """!
 @package pytrader.libs.security
 
@@ -26,18 +25,20 @@ Provides the broker client
 @file security.py
 """
 # System libraries
-import sys
+import random
 import time
 
 # 3rd Party libraries
-from ibapi.client import Contract
-from ibapi.order import Order
 
 # System Library Overrides
 from pytrader.libs.system import logging
 
 # Application Libraries
-from pytrader.libs.clients import broker
+from pytrader.libs.clients import nasdaq
+from pytrader.libs.clients import yahoo
+from pytrader.libs.indexes import index
+from pytrader.libs.securities import etf
+from pytrader.libs.securities import stock
 
 # ==================================================================================================
 #
@@ -45,6 +46,8 @@ from pytrader.libs.clients import broker
 #
 # ==================================================================================================
 logger = logging.getLogger(__name__)
+min_sleeptime = 61
+max_sleeptime = 121
 
 
 # ==================================================================================================
@@ -52,46 +55,110 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class Security():
+class Securities():
 
-    def __init__(self, client, ticker_symbol):
-        self.ticker_symbol = ticker_symbol
-        self.client = client
+    def __init__(self, *args, **kwargs):
+        self.securities_list = {}
+        if kwargs.get("brokerclient"):
+            self.brokerclient = kwargs["brokerclient"]
+            logger.debug("BrokerClient: %s", self.brokerclient)
 
-    def get_security_type(self):
-        self.security_type = "STK"
-        return self.security_type
+    def __update_info_broker(self):
+        logger.debug10("Begin Function")
 
-    def get_security_currency(self):
-        self.currency = "USD"
-        return self.currency
+        for item in self.securities_list:
+            logger.debug2("Item: %s", item)
+            logger.debug3("Investment Type: %s", self.investment_type)
+            if self.investment_type == "etfs":
+                security = etf.Etf(ticker_symbol=item["ticker"],
+                                   brokerclient=self.brokerclient)
+            elif self.investment_type == "indexes":
+                security = index.Index(ticker_symbol=item["ticker"],
+                                       brokerclient=self.brokerclient)
+            elif self.investment_type == "stocks":
+                security = stock.Stock(ticker_symbol=item["ticker"],
+                                       brokerclient=self.brokerclient)
 
-    def set_security(self):
-        self.client.set_contract(self.ticker_symbol)
+            else:
+                logger.error("No investment type was selected.")
 
-    def get_security_data(self):
-        self.client.get_security_data()
-        time.sleep(60)
+            logger.debug("Security: %s", security)
+            security.update_info()
 
-    def get_security_pricing_data(self):
-        self.client.get_security_pricing_data()
+        logger.debug10("End Function")
+        return None
 
-    def get_option_chain(self, contract_id):
-        logger.debug10("Get Option Chain")
-        logger.debug("Ticker is: %s", self.ticker_symbol, contract_id)
-        self.client.get_option_chain()
+    def __update_info_nasdaq(self):
+        logger.debug10("Begin Function")
+        client = nasdaq.NasdaqClient(investments=self.investment_type)
+        client.download_list()
+        logger.debug10("End Function")
+        return None
 
-    def place_order(self,
-                    action,
-                    order_type,
-                    order_price=None,
-                    quantity=1.0,
-                    time_in_force="DAY",
-                    transmit=False):
+    def __update_info_yahoo(self):
+        logger.debug10("Begin Function")
+        for ticker in self.securities_list:
+            logger.debug("Ticker: %s", ticker["yahoo_symbol"])
+            if ticker["yahoo_symbol"]:
+                yahoo_symbol = ticker["yahoo_symbol"]
+            else:
+                yahoo_symbol = ticker["ticker"]
 
-        logger.info("Placing %s Order to %s %s of %s for %s %s", order_type,
-                    action, quantity, self.ticker_symbol, order_price,
-                    time_in_force)
-        logger.debug("Transmit Order: %s", transmit)
-        self.client.place_order(self.ticker_symbol, action, order_type,
-                                order_price, quantity, time_in_force, transmit)
+            yc = yahoo.YahooClient()
+            yc.get_info(self.investment_type, yahoo_symbol)
+            time.sleep(random.randint(min_sleeptime, max_sleeptime))
+
+        logger.debug10("End Function")
+        return None
+
+    def __update_history_yahoo(self, bar_size, period):
+        logger.debug10("Begin Function")
+        for ticker in self.securities_list:
+            logger.debug("Ticker: %s", ticker["yahoo_symbol"])
+            if ticker["yahoo_symbol"]:
+                yc = yahoo.YahooClient()
+                yc.get_bar_history(self.investment_type,
+                                   ticker["ticker"],
+                                   ticker["yahoo_symbol"],
+                                   interval=bar_size,
+                                   period=period)
+            time.sleep(random.randint(min_sleeptime, max_sleeptime))
+
+        logger.debug10("End Function")
+        return None
+
+    def update_history(self, source, bar_size, period):
+        logger.debug10("Begin Function")
+        if self.securities_list:
+            logger.debug("Index List: %s", self.index_list)
+        else:
+            self.get_list()
+
+        if source == "yahoo":
+            self.__update_history_yahoo(bar_size, period)
+        else:
+            self.__update_history_yahoo(bar_size, period)
+
+        logger.debug("End Function")
+        return None
+
+    def update_info(self, source=None):
+        logger.debug10("Begin Function")
+        logger.debug("Source: %s", source)
+        if self.securities_list:
+            logger.debug("Index List: %s", self.securities_list)
+        else:
+            self.get_list()
+
+        if source == "broker":
+            self.__update_info_broker()
+        elif source == "nasdaq":
+            self.__update_info_nasdaq()
+        elif source == "yahoo":
+            self.__update_info_yahoo()
+        else:
+            self.__update_info_nasdaq()
+            self.__update_info_yahoo()
+
+        logger.debug("End Function")
+        return None

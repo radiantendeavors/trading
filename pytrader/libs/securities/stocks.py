@@ -1,7 +1,7 @@
 """!
-@package pytrader.libs.clients.broker
+@package pytrader.libs.indexes
 
-Provides the broker client
+Provides Market Index Information
 
 @author Geoff S. derber
 @version HEAD
@@ -22,10 +22,7 @@ Provides the broker client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file lib/clients/broker/__init__.py
-
-  Creates a basic interface for interacting with a broker
-
+@file security.py
 """
 # System libraries
 
@@ -35,8 +32,8 @@ Provides the broker client
 from pytrader.libs.system import logging
 
 # Application Libraries
-from pytrader.libs.clients.broker import ibkrclient
-
+from pytrader.libs.clients.mysql import stock_info
+from pytrader.libs import securities
 # ==================================================================================================
 #
 # Global Variables
@@ -50,17 +47,15 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class BrokerClient(ibkrclient.IbkrClient):
-    """! @class BrokerClient
-
-    @brief Provides the client interface to the broker"""
+class Stocks(securities.Securities):
 
     def __init__(self, *args, **kwargs):
-        """! Broker Client Class initializer.
-
-        @param address The IP Address for the client.
-        @param port The port for the client.
-        @param client_id The id number for the client
-        """
-
         super().__init__(*args, **kwargs)
+        self.investment_type = "stocks"
+        return None
+
+    def get_list(self):
+        info = stock_info.StockInfo()
+        where = "`delisted_date` IS NULL"
+        self.securities_list = info.select(where_clause=where)
+        return self.securities_list

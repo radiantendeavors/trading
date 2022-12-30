@@ -1,5 +1,5 @@
 """!
-@package pytrader.libs.clients.mysql.index_bar_daily_raw
+@package pytrader.libs.clients.mysql.etf_bar_daily_raw
 
 Provides the database client
 
@@ -22,7 +22,7 @@ Provides the database client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file pytrader/libs/clients/mysql/index_bar_daily_raw.py
+@file pytrader/libs/clients/mysql/etf_bar_daily_raw.py
 """
 # System Libraries
 import pymysql
@@ -57,10 +57,10 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class IndexBarDailyRaw(mysql.MySQLDatabase):
+class EtfBarDailyRaw(mysql.MySQLDatabase):
 
     def __init__(self):
-        self.table_name = "index_bar_daily_raw"
+        self.table_name = "etf_bar_daily_raw"
         super().__init__()
 
     def select(self, select_clause=None, where_clause=None):
@@ -73,7 +73,7 @@ class IndexBarDailyRaw(mysql.MySQLDatabase):
             SELECT *
             """
 
-        sql += "FROM `index_bar_daily_raw`\n"
+        sql += "FROM `etf_bar_daily_raw`\n"
         logger.debug("SQL: %s", sql)
 
         if where_clause:
@@ -108,7 +108,7 @@ class IndexBarDailyRaw(mysql.MySQLDatabase):
                 if item[0]["data_source"] == data_source:
 
                     sql = """
-                    UPDATE `index_bar_daily_raw`
+                    UPDATE `etf_bar_daily_raw`
                     SET `open`=%s, `high`=%s, `low`=%s, `close`=%s, `adjusted_close`=%s, `volume`=%s
                     WHERE `ticker`=%s AND `date`=%s AND `data_source`=%s
                     """
@@ -128,7 +128,7 @@ class IndexBarDailyRaw(mysql.MySQLDatabase):
             logger.debug("Empty Item")
 
             sql = """
-            INSERT INTO `index_bar_daily_raw`
+            INSERT INTO `etf_bar_daily_raw`
             (`ticker`, `date`, `open`, `high`, `low`, `close`, `adjusted_close`, `volume`, `data_source`, `date_downloaded`)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """

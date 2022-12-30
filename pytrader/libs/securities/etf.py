@@ -1,5 +1,5 @@
 """!
-@package pytrader.libs.clients.broker
+@package pytrader.libs.security
 
 Provides the broker client
 
@@ -22,10 +22,7 @@ Provides the broker client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file lib/clients/broker/__init__.py
-
-  Creates a basic interface for interacting with a broker
-
+@file security.py
 """
 # System libraries
 
@@ -34,8 +31,9 @@ Provides the broker client
 # System Library Overrides
 from pytrader.libs.system import logging
 
-# Application Libraries
-from pytrader.libs.clients.broker import ibkrclient
+# Other Application Libraries
+from pytrader.libs.clients.mysql import etf_info
+from pytrader.libs.securities import security
 
 # ==================================================================================================
 #
@@ -50,17 +48,35 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class BrokerClient(ibkrclient.IbkrClient):
-    """! @class BrokerClient
-
-    @brief Provides the client interface to the broker"""
+class Etf(security.Security):
 
     def __init__(self, *args, **kwargs):
-        """! Broker Client Class initializer.
-
-        @param address The IP Address for the client.
-        @param port The port for the client.
-        @param client_id The id number for the client
-        """
-
         super().__init__(*args, **kwargs)
+        self.req_id = 10000
+        self.security_type = "STK"
+
+    def update_info(self):
+        logger.debug10("Begin Function")
+        info = etf_info.EtfInfo()
+        where_clause = "`ticker`='" + self.ticker_symbol + "'"
+        result = info.select(where_clause=where_clause)
+
+        logger.debug("Result: %s", result)
+
+        if result[0]["ibkr_exchange"] == "SMART" and result[0][
+                "ibkr_primary_exchange"]:
+            self.primary_exchange = result[0]["ibkr_primary_exchange"]
+            self.set_contract(self.ticker_symbol,
+                              self.security_type,
+                              primary_exchange=self.primary_exchange)
+        else:
+            self.set_contract(self.ticker_symbol, self.security_type)
+
+        logger.debug("Get Security Data")
+        req_id = self.brokerclient.get_security_data(self.contract)
+        logger.debug("Request ID: %s", req_id)
+        data = self.brokerclient.get_data(req_id)
+        logger.debug("Data: %s", data)
+
+        logger.debug10("End Function")
+        return None

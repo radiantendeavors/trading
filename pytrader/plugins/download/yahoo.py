@@ -27,9 +27,7 @@ Algorithmic Trading Program
 """
 
 # System Libraries
-import random
 import sys
-import time
 
 # 3rd Party Libraries
 
@@ -38,11 +36,9 @@ import time
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs.clients import yahoo
-from pytrader.libs.clients.mysql import etf_info
-from pytrader.libs.clients.mysql import index_info
-from pytrader.libs.clients.mysql import stock_info
-from pytrader.libs.utilities import config
+from pytrader.libs import indexes
+from pytrader.libs.indexes import index
+from pytrader.libs.securities import etfs, stocks
 
 # Conditional Libraries
 
@@ -58,88 +54,37 @@ The base logger.
 """
 logger = logging.getLogger(__name__)
 
-min_sleeptime = 61
-max_sleeptime = 121
 
-
-# ==================================================================================================
-#
-# Functions
-#
-# ==================================================================================================
-def history(investments, args):
-    if investments == "indexes":
-        info = index_info.IndexInfo()
-    elif investments == "etfs":
-        info = etf_info.EtfInfo()
-    elif investments == "stocks":
-        info = stock_info.StockInfo()
-    else:
-        logger.error("No investments were selected")
-        sys.exit(1)
-
-    yc = yahoo.YahooClient()
-    all_tickers = yc.get_ticker_list(info)
-
-    for ticker in all_tickers:
-        logger.debug("Ticker: %s", ticker["yahoo_symbol"])
-        if ticker["yahoo_symbol"]:
-            yahoo_symbol = ticker["yahoo_symbol"]
-        else:
-            yahoo_symbol = ticker["ticker"]
-
-        yc.get_bar_history(info,
-                           ticker["ticker"],
-                           yahoo_symbol,
-                           interval=args.bar_size,
-                           period=args.period)
-        time.sleep(random.randint(min_sleeptime, max_sleeptime))
-
-
-def information(investments, args):
+def yahoo_download(args):
     logger.debug10("Begin Function")
-    if investments == "indexes":
-        info_table = index_info.IndexInfo()
-    elif investments == "etfs":
-        info_table = etf_info.EtfInfo()
-    elif investments == "stocks":
-        info_table = stock_info.StockInfo()
-    else:
-        logger.error("No investments were selected")
-        sys.exit(1)
-
-    yc = yahoo.YahooClient()
 
     if args.security:
-        info = yc.get_info(args.security, info_table)
-        logger.debug("Info: ", info)
+        logger.debug("Get information and history for individual security")
     else:
-        all_tickers = yc.get_ticker_list(info_table, check_symbol=0)
-        for ticker in all_tickers:
-            logger.debug("Ticker: %s", ticker["yahoo_symbol"])
-            if ticker["yahoo_symbol"]:
-                yahoo_symbol = ticker["yahoo_symbol"]
+        if args.type:
+            investments = args.type
+        else:
+            investments = ["indexes", "etfs", "stocks"]
+
+        for investment in investments:
+            if investment == "indexes":
+                info = indexes.Indexes()
+            elif investment == "etfs":
+                info = etfs.Etfs()
+            elif investment == "stocks":
+                info = stocks.Stocks()
+
             else:
-                yahoo_symbol = ticker["ticker"]
-                info = yc.get_info(yahoo_symbol, info_table)
-                logger.debug("Info: ", info)
-                #time.sleep(random.randint(min_sleeptime, max_sleeptime))
+                logger.error("No investments were selected")
+                sys.exit(1)
 
-    logger.debug10("End Function")
-    return None
-
-
-def broker_download(args):
-    logger.debug10("Begin Function")
-
-    if args.type:
-        investments = args.type
-    else:
-        investments = ["indexes", "etfs", "stocks"]
-
-    for investment in investments:
-        information(investment, args)
-        history(investment, args)
+            if args.info:
+                info.update_info("yahoo")
+            elif args.history:
+                info.update_history("yahoo", args.bar_size, args.period)
+            else:
+                info.update_info("yahoo")
+                info.update_history("yahoo", args.bar_size, args.period)
 
     logger.debug10("End Function")
 
@@ -162,6 +107,10 @@ def parser(*args, **kwargs):
                      ],
                      default="1d",
                      help="Bar Size  (Default: '1d')")
+    cmd.add_argument("-H",
+                     "--history",
+                     action="store_true",
+                     help="Get Price history.")
     cmd.add_argument("-i",
                      "--info",
                      action="store_true",
@@ -181,6 +130,6 @@ def parser(*args, **kwargs):
                      nargs=1,
                      choices=["etfs", "stocks", "indexes"],
                      help="Investment type to download information")
-    cmd.set_defaults(func=broker_download)
+    cmd.set_defaults(func=yahoo_download)
 
     return cmd

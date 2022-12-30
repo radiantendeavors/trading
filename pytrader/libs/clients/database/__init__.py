@@ -1,6 +1,7 @@
-"""!@package pytrader
+"""!
+@package pytrader.libs.clients.database
 
-Algorithmic Trading Program
+Provides the database client
 
 @author Geoff S. derber
 @version HEAD
@@ -20,26 +21,22 @@ Algorithmic Trading Program
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file plugins/download/nasdaq.py
 
-    Contains global variables for the pyTrader program.
-
+@file pytrader/libs/clients/database/__init__.py
 """
-
 # System Libraries
-# import os
-# import sys
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 # 3rd Party Libraries
 
 # Application Libraries
 # System Library Overrides
-# from pytrader.libs.system import argparse
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs.securities import etfs, stocks
-# Conditional Libraries
+from pytrader.libs.utilities import config
 
 # ==================================================================================================
 #
@@ -50,10 +47,13 @@ from pytrader.libs.securities import etfs, stocks
 @var logger
 The base logger.
 
-@var colortext
-Allows Color text on the console
+@var Base
+
+@var DBSession
 """
 logger = logging.getLogger(__name__)
+Base = declarative_base()
+DBSession = scoped_session(sessionmaker())
 
 
 # ==================================================================================================
@@ -61,42 +61,11 @@ logger = logging.getLogger(__name__)
 # Functions
 #
 # ==================================================================================================
-def nasdaq_download(args):
-    logging.debug("Begin Function")
-
-    investments = "None"
-
-    if args.type:
-        investments = args.type
-    else:
-        investments = ["stocks", "etfs"]
-
-    for investment in investments:
-        if investment == "etfs":
-            info = etfs.Etfs()
-        elif investment == "stocks":
-            info = stocks.Stocks()
-
-        info.update_info("nasdaq")
-
-    logging.debug("End Fuction")
-    return None
-
-
-def parser(*args, **kwargs):
-    subparsers = args[0]
-    parent_parsers = list(args[1:])
-
-    cmd = subparsers.add_parser("nasdaq",
-                                aliases=["n"],
-                                parents=parent_parsers,
-                                help="Downloads data from NASDAQ")
-    cmd.add_argument("-t",
-                     "--type",
-                     nargs=1,
-                     choices=["etfs", "stocks"],
-                     help="Type of investments to download")
-
-    cmd.set_defaults(func=nasdaq_download)
-
-    return cmd
+def init_sqlalchemy():
+    global engine
+    conf = config.Config()
+    conf.read_config()
+    database_url = conf.set_database_url()
+    engine = create_engine(database_url)
+    DBSession.configure(bind=engine, autoflush=False, expire_on_commit=False)
+    Base.metadata.create_all(engine)
