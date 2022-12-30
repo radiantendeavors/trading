@@ -1,5 +1,5 @@
 """!
-@package pytrader.libs.clients.broker.ibkrclient
+@file ibrkrclient.py
 
 Provides the client for Interactive Brokers
 
@@ -20,9 +20,6 @@ Provides the client for Interactive Brokers
 
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-
-@file lib/clients/broker/ibrkrclient.py
 
   Creates a basic interface for interacting with Interactive Brokers.
 
@@ -57,9 +54,19 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class IbkrClient(EWrapper, EClient):
-    """ Serves as the client and the wrapper"""
+    """! @class IbkrClient
+
+    Serves as the client and the wrapper
+    """
 
     def __init__(self, *args, **kwargs):
+        """!@fn __init__
+
+        Initialize the IbkrClient class
+
+        @param *args
+        @param **kwargs
+        """
         EWrapper.__init__(self)
         EClient.__init__(self, self)
 
@@ -386,9 +393,13 @@ class IbkrClient(EWrapper, EClient):
 #
 # ==================================================================================================
 def main():
+    """!@fn main
+
+    Function used to test connectivity
+    """
     # Create the client and connect to TWS or IB Gateway
 
-    client = BrokerClient("127.0.0.1", 7497, 0)
+    client = IbkrClient("127.0.0.1", 7497, 0)
 
     # Request the current time
     client.reqCurrentTime()
