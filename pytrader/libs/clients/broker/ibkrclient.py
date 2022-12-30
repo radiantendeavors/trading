@@ -151,7 +151,7 @@ class IbkrClient(EWrapper, EClient):
         logger.info("Current time: %s", time_now)
 
     @iswrapper
-    def error(self, req_id, code, msg):
+    def error(self, req_id, code, msg, advanced_order_rejection=""):
         logger.debug2("Interactive Brokers Error Messages")
         error_codes = [
             100, 102, 103, 104, 105, 106, 320, 502, 503, 504, 2100, 2101, 2102,
@@ -160,11 +160,26 @@ class IbkrClient(EWrapper, EClient):
         warning_codes = [101, 2105, 2107, 2108, 2109, 2110, 2137]
 
         if code in error_codes:
-            logger.error("ReqID# %s, Code: %s (%s)", req_id, code, msg)
+            if advanced_order_rejection:
+                logger.error(
+                    "ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s",
+                    req_id, code, msg, advanced_order_rejection)
+            else:
+                logger.error("ReqID# %s, Code: %s (%s)", req_id, code, msg)
         elif code in warning_codes:
-            logger.warning("ReqID# %s, Code: %s (%s)", req_id, code, msg)
+            if advanced_order_rejection:
+                logger.warning(
+                    "ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s",
+                    req_id, code, msg, advanced_order_rejection)
+            else:
+                logger.warning("ReqID# %s, Code: %s (%s)", req_id, code, msg)
         else:
-            logger.debug("ReqID# %s, Code: %s (%s)", req_id, code, msg)
+            if advanced_order_rejection:
+                logger.debug(
+                    "ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s",
+                    req_id, code, msg, advanced_order_rejection)
+            else:
+                logger.debug("ReqID# %s, Code: %s (%s)", req_id, code, msg)
 
         logger.debug10("End Function")
         return None
