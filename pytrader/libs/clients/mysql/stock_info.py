@@ -1,7 +1,6 @@
-"""!
-@package pytrader.libs.dbclient
+"""!@file pytrader/libs/clients/mysql/stock_info.py
 
-Provides the database client
+Provides the interface with the stock_info table
 
 @author Geoff S. derber
 @version HEAD
@@ -22,7 +21,6 @@ Provides the database client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file __init__.py
 """
 # System Libraries
 import pymysql
