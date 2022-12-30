@@ -1,4 +1,4 @@
-"""!@package pytrader
+"""!@file broker.py
 
 Algorithmic Trading Program
 
@@ -20,17 +20,12 @@ Algorithmic Trading Program
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file plugins/download/broker.py
-
-    Contains global variables for the pyTrader program.
 
 """
 
 # System Libraries
 # import os
 import sys
-import threading
-import time
 
 # 3rd Party Libraries
 
@@ -59,40 +54,12 @@ The base logger.
 """
 logger = logging.getLogger(__name__)
 
+
 # ==================================================================================================
 #
 # Functions
 #
 # ==================================================================================================
-# def run_loop():
-#     brokerclient.run()
-
-
-def broker_connect(address, port, client_id=0):
-    logger.debug10("Begin Function")
-    logger.debug("Address: %s Port: %s", address, port)
-    if client_id < 1:
-        logger.warning("Self.Client ID: %s", client_id)
-    else:
-        logger.debug("Client ID: %s", client_id)
-
-    # Connect to TWS or IB Gateway
-    brokerclient = broker.BrokerClient()
-    brokerclient.connect(address, port, client_id)
-
-    logger.debug2("Start Broker Client Thread")
-    broker_thread = threading.Thread(target=brokerclient.run)
-    broker_thread.start()
-    logger.debug2("Broker Client Thread Started")
-
-    time.sleep(1)
-
-    brokerclient.check_server()
-
-    logger.debug10("End Function")
-    return brokerclient
-
-
 def basic_info(investments, brokerclient, security=None):
     logger.debug("Begin Function")
 
@@ -125,7 +92,7 @@ def broker_download(args):
     else:
         port = conf.brokerclient_port
 
-    brokerclient = broker_connect(address, port, client_id=client_id)
+    brokerclient = broker.broker_connect(address, port, client_id=client_id)
 
     if args.type:
         investments = args.type
