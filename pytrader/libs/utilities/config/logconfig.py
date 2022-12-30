@@ -57,7 +57,7 @@ class LogConfig():
             if "loglevel" in config["logging"]:
                 self.loglevel = loglevels[config["logging"]["loglevel"]]
             if "verbosity" in config["logging"]:
-                self.loglevel = 20 - min(20, config["logging"]["verbosity"])
+                self.loglevel = 11 - min(10, config["logging"]["verbosity"])
         return None
 
     def update_loglevel(self, args):
@@ -66,7 +66,7 @@ class LogConfig():
         elif args.quiet > 0:
             self.loglevel = 20 + args.quiet
         elif args.verbosity > 0:
-            self.loglevel = 20 - args.verbosity
+            self.loglevel = 11 - args.verbosity
         else:
             # Bind loglevel to the upper case string value obtained
             # from the command line argument.  This allows the user to
