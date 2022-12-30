@@ -34,9 +34,11 @@ import time
 from pytrader.libs.system import logging
 
 # Application Libraries
-from pytrader.libs.clients import broker
 from pytrader.libs.clients import nasdaq
 from pytrader.libs.clients import yahoo
+from pytrader.libs.indexes import index
+from pytrader.libs.securities import etf
+from pytrader.libs.securities import stock
 
 # ==================================================================================================
 #
@@ -56,12 +58,32 @@ max_sleeptime = 121
 class Securities():
 
     def __init__(self, *args, **kwargs):
-        self.index_list = {}
+        self.securities_list = {}
+        if kwargs.get("brokerclient"):
+            self.brokerclient = kwargs["brokerclient"]
+            logger.debug("BrokerClient: %s", self.brokerclient)
 
     def __update_info_broker(self):
         logger.debug10("Begin Function")
-        if self.investment_type == "etfs":
-            logger.debug("Updating ETFs")
+
+        for item in self.securities_list:
+            logger.debug2("Item: %s", item)
+            logger.debug3("Investment Type: %s", self.investment_type)
+            if self.investment_type == "etfs":
+                security = etf.Etf(ticker_symbol=item["ticker"],
+                                   brokerclient=self.brokerclient)
+            elif self.investment_type == "indexes":
+                security = index.Index(ticker_symbol=item["ticker"],
+                                       brokerclient=self.brokerclient)
+            elif self.investment_type == "stocks":
+                security = stock.Stock(ticker_symbol=item["ticker"],
+                                       brokerclient=self.brokerclient)
+
+            else:
+                logger.error("No investment type was selected.")
+
+            logger.debug("Security: %s", security)
+            security.update_info()
 
         logger.debug10("End Function")
         return None
@@ -75,7 +97,7 @@ class Securities():
 
     def __update_info_yahoo(self):
         logger.debug10("Begin Function")
-        for ticker in self.index_list:
+        for ticker in self.securities_list:
             logger.debug("Ticker: %s", ticker["yahoo_symbol"])
             if ticker["yahoo_symbol"]:
                 yahoo_symbol = ticker["yahoo_symbol"]
@@ -91,7 +113,7 @@ class Securities():
 
     def __update_history_yahoo(self, bar_size, period):
         logger.debug10("Begin Function")
-        for ticker in self.index_list:
+        for ticker in self.securities_list:
             logger.debug("Ticker: %s", ticker["yahoo_symbol"])
             if ticker["yahoo_symbol"]:
                 yc = yahoo.YahooClient()
@@ -107,7 +129,7 @@ class Securities():
 
     def update_history(self, source, bar_size, period):
         logger.debug10("Begin Function")
-        if self.index_list:
+        if self.securities_list:
             logger.debug("Index List: %s", self.index_list)
         else:
             self.get_list()
@@ -120,14 +142,17 @@ class Securities():
         logger.debug("End Function")
         return None
 
-    def update_info(self, source):
+    def update_info(self, source=None):
         logger.debug10("Begin Function")
-        if self.index_list:
-            logger.debug("Index List: %s", self.index_list)
+        logger.debug("Source: %s", source)
+        if self.securities_list:
+            logger.debug("Index List: %s", self.securities_list)
         else:
             self.get_list()
 
-        if source == "nasdaq":
+        if source == "broker":
+            self.__update_info_broker()
+        elif source == "nasdaq":
             self.__update_info_nasdaq()
         elif source == "yahoo":
             self.__update_info_yahoo()
