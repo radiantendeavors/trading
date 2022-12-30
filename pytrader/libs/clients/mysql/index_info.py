@@ -205,6 +205,26 @@ class IndexInfo(mysql.MySQLDatabase):
         logger.debug("End Function")
         return None
 
+    def update_ibkr_ipo_date(self, symbol, ipo_date):
+        logger.debug10("Begin Function")
+        cursor = self.mycursor
+
+        sql = """
+        UPDATE `index_info`
+        SET `ipo_date`=%s
+        WHERE `ticker`=%s
+        """
+
+        try:
+            cursor.execute(sql, (ipo_date, symbol))
+        except pymysql.Error as e:
+            logger.error("Update Delisting Error: %s", e)
+
+        logger.debug("SQL: %s", sql)
+        self.mydb.commit()
+        logger.debug10("End Function")
+        return None
+
     def update_yahoo_info(self, ticker, yahoo_security=None):
         logger.debug("Begin Function")
 

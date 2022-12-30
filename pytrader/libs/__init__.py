@@ -1,7 +1,7 @@
 """!
 @package pytrader.libs
 
-Provides the user interfaces for pytrader
+Provides the internal libraries for pytrader
 
 @author Geoff S. derber
 @version HEAD
@@ -22,5 +22,4 @@ Provides the user interfaces for pytrader
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file __init__.py
 """

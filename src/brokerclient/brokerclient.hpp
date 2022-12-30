@@ -15,7 +15,7 @@
 template<class ItemType>
 /***************************************************************************************************
  *
- * BrokerClient
+ * @class BrokerClient brokerclient.hpp "brokerclient/brokerclient.hpp"
  *
  * @param host
  * @param port
