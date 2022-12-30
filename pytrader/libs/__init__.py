@@ -1,5 +1,5 @@
 """!
-@file __init__.py
+@package pytrader.libs
 
 Provides the internal libraries for pytrader
 
