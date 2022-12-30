@@ -64,5 +64,5 @@ class Indexes(securities.Securities):
     def get_list(self):
         info = index_info.IndexInfo()
         where = "`delisted_date` IS NULL"
-        self.index_list = info.select(where_clause=where)
-        return self.index_list
+        self.securities_list = info.select(where_clause=where)
+        return self.securities_list

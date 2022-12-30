@@ -59,10 +59,14 @@ class Etfs(securities.Securities):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.investment_type = "etfs"
+        if kwargs.get("client_id"):
+            self.client_id = kwargs["client_id"]
+        else:
+            self.client_id = 0
         return None
 
     def get_list(self):
         info = etf_info.EtfInfo()
         where = "`delisted_date` IS NULL"
-        self.index_list = info.select(where_clause=where)
-        return self.index_list
+        self.securities_list = info.select(where_clause=where)
+        return self.securities_list
