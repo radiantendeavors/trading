@@ -53,6 +53,7 @@ from pytrader.libs.utilities import config
 The base logger.
 """
 logger = logging.getLogger(__name__)
+client_id = 2
 
 
 # ==================================================================================================
@@ -118,7 +119,7 @@ def init(args):
             parser.print_help()
             logger.debug("No command was given")
 
-    logger.debug("End real main")
+    logger.debug10("End Function")
     return None
 
 
@@ -138,7 +139,7 @@ def main(args=None):
         init(args)
 
     logger.debug("End Application")
-    return None
+    return 1
 
 
 # ==================================================================================================
