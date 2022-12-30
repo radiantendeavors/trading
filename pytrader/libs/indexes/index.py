@@ -25,7 +25,7 @@ Provides Market Index Information
 @file security.py
 """
 # System libraries
-
+import datetime
 # 3rd Party libraries
 
 # System Library Overrides
@@ -62,14 +62,18 @@ class Index(security.Security):
         return logger.info("Index(Ticker: %s, Name: %s)", self.ticker,
                            self.name)
 
-    def update_info(self):
+    def __get_info_from_database(self):
         info = index_info.IndexInfo()
         where_clause = "`ticker`='" + self.ticker_symbol + "'"
-        result = info.select(where_clause=where_clause)
+        return info.select(where_clause=where_clause)
+
+    def update_info(self):
+        result = self.__get_info_from_database()
 
         logger.debug("Result: %s", result)
 
         self.exchange = result[0]["ibkr_exchange"]
+        logger.debug("Exchange: %s", self.exchange)
         self.set_contract(self.ticker_symbol,
                           self.security_type,
                           exchange=self.exchange)
@@ -79,6 +83,30 @@ class Index(security.Security):
         logger.debug("Request ID: %s", req_id)
         data = self.brokerclient.get_data(req_id)
         logger.debug("Data: %s", data)
+
+        self.update_ipo_date()
+        logger.debug10("End Function")
+        return None
+
+    def update_ipo_date(self):
+        logger.debug10("Begin Function")
+        result = self.__get_info_from_database()
+
+        self.exchange = result[0]["ibkr_exchange"]
+        logger.debug("Exchange: %s", self.exchange)
+        self.set_contract(self.ticker_symbol,
+                          self.security_type,
+                          exchange=self.exchange)
+
+        logger.debug("Get Security Data")
+        req_id = self.brokerclient.get_ipo_date(self.contract)
+        logger.debug("Request ID: %s", req_id)
+        data = self.brokerclient.get_data(req_id)
+        ipo_date = datetime.datetime.strptime(data, "%Y%m%d-%H:%M:%S")
+        logger.debug("Data: %s", ipo_date)
+
+        db = index_info.IndexInfo()
+        db.update_ibkr_ipo_date(self.ticker_symbol, ipo_date)
 
         logger.debug10("End Function")
         return None

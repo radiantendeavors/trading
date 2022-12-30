@@ -1,5 +1,5 @@
-"""!
-@file ibrkrclient.py
+"""
+@package pytrader.libs.clients.broker.ibrkrclient
 
 Provides the client for Interactive Brokers
 
@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class IbkrClient(EWrapper, EClient):
-    """! @class IbkrClient
+    """IbkrClient
 
     Serves as the client and the wrapper
     """
@@ -74,8 +74,9 @@ class IbkrClient(EWrapper, EClient):
         self.data = {}
 
     def check_server(self):
-        """! @fn check_server
+        """check_server
 
+        Checks the connection by asking the server it's time.
         """
         self.reqCurrentTime()
         if self.serverVersion() is not None:
@@ -109,12 +110,14 @@ class IbkrClient(EWrapper, EClient):
         logger.debug("Ticker: %s", contract.symbol)
         self.reqHeadTimeStamp(self.req_id, contract, what_to_show,
                               use_regular_trading_hours, format_date)
+        time.sleep(5)
         return self.req_id
 
     def get_account_summary(self):
         self.req_id += 1
         self.reqAccountSummary(self.req_id, "ALL",
                                "AccountType, AvailableFunds")
+        time.sleep(5)
         return self.req_id
 
     def get_security_data(self, contract):
@@ -231,8 +234,8 @@ class IbkrClient(EWrapper, EClient):
     def error(self, req_id, code, msg, advanced_order_rejection=""):
         logger.debug2("Interactive Brokers Error Messages")
         error_codes = [
-            100, 102, 103, 104, 105, 106, 320, 502, 503, 504, 2100, 2101, 2102,
-            2103, 2168, 2169, 10038
+            100, 102, 103, 104, 105, 106, 200, 320, 502, 503, 504, 2100, 2101,
+            2102, 2103, 2168, 2169, 10038
         ]
         warning_codes = [101, 2105, 2107, 2108, 2109, 2110, 2137]
 
@@ -264,6 +267,7 @@ class IbkrClient(EWrapper, EClient):
     @iswrapper
     def headTimestamp(self, req_id, head_time_stamp):
         logger.debug("ReqID: %s, IPO Date: %s", req_id, head_time_stamp)
+        self.data[req_id] = head_time_stamp
 
     @iswrapper
     def nextValidId(self, order_id: int):
