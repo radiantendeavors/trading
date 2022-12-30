@@ -89,7 +89,7 @@ class EtfInfo(mysql.MySQLDatabase):
         try:
             cursor.execute(sql)
             result = cursor.fetchall()
-            logger.debug("Result: %s", result)
+            logger.debug3("Result: %s", result)
             return result
         except pymysql.Error as e:
             logger.error("Select Error: %s", e)
@@ -126,7 +126,7 @@ class EtfInfo(mysql.MySQLDatabase):
         return None
 
     def update_last_seen(self, ticker, name):
-        logger.debug("Begin Function")
+        logger.debug10("Begin Function")
         last_seen = date.today()
         cursor = self.mycursor
 
@@ -144,11 +144,11 @@ class EtfInfo(mysql.MySQLDatabase):
         logger.debug("SQL: %s", sql)
         self.mydb.commit()
 
-        logger.debug("End Function")
+        logger.debug10("End Function")
         return None
 
     def update_delisted(self, ticker):
-        logger.debug("Begin Function")
+        logger.debug10("Begin Function")
         logger.debug("Ticker: %s", ticker)
         delisted = date.today()
         logger.debug("Delisted: %s", delisted)
@@ -185,7 +185,7 @@ class EtfInfo(mysql.MySQLDatabase):
 
     def update_ibkr_info(self, symbol, contract_id, primary_exchange,
                          exchange):
-        logger.debug("Begin Function")
+        logger.debug10("Begin Function")
         cursor = self.mycursor
 
         sql = """
