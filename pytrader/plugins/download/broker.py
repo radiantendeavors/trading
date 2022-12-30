@@ -29,7 +29,7 @@ Algorithmic Trading Program
 # System Libraries
 # import os
 import sys
-#import threading
+import threading
 import time
 
 # 3rd Party Libraries
@@ -59,12 +59,15 @@ The base logger.
 """
 logger = logging.getLogger(__name__)
 
-
 # ==================================================================================================
 #
 # Functions
 #
 # ==================================================================================================
+# def run_loop():
+#     brokerclient.run()
+
+
 def broker_connect(address, port, client_id=0):
     logger.debug10("Begin Function")
     logger.debug("Address: %s Port: %s", address, port)
@@ -74,20 +77,15 @@ def broker_connect(address, port, client_id=0):
         logger.debug("Client ID: %s", client_id)
 
     # Connect to TWS or IB Gateway
-    try:
-        brokerclient = broker.BrokerClient()
-        brokerclient.connect(address, port, client_id)
-        time.sleep(1)
-    except Exception as msg:
-        logger.error("Failed to connect")
-        logger.error(msg)
-        sys.exit(1)
+    brokerclient = broker.BrokerClient()
+    brokerclient.connect(address, port, client_id)
 
-    # logger.debug("Start Threads")
-    # Launch client thread
-    # broker_thread = threading.Thread(target=brokerclient.run())
-    # broker_thread.start()
-    # logger.debug("Threads Started")
+    logger.debug2("Start Broker Client Thread")
+    broker_thread = threading.Thread(target=brokerclient.run)
+    broker_thread.start()
+    logger.debug2("Broker Client Thread Started")
+
+    time.sleep(1)
 
     brokerclient.check_server()
 
@@ -141,6 +139,7 @@ def broker_download(args):
             for investment in investments:
                 basic_info(investment, brokerclient)
 
+    brokerclient.disconnect()
     return None
 
 
