@@ -55,6 +55,7 @@ Allows Color text on the console
 """
 logger = logging.getLogger(__name__)
 colortext = text.ConsoleText()
+client_id = 1
 
 
 # ==================================================================================================
