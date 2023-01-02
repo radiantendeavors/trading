@@ -33,7 +33,7 @@ from pytrader.libs.system import logging
 
 # Application Libraries
 from pytrader.libs.clients.mysql import index_info
-from pytrader.libs.securities import security
+from pytrader.libs.securities import securitybase
 
 # ==================================================================================================
 #
@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class Index(security.Security):
+class Index(securitybase.SecurityBase):
 
     def __init__(self, *args, **kwargs):
         logger.debug("Begin Function")

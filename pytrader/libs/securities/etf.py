@@ -33,7 +33,7 @@ from pytrader.libs.system import logging
 
 # Other Application Libraries
 from pytrader.libs.clients.mysql import etf_info
-from pytrader.libs.securities import security
+from pytrader.libs.securities import securitybase
 
 # ==================================================================================================
 #
@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class Etf(security.Security):
+class Etf(securitybase.SecurityBase):
     """
     Etf
 

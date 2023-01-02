@@ -36,9 +36,7 @@ from pytrader.libs.system import logging
 # Application Libraries
 from pytrader.libs.clients import nasdaq
 from pytrader.libs.clients import yahoo
-from pytrader.libs.indexes import index
-from pytrader.libs.securities import etf
-from pytrader.libs.securities import stock
+from pytrader.libs.securities import security
 # from pytrader.libs import indexes
 # from pytrader.libs.securities import etfs, stocks
 from pytrader.libs.clients.mysql import etf_info, index_info, stock_info
@@ -77,21 +75,12 @@ class SecuritiesBase():
         for item in self.securities_list:
             logger.debug2("Item: %s", item)
             logger.debug3("Investment Type: %s", self.securities_type)
-            if self.securities_type == "etfs":
-                security = etf.Etf(ticker_symbol=item["ticker"],
-                                   brokerclient=self.brokerclient)
-            elif self.securities_type == "indexes":
-                security = index.Index(ticker_symbol=item["ticker"],
-                                       brokerclient=self.brokerclient)
-            elif self.securities_type == "stocks":
-                security = stock.Stock(ticker_symbol=item["ticker"],
-                                       brokerclient=self.brokerclient)
+            investment = security.Security(security_type=self.securities_type,
+                                           ticker_symbol=item["ticker"],
+                                           brokerclient=self.brokerclient)
 
-            else:
-                logger.error("No investment type was selected.")
-
-            logger.debug("Security: %s", security)
-            security.update_info()
+            logger.debug("Security: %s", investment)
+            investment.update_info()
 
         logger.debug10("End Function")
         return None
@@ -142,9 +131,12 @@ class SecuritiesBase():
         else:
             self.get_list()
 
-        if source == "yahoo":
+        if source == "broker":
+            self.__update_history_broker(bar_size, period)
+        elif source == "yahoo":
             self.__update_history_yahoo(bar_size, period)
         else:
+            self.__update_history_broker(bar_size, period)
             self.__update_history_yahoo(bar_size, period)
 
         logger.debug("End Function")
@@ -165,6 +157,7 @@ class SecuritiesBase():
         elif source == "yahoo":
             self.__update_info_yahoo()
         else:
+            self.__update_info_broker
             self.__update_info_nasdaq()
             self.__update_info_yahoo()
 

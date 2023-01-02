@@ -33,7 +33,7 @@ from pytrader.libs.system import logging
 
 # Other Application Libraries
 from pytrader.libs.clients.mysql import stock_info
-from pytrader.libs.securities import security
+from pytrader.libs.securities import securitybase
 
 # ==================================================================================================
 #
@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class Stock(security.Security):
+class Stock(securitybase.SecurityBase):
 
     def __init__(self, *args, **kwargs):
         self.req_id = 20000

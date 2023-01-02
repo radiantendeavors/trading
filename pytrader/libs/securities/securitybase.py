@@ -33,9 +33,6 @@ from ibapi.contract import Contract
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs.indexes import index
-from pytrader.libs.securities import etf
-from pytrader.libs.securities import stock
 
 # ==================================================================================================
 #
@@ -50,20 +47,42 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class Security():
+class SecurityBase():
 
-    def __new__(cls, *args, **kwargs):
-        security_type = kwargs["security_type"]
-        subclass_map = {
-            "etfs": etf.Etf,
-            "stocks": stock.Stock,
-            "indexes": index.Index
-        }
+    def __init__(self, *args, **kwargs):
+        logger.debug10("Begin Function")
+        logger.debug("Kwargs: %s", kwargs)
+        if kwargs.get("ticker_symbol"):
+            self.ticker_symbol = kwargs["ticker_symbol"]
+        if kwargs.get("brokerclient"):
+            self.brokerclient = kwargs["brokerclient"]
 
-        logger.debug("Subclass Map: %s", subclass_map)
-        logger.debug("Securities Type: %s", security_type)
-        logger.debug("Securities Subclass: %s",
-                     subclass_map.get(security_type))
+        logger.debug10("End Function")
 
-        subclass = subclass_map.get(security_type)
-        return subclass(*args, **kwargs)
+    def set_contract(self,
+                     ticker_symbol,
+                     security_type,
+                     primary_exchange=None,
+                     exchange="SMART"):
+        """!@fn set_contract
+
+        @param security The ticker symbol for the contract
+        @param security_type The type of security for the contract.  Can be one of: CASH, CRYPTO, STK, IND, CFD, FUT, CONTFUT, FUT+CONTFUT, OPT, FOP, BOND, FUND
+        @param exchange
+        @param currency
+        """
+        logger.debug10("Begin Function")
+        contract = Contract()
+        contract.symbol = ticker_symbol
+        contract.secType = security_type
+        contract.exchange = exchange
+        contract.currency = "USD"
+        logger.debug("Primary Exchange: %s", primary_exchange)
+        if primary_exchange:
+            contract.primaryExchange = primary_exchange
+
+        logger.debug("Contract: %s", contract)
+        self.contract = contract
+
+        logger.debug10("End Function")
+        return contract
