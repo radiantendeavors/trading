@@ -83,16 +83,18 @@ class EtfInfo(mysql.MySQLDatabase):
         if where_clause:
             sql += "WHERE " + where_clause
 
-        logger.debug("SQL: %s", sql)
+        logger.debug2("SQL: %s", sql)
 
         cursor = self.mycursor
         try:
             cursor.execute(sql)
             result = cursor.fetchall()
             logger.debug3("Result: %s", result)
+            logger.debug10("End Function")
             return result
         except pymysql.Error as e:
             logger.error("Select Error: %s", e)
+            logger.debug10("End Function")
             return None
 
     def insert(self, ticker, name):
@@ -107,7 +109,7 @@ class EtfInfo(mysql.MySQLDatabase):
         last_seen = date.today()
 
         logger.debug("Ticker: %s", ticker)
-        logger.debug("SQL: %s", sql)
+        logger.debug2("SQL: %s", sql)
 
         cursor = self.mycursor
         try:

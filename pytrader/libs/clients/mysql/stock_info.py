@@ -64,7 +64,7 @@ class StockInfo(mysql.MySQLDatabase):
         super().__init__()
 
     def select(self, select_clause=None, where_clause=None):
-        logger.debug("Begin Function")
+        logger.debug10("Begin Function")
 
         if select_clause:
             sql = """
@@ -79,20 +79,22 @@ class StockInfo(mysql.MySQLDatabase):
         if where_clause:
             sql += "WHERE " + where_clause
 
-        logger.debug("SQL: %s", sql)
+        logger.debug3("SQL: %s", sql)
 
         cursor = self.mycursor
         try:
             cursor.execute(sql)
             result = cursor.fetchall()
-            logger.debug("Result: %s", result)
+            logger.debug3("Result: %s", result)
+            logger.debug10("End Function")
             return result
         except pymysql.Error as e:
             logger.error("Select Error: %s", e)
+            logger.debug10("End Function")
             return None
 
     def insert(self, ticker, name, country, industry, sector):
-        logger.debug("Begin Function")
+        logger.debug10("Begin Function")
         first_listed = date.today()
         last_seen = date.today()
 
@@ -112,7 +114,7 @@ class StockInfo(mysql.MySQLDatabase):
         """
 
         logger.debug("Ticker: %s", ticker)
-        logger.debug("SQL: %s", sql)
+        logger.debug3("SQL: %s", sql)
 
         cursor = self.mycursor
         try:
@@ -130,7 +132,7 @@ class StockInfo(mysql.MySQLDatabase):
 
         self.mydb.commit()
 
-        logger.debug("End Function")
+        logger.debug10("End Function")
         return None
 
     def update_last_seen(self, ticker, name, country, industry, sector):
@@ -160,7 +162,7 @@ class StockInfo(mysql.MySQLDatabase):
         except pymysql.Error as e:
             logger.error("Update Error 1: %s", e)
 
-        logger.debug("SQL: %s", sql)
+        logger.debug3("SQL: %s", sql)
         self.mydb.commit()
 
         logger.debug("End Function")
@@ -199,7 +201,7 @@ class StockInfo(mysql.MySQLDatabase):
             except pymysql.Error as e:
                 logger.error("Update Delisting Error: %s", e)
 
-            logger.debug("SQL: %s", sql)
+            logger.debug3("SQL: %s", sql)
             self.mydb.commit()
 
         logger.debug("End Function")
@@ -222,7 +224,7 @@ class StockInfo(mysql.MySQLDatabase):
         except pymysql.Error as e:
             logger.error("Update Delisting Error: %s", e)
 
-        logger.debug("SQL: %s", sql)
+        logger.debug3("SQL: %s", sql)
         self.mydb.commit()
 
     def update_ibkr_ipo_date(self, symbol, ipo_date):
@@ -240,7 +242,7 @@ class StockInfo(mysql.MySQLDatabase):
         except pymysql.Error as e:
             logger.error("Update Delisting Error: %s", e)
 
-        logger.debug("SQL: %s", sql)
+        logger.debug3("SQL: %s", sql)
         self.mydb.commit()
         logger.debug10("End Function")
         return None
@@ -263,7 +265,7 @@ class StockInfo(mysql.MySQLDatabase):
         except pymysql.Error as e:
             logger.error("Update Interactive Brokers Information Error: %s", e)
 
-        logger.debug("SQL: %s", sql)
+        logger.debug3("SQL: %s", sql)
         self.mydb.commit()
         logger.debug("End Function")
         return None
