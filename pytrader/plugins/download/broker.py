@@ -120,11 +120,22 @@ def parser(*args, **kwargs):
                                 aliases=["b"],
                                 parents=parent_parsers,
                                 help="Downloads data from broker")
-    cmd.add_argument("-b", "--bar-size", help="Bar Size")
+    cmd.add_argument("-b",
+                     "--bar-size",
+                     choices=[
+                         "1 secs", "5 secs", "10 secs", "15 secs", "30 secs",
+                         "1 min", "2 mins", "3 mins", "5 mins", "10 mins",
+                         "15 mins", "20 mins", "30 mins", "1 hour", "2 hours",
+                         "3 hours", "4 hours", "8 hours", "1 day", "1 week",
+                         "1 month"
+                     ],
+                     default="1 day",
+                     help="Bar Size")
     cmd.add_argument("-i",
                      "--info",
                      action="store_true",
                      help="Get Basic Security information.")
+    cmd.add_argument("-d", "--duration")
     cmd.add_argument("-s", "--security", help="Security to download")
     cmd.add_argument("-t",
                      "--type",
