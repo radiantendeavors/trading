@@ -38,7 +38,7 @@ from pytrader.libs.system import logging
 
 # Application Libraries
 from pytrader.libs.clients.mysql import etf_info
-from pytrader.libs import securities
+from pytrader.libs.securities import securitiesbase
 # ==================================================================================================
 #
 # Global Variables
@@ -54,15 +54,11 @@ max_sleeptime = 121
 # Classes
 #
 # ==================================================================================================
-class Etfs(securities.Securities):
+class Etfs(securitiesbase.SecuritiesBase):
+    securities_type = "etfs"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.investment_type = "etfs"
-        if kwargs.get("client_id"):
-            self.client_id = kwargs["client_id"]
-        else:
-            self.client_id = 0
         return None
 
     def get_list(self):

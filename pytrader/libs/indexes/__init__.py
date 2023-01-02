@@ -38,7 +38,7 @@ from pytrader.libs.system import logging
 
 # Application Libraries
 from pytrader.libs.clients.mysql import index_info
-from pytrader.libs import securities
+from pytrader.libs.securities import securitiesbase
 # ==================================================================================================
 #
 # Global Variables
@@ -54,11 +54,11 @@ max_sleeptime = 121
 # Classes
 #
 # ==================================================================================================
-class Indexes(securities.Securities):
+class Indexes(securitiesbase.SecuritiesBase):
+    securities_type = "indexes"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.investment_type = "indexes"
         return None
 
     def get_list(self):

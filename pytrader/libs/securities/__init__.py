@@ -1,7 +1,7 @@
 """!
-@package pytrader.libs.security
+@package pytrader.libs.securities
 
-Provides the broker client
+Provides the Base Class for Securities
 
 @author Geoff S. derber
 @version HEAD
@@ -22,7 +22,7 @@ Provides the broker client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file security.py
+@file pytrader/libs/securities/__init__.py
 """
 # System libraries
 import random
@@ -39,6 +39,9 @@ from pytrader.libs.clients import yahoo
 from pytrader.libs.indexes import index
 from pytrader.libs.securities import etf
 from pytrader.libs.securities import stock
+from pytrader.libs import indexes
+from pytrader.libs.securities import etfs, stocks
+from pytrader.libs.clients.mysql import etf_info, index_info, stock_info
 
 # ==================================================================================================
 #
@@ -57,108 +60,18 @@ max_sleeptime = 121
 # ==================================================================================================
 class Securities():
 
-    def __init__(self, *args, **kwargs):
-        self.securities_list = {}
-        if kwargs.get("brokerclient"):
-            self.brokerclient = kwargs["brokerclient"]
-            logger.debug("BrokerClient: %s", self.brokerclient)
+    def __new__(cls, *args, **kwargs):
+        securities_type = kwargs["securities_type"]
+        subclass_map = {
+            "etfs": etfs.Etfs,
+            "stocks": stocks.Stocks,
+            "indexes": indexes.Indexes
+        }
 
-    def __update_info_broker(self):
-        logger.debug10("Begin Function")
+        logger.debug("Subclass Map: %s", subclass_map)
+        logger.debug("Securities Type: %s", securities_type)
+        logger.debug("Securities Subclass: %s",
+                     subclass_map.get(securities_type))
 
-        for item in self.securities_list:
-            logger.debug2("Item: %s", item)
-            logger.debug3("Investment Type: %s", self.investment_type)
-            if self.investment_type == "etfs":
-                security = etf.Etf(ticker_symbol=item["ticker"],
-                                   brokerclient=self.brokerclient)
-            elif self.investment_type == "indexes":
-                security = index.Index(ticker_symbol=item["ticker"],
-                                       brokerclient=self.brokerclient)
-            elif self.investment_type == "stocks":
-                security = stock.Stock(ticker_symbol=item["ticker"],
-                                       brokerclient=self.brokerclient)
-
-            else:
-                logger.error("No investment type was selected.")
-
-            logger.debug("Security: %s", security)
-            security.update_info()
-
-        logger.debug10("End Function")
-        return None
-
-    def __update_info_nasdaq(self):
-        logger.debug10("Begin Function")
-        client = nasdaq.NasdaqClient(investments=self.investment_type)
-        client.download_list()
-        logger.debug10("End Function")
-        return None
-
-    def __update_info_yahoo(self):
-        logger.debug10("Begin Function")
-        for ticker in self.securities_list:
-            logger.debug("Ticker: %s", ticker["yahoo_symbol"])
-            if ticker["yahoo_symbol"]:
-                yahoo_symbol = ticker["yahoo_symbol"]
-            else:
-                yahoo_symbol = ticker["ticker"]
-
-            yc = yahoo.YahooClient()
-            yc.get_info(self.investment_type, yahoo_symbol)
-            time.sleep(random.randint(min_sleeptime, max_sleeptime))
-
-        logger.debug10("End Function")
-        return None
-
-    def __update_history_yahoo(self, bar_size, period):
-        logger.debug10("Begin Function")
-        for ticker in self.securities_list:
-            logger.debug("Ticker: %s", ticker["yahoo_symbol"])
-            if ticker["yahoo_symbol"]:
-                yc = yahoo.YahooClient()
-                yc.get_bar_history(self.investment_type,
-                                   ticker["ticker"],
-                                   ticker["yahoo_symbol"],
-                                   interval=bar_size,
-                                   period=period)
-            time.sleep(random.randint(min_sleeptime, max_sleeptime))
-
-        logger.debug10("End Function")
-        return None
-
-    def update_history(self, source, bar_size, period):
-        logger.debug10("Begin Function")
-        if self.securities_list:
-            logger.debug("Index List: %s", self.index_list)
-        else:
-            self.get_list()
-
-        if source == "yahoo":
-            self.__update_history_yahoo(bar_size, period)
-        else:
-            self.__update_history_yahoo(bar_size, period)
-
-        logger.debug("End Function")
-        return None
-
-    def update_info(self, source=None):
-        logger.debug10("Begin Function")
-        logger.debug("Source: %s", source)
-        if self.securities_list:
-            logger.debug("Index List: %s", self.securities_list)
-        else:
-            self.get_list()
-
-        if source == "broker":
-            self.__update_info_broker()
-        elif source == "nasdaq":
-            self.__update_info_nasdaq()
-        elif source == "yahoo":
-            self.__update_info_yahoo()
-        else:
-            self.__update_info_nasdaq()
-            self.__update_info_yahoo()
-
-        logger.debug("End Function")
-        return None
+        subclass = subclass_map.get(securities_type)
+        return subclass(*args, **kwargs)

@@ -25,7 +25,6 @@ The Broker SubCommand for pytrdownload
 
 # System Libraries
 # import os
-import sys
 
 # 3rd Party Libraries
 
@@ -34,9 +33,8 @@ import sys
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs import indexes
+from pytrader.libs import securities
 from pytrader.libs.clients import broker
-from pytrader.libs.securities import etfs, stocks
 from pytrader.libs.utilities import config
 from pytrader.ui.pytrdownload import client_id
 
@@ -70,17 +68,10 @@ def basic_info(investments, brokerclient, security=None):
     """
     logger.debug("Begin Function")
 
-    if investments == "indexes":
-        info = indexes.Indexes(brokerclient=brokerclient)
-    elif investments == "etfs":
-        info = etfs.Etfs(brokerclient=brokerclient)
-    elif investments == "stocks":
-        info = stocks.Stocks(brokerclient=brokerclient)
-    else:
-        logger.error("No investments were selected")
-        sys.exit(1)
+    info = securities.Securities(brokerclient=brokerclient,
+                                 securities_type=investments)
 
-    info.update_info("broker")
+    info.update_info(source="broker")
     logger.debug("End Function")
 
 

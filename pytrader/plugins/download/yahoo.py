@@ -27,7 +27,6 @@ Algorithmic Trading Program
 """
 
 # System Libraries
-import sys
 
 # 3rd Party Libraries
 
@@ -36,9 +35,7 @@ import sys
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs import indexes
-from pytrader.libs.indexes import index
-from pytrader.libs.securities import etfs, stocks
+from pytrader.libs import securities
 
 # Conditional Libraries
 
@@ -67,23 +64,14 @@ def yahoo_download(args):
             investments = ["indexes", "etfs", "stocks"]
 
         for investment in investments:
-            if investment == "indexes":
-                info = indexes.Indexes()
-            elif investment == "etfs":
-                info = etfs.Etfs()
-            elif investment == "stocks":
-                info = stocks.Stocks()
-
-            else:
-                logger.error("No investments were selected")
-                sys.exit(1)
+            info = securities.Securities(securities_type=investment)
 
             if args.info:
-                info.update_info("yahoo")
+                info.update_info(source="yahoo")
             elif args.history:
                 info.update_history("yahoo", args.bar_size, args.period)
             else:
-                info.update_info("yahoo")
+                info.update_info(source="yahoo")
                 info.update_history("yahoo", args.bar_size, args.period)
 
     logger.debug10("End Function")

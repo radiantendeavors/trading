@@ -33,7 +33,7 @@ from pytrader.libs.system import logging
 
 # Application Libraries
 from pytrader.libs.clients.mysql import stock_info
-from pytrader.libs import securities
+from pytrader.libs.securities import securitiesbase
 # ==================================================================================================
 #
 # Global Variables
@@ -47,12 +47,15 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class Stocks(securities.Securities):
+class Stocks(securitiesbase.SecuritiesBase):
+    securities_type = "stocks"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.investment_type = "stocks"
-        return None
+        #return None
+
+    def __repr__(self):
+        return f'Stocks(securities_list={self.securities_list})'
 
     def get_list(self):
         info = stock_info.StockInfo()

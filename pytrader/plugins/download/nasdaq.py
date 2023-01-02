@@ -38,7 +38,7 @@ Algorithmic Trading Program
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs.securities import etfs, stocks
+from pytrader.libs import securities
 # Conditional Libraries
 
 # ==================================================================================================
@@ -72,12 +72,9 @@ def nasdaq_download(args):
         investments = ["stocks", "etfs"]
 
     for investment in investments:
-        if investment == "etfs":
-            info = etfs.Etfs()
-        elif investment == "stocks":
-            info = stocks.Stocks()
-
-        info.update_info("nasdaq")
+        info = securities.Securities(securities_type=investment)
+        logger.debug("Info: %s", info.__repr__())
+        info.update_info(source="nasdaq")
 
     logging.debug("End Fuction")
     return None
