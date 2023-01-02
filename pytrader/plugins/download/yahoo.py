@@ -88,7 +88,6 @@ def parser(*args, **kwargs):
                                 help="Downloads data from broker")
     cmd.add_argument("-b",
                      "--bar-size",
-                     nargs=1,
                      choices=[
                          "1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h",
                          "1d", "5d", "1wk", "1mo", "3mo"
@@ -105,7 +104,6 @@ def parser(*args, **kwargs):
                      help="Get Basic Security information.")
     cmd.add_argument("-p",
                      "--period",
-                     nargs=1,
                      choices=[
                          "1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y",
                          "10y", "ytd", "max"
