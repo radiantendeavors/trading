@@ -57,8 +57,13 @@ class Stocks(securitiesbase.SecuritiesBase):
     def __repr__(self):
         return f'Stocks(securities_list={self.securities_list})'
 
-    def get_list(self):
+    def get_list(self, securities_list=None):
         info = stock_info.StockInfo()
-        where = "`delisted_date` IS NULL"
+        if securities_list:
+            securities_string = "', '".join(
+                [str(item) for item in securities_list])
+            where = "`delisted_date` IS NULL AND `ticker` IN ('" + securities_string + "')"
+        else:
+            where = "`delisted_date` IS NULL"
         self.securities_list = info.select(where_clause=where)
         return self.securities_list

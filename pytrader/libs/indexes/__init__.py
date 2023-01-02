@@ -61,8 +61,13 @@ class Indexes(securitiesbase.SecuritiesBase):
         super().__init__(*args, **kwargs)
         return None
 
-    def get_list(self):
+    def get_list(self, securities_list=None):
         info = index_info.IndexInfo()
-        where = "`delisted_date` IS NULL"
+        if securities_list:
+            securities_string = "', '".join(
+                [str(item) for item in securities_list])
+            where = "`delisted_date` IS NULL AND `ticker` IN ('" + securities_string + "')"
+        else:
+            where = "`delisted_date` IS NULL"
         self.securities_list = info.select(where_clause=where)
         return self.securities_list

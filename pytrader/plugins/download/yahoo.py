@@ -56,10 +56,26 @@ def yahoo_download(args):
     logger.debug10("Begin Function")
 
     if args.security:
-        logger.debug("Get information and history for individual security")
+        if args.type:
+            info = securities.Securities(securities_type=args.type[0])
+            if args.info:
+                info.update_info(source="yahoo", securities_list=args.security)
+            elif args.history:
+                info.update_history("yahoo",
+                                    args.bar_size,
+                                    args.period,
+                                    securities_list=args.security)
+            else:
+                info.update_info(source="yahoo", securities_list=args.security)
+                info.update_history("yahoo",
+                                    args.bar_size,
+                                    args.period,
+                                    securities_list=args.security)
+                logger.debug(
+                    "Get information and history for individual security")
     else:
         if args.type:
-            investments = args.type
+            investments = args.type[0]
         else:
             investments = ["indexes", "etfs", "stocks"]
 
@@ -110,7 +126,10 @@ def parser(*args, **kwargs):
                      ],
                      default="1mo",
                      help="How long of history to download (Default: '1mo')")
-    cmd.add_argument("-s", "--security", help="Security to download")
+    cmd.add_argument("-s",
+                     "--security",
+                     nargs="+",
+                     help="Security to download")
     cmd.add_argument("-t",
                      "--type",
                      nargs=1,

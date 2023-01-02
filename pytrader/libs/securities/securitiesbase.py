@@ -103,7 +103,8 @@ class SecuritiesBase():
 
             yc = yahoo.YahooClient()
             yc.get_info(self.securities_type, yahoo_symbol)
-            time.sleep(random.randint(min_sleeptime, max_sleeptime))
+            if ticker != self.securities_list[-1]:
+                time.sleep(random.randint(min_sleeptime, max_sleeptime))
 
         logger.debug10("End Function")
         return None
@@ -119,17 +120,20 @@ class SecuritiesBase():
                                    ticker["yahoo_symbol"],
                                    interval=bar_size,
                                    period=period)
-            time.sleep(random.randint(min_sleeptime, max_sleeptime))
+            if ticker != self.securities_list[-1]:
+                time.sleep(random.randint(min_sleeptime, max_sleeptime))
 
         logger.debug10("End Function")
         return None
 
-    def update_history(self, source, bar_size, period):
+    def update_history(self, source, bar_size, period, securities_list=None):
         logger.debug10("Begin Function")
         if self.securities_list:
-            logger.debug("Index List: %s", self.index_list)
+            logger.debug("Securities List: %s", self.securities_list)
         else:
-            self.get_list()
+            self.get_list(securities_list)
+
+        logger.debug("Securities List: %s", self.securities_list)
 
         if source == "broker":
             self.__update_history_broker(bar_size, period)
@@ -142,13 +146,14 @@ class SecuritiesBase():
         logger.debug("End Function")
         return None
 
-    def update_info(self, source=None):
+    def update_info(self, source=None, securities_list=None):
         logger.debug10("Begin Function")
         logger.debug("Source: %s", source)
+
         if self.securities_list:
             logger.debug("Securities List: %s", self.securities_list)
         else:
-            self.get_list()
+            self.get_list(securities_list)
 
         if source == "broker":
             self.__update_info_broker()
