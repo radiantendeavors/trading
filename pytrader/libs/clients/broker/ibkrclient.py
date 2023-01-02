@@ -47,6 +47,11 @@ from pytrader.libs.system import logging
 # ==================================================================================================
 logger = logging.getLogger(__name__)
 
+# To avoid pacing violations, data can be requested no more than 60 requests in any 10 minute period.
+# There are 600 seconds in 10 minutes.
+# So, 1 request every 10 seconds, and add 1 second to ensure we don't cross the threshold.
+sleep_time = 11
+
 
 # ==================================================================================================
 #
@@ -72,6 +77,9 @@ class IbkrClient(EWrapper, EClient):
 
         self.req_id = 0
         self.data = {}
+
+    def cancel_head_timestamp(self, req_id):
+        self.cancelHeadTimeStamp(req_id)
 
     def check_server(self):
         """check_server
@@ -110,14 +118,14 @@ class IbkrClient(EWrapper, EClient):
         logger.debug("Ticker: %s", contract.symbol)
         self.reqHeadTimeStamp(self.req_id, contract, what_to_show,
                               use_regular_trading_hours, format_date)
-        time.sleep(5)
+        time.sleep(sleep_time)
         return self.req_id
 
     def get_account_summary(self):
         self.req_id += 1
         self.reqAccountSummary(self.req_id, "ALL",
                                "AccountType, AvailableFunds")
-        time.sleep(5)
+        time.sleep(sleep_time)
         return self.req_id
 
     def get_security_data(self, contract):
@@ -125,9 +133,25 @@ class IbkrClient(EWrapper, EClient):
         self.req_id += 1
         logger.debug("Requesting Contract Details for contract: %s", contract)
         self.reqContractDetails(self.req_id, contract)
-        time.sleep(5)
+        time.sleep(sleep_time)
         logger.debug10("End Function")
         return self.req_id
+
+    def get_security_historical_bars(self,
+                                     contract,
+                                     duration_str,
+                                     bar_size_setting,
+                                     what_to_show,
+                                     chart_options,
+                                     end_date_time="",
+                                     use_regular_trading_hours=1,
+                                     format_date=1,
+                                     keep_up_to_date=False):
+        self.req_id += 1
+        self.reqHistoricalData(self.req_id, contract, end_date_time,
+                               duration_str, bar_size_setting, what_to_show,
+                               use_regular_trading_hours, format_date,
+                               keep_up_to_date, chart_options)
 
     def get_security_pricing_data(self, contract):
         logger.debug10("Begin Function")
@@ -233,11 +257,16 @@ class IbkrClient(EWrapper, EClient):
     @iswrapper
     def error(self, req_id, code, msg, advanced_order_rejection=""):
         logger.debug2("Interactive Brokers Error Messages")
+        critical_codes = [1300]
         error_codes = [
-            100, 102, 103, 104, 105, 106, 200, 320, 502, 503, 504, 2100, 2101,
-            2102, 2103, 2168, 2169, 10038
+            100, 102, 103, 104, 105, 106, 107, 109, 110, 111, 113, 116, 117,
+            118, 119, 120, 121, 122, 123, 124, 125, 126, 129, 131, 132, 162,
+            200, 320, 502, 503, 504, 1101, 2100, 2101, 2102, 2103, 2168, 2169,
+            10038
         ]
-        warning_codes = [101, 2105, 2107, 2108, 2109, 2110, 2137]
+        warning_codes = [101, 501, 1100, 2105, 2107, 2108, 2109, 2110, 2137]
+        info_codes = [1102]
+        debug_codes = [2104, 2106, 2158]
 
         if code in error_codes:
             if advanced_order_rejection:
