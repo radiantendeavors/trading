@@ -107,6 +107,7 @@ class Etf(securitybase.SecurityBase):
         req_id = self.brokerclient.get_ipo_date(self.contract)
         logger.debug("Request ID: %s", req_id)
         data = self.brokerclient.get_data(req_id)
+        self.brokerclient.cancel_head_timestamp(req_id)
         ipo_date = datetime.datetime.strptime(data, "%Y%m%d-%H:%M:%S")
         logger.debug("Data: %s", ipo_date)
 
