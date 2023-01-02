@@ -59,6 +59,7 @@ class EtfBarDailyRaw(Base):
     __tablename__ = "etf_bar_daily_raw"
     id = Column(Integer, Primary=True)
     ticker = Column(String, nullable=False)
+    date = Column(Date, nullable=False)
     open = Column(Float, nullable=True, default=None)
     high = Column(Float, nullable=True, default=None)
     low = Column(Float, nullable=True, default=None)
