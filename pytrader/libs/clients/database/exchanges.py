@@ -24,7 +24,9 @@ Provides the database client
 
 @file pytrader/libs/clients/database/etf_bar_daily_raw.py
 """
-from sqlalchemy import BigInteger, Boolean, Column, Date, Float, Integer, String
+from sqlalchemy import (BigInteger, Boolean, Column, Date, ForeignKey, Float,
+                        Integer, String, Time)
+from sqlalchemy.orm import relationship
 
 # 3rd Party Libraries
 
@@ -55,15 +57,27 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class YahooEtfBarDaily(Base):
-    __tablename__ = "yahoo_bar_daily"
+class ExchangeInfo(Base):
+    __tablename__ = "exchange_info"
     id = Column(Integer, Primary=True)
-    ticker = Column(String, nullable=False)
-    date = Column(Date, nullable=False)
-    open = Column(Float, nullable=True, default=None)
-    high = Column(Float, nullable=True, default=None)
-    low = Column(Float, nullable=True, default=None)
-    close = Column(Float, nullable=True, default=None)
-    adjusted_close = Column(Float, nullable=True, default=None)
-    volume = Column(BigInteger, nullable=True, default=None)
-    date_downloaded = Column(Date)
+    name = Column(String)
+    symbol = Column(String)
+
+
+class ExchangeOperatingHours(Base):
+    __tablename__ = "exchange_operating_hours"
+    id = Column(Integer, Primary=True)
+    exchange_id = Column(Integer, ForeignKey="exchange_info.id")
+    date = Column(Date)
+    premarket_open = Column(Time)
+    market_open = Column(Time)
+    market_close = Column(Time)
+    afterhours_close = Column(Time)
+    timezone_id = Column(Integer, ForeignKey="timezones")
+
+
+class TimeZones(Base):
+    __tablename__ = "timezones"
+    id = Column(Integer, Primary=True)
+    name = Column(String)
+    code = Column(String)

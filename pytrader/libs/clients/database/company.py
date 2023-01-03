@@ -22,9 +22,10 @@ Provides the database client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file pytrader/libs/clients/database/__init__.py
+@file pytrader/libs/clients/database/etf_bar_daily_raw.py
 """
-from sqlalchemy import Column, Date, Integer, String, DateTime
+from sqlalchemy import BigInteger, Boolean, Column, Date, Float, Integer, String, ForeignKey
+from sqlalchemy.orm import relationship
 
 # 3rd Party Libraries
 
@@ -55,19 +56,49 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class StockInfo(Base):
-    __tablename__ = "etf_info"
+class CompanyAddress(Base):
+    __tablename__ = "company_address"
     id = Column(Integer, Primary=True)
-    ticker = Column(String, nullable=False)
-    name = Column(String, nullable=True, default=None)
-    sector = Column(String, nullable=True, default=None)
-    industry = Column(String, nullable=True, default=None)
-    country = Column(String, nullable=True, default=None)
-    ibkr_symbol = Column(String, nullable=True, default=None)
-    ibkr_contract_id = Column(String, nullable=True, default=None)
-    ibkr_primary_exchange = Column(String, nullable=True, default=None)
-    yahoo_symbol = Column(String, nullable=True, default=None)
-    ipo_date = Column(DateTime, nullable=True, default=None)
-    first_seen = Column(Date, nullable=True, default=None)
-    last_seen = Column(Date, nullable=True, default=None)
-    delisted_date = Column(Date, nullable=True, default=None)
+    company_id = Column(Integer, ForeignKey="company_info.id")
+    address_id = Column(Integer, ForeignKey="address_street.id")
+    beginning_date = Column(Date)
+    end_date = Column(Date)
+
+
+class CompanyInfo(Base):
+    __tablename__ = "company_info"
+    id = Column(Integer, Primary=True)
+    cik = Column(Integer)
+    begin_date = Column(Date)
+    end_date = Column(Date)
+
+
+class CompanyName(Base):
+    __tablename__ = "company_name"
+    id = Column(Integer, Primary=True)
+    name = Column(String)
+    company_id = Column(Integer, ForeignKey="company_info.id")
+    begin_date = Column(Date)
+    end_date = Column(Date)
+
+
+class CompanySector(Base):
+    __tablename__ = "company_sector"
+    id = Column(Integer, Primary=True)
+    company_id = Column(Integer, ForeignKey="company_info.id")
+    sector_id = Column(Integer, ForeignKey="stock_sectors.id")
+
+
+class CompanyIndustry(Base):
+    __tablename__ = "company_industry"
+    id = Column(Integer, Primary=True)
+    company_id = Column(Integer, ForeignKey="company_info.id")
+    industry_id = Column(Integer, ForeignKey="stock_industries.id")
+
+
+class CompanyStockListing(Base):
+    __tablename__ = "company_stock_listing"
+    id = Column(Integer, Primary=True)
+    company_id = Column(Integer, ForeignKey="company_info.id")
+    ipo_date = Column(Date)
+    delisting_date = Column(Date)

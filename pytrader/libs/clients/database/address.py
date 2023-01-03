@@ -24,7 +24,8 @@ Provides the database client
 
 @file pytrader/libs/clients/database/etf_bar_daily_raw.py
 """
-from sqlalchemy import BigInteger, Boolean, Column, Date, Float, Integer, String
+from sqlalchemy import BigInteger, Boolean, Column, Date, Float, Integer, String, ForeignKey
+from sqlalchemy.orm import relationship
 
 # 3rd Party Libraries
 
@@ -55,10 +56,33 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class YahooEtfDividends(Base):
-    __tablename__ = "yahoo_etf_dividends"
+class AddressStreet(Base):
+    __tablename__ = "address_street"
     id = Column(Integer, Primary=True)
-    ticker = Column(String, nullable=False)
-    date = Column(Date, nullable=False)
-    dividend = Column(Float, nullable=True, default=None)
-    date_downloaded = Column(Date)
+    address1 = Column(String)
+    address2 = Column(String)
+    zip = Column(Integer(length=9))
+    city_id = Column(Integer, ForeignKey="address_city.id")
+
+
+class AddressCity(Base):
+    __tablename__ = "address_city"
+    id = Column(Integer, Primary=True)
+    city = Column(String)
+    state_id = Column(Integer, ForeignKey="address_state.id")
+
+
+class AddressState(Base):
+    __tablename__ = "address_state"
+    id = Column(Integer, Primary=True)
+    state = Column(String)
+    code = Column(String)
+    country_id = Column(Integer, ForeignKey="address_country.id")
+
+
+class AddressCountry(Base):
+    __tablename__ = "address_country"
+    id = Column(Integer, Primary=True)
+    name = Column(String)
+    code2 = Column(String(length=2))
+    code3 = Column(String(length=3))

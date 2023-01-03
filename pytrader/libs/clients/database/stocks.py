@@ -24,7 +24,9 @@ Provides the database client
 
 @file pytrader/libs/clients/database/etf_bar_daily_raw.py
 """
-from sqlalchemy import BigInteger, Boolean, Column, Date, Float, Integer, String
+from sqlalchemy import (BigInteger, Boolean, Column, Date, Float, Integer,
+                        String, ForeignKey, DateTime)
+from sqlalchemy.orm import relationship
 
 # 3rd Party Libraries
 
@@ -55,10 +57,37 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class YahooEtfDividends(Base):
-    __tablename__ = "yahoo_etf_dividends"
+# ==================================================================================================
+#
+# Classes
+#
+# ==================================================================================================
+class StockInfo(Base):
+    __tablename__ = "stock_info"
     id = Column(Integer, Primary=True)
     ticker = Column(String, nullable=False)
-    date = Column(Date, nullable=False)
-    split = Column(Float, nullable=True, default=None)
-    date_downloaded = Column(Date)
+    company_id = Column(Integer, ForeignKey="company_info.id")
+    primary_exchange = Column(Integer, ForeignKey="exchange_info.id")
+    oldest_available = Column(DateTime)
+    delisted_date = Column(Date, nullable=True, default=None)
+
+
+class StockSectors(Base):
+    __tablename__ = "stock_sectors"
+    id = Column(Integer, Primary=True)
+    sector = Column(String)
+
+
+class StockIndustries(Base):
+    __tablename__ = "stock_industries"
+    id = Column(Integer, Primary=True)
+    sector = Column(String)
+
+
+class StockExchanges(Base):
+    __tablename__ = "stock_exchanges"
+    id = Column(Integer, Primary=True)
+    stock_id = Column(Integer, ForeignKey="stock_info.id")
+    exchange_id = Column(Integer, ForeignKey="exchange_info.id")
+    begin_date = Column(Date)
+    end_date = Column(Date)
