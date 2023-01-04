@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 # To avoid pacing violations, data can be requested no more than 60 requests in any 10 minute period.
 # There are 600 seconds in 10 minutes.
 # So, 1 request every 10 seconds, and add 1 second to ensure we don't cross the threshold.
-sleep_time = 11
+sleep_time = 15
 
 
 # ==================================================================================================
@@ -104,7 +104,15 @@ class IbkrClient(EWrapper, EClient):
 
         if req_id:
             # Pop the key because otherwise this variable could become large with many requests
-            return self.data.pop(req_id)
+            while True:
+                if req_id in self.data:
+                    return self.data.pop(req_id)
+                    break
+                else:
+                    logger.debug("Waiting on response for Request ID: %s",
+                                 req_id)
+                    time.sleep(1)
+
         else:
             return self.data
 
@@ -186,6 +194,7 @@ class IbkrClient(EWrapper, EClient):
 
     @iswrapper
     def contractDetails(self, req_id, details):
+        logger.debug("Begin Function")
         self.data[req_id] = details
 
         logger.debug("Contract Info")
