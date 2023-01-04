@@ -71,7 +71,11 @@ def basic_info(investments, brokerclient, security=None):
     info = securities.Securities(brokerclient=brokerclient,
                                  securities_type=investments)
 
-    info.update_info(source="broker")
+    if security:
+        info.update_info(source="broker", securities_list=security)
+    else:
+        info.update_info(source="broker")
+
     logger.debug("End Function")
 
 
@@ -104,7 +108,7 @@ def broker_download(args):
 
     if args.info:
         if args.security:
-            basic_info("stocks", brokerclient, security=args.security)
+            basic_info(investments[0], brokerclient, security=args.security)
         else:
             for investment in investments:
                 basic_info(investment, brokerclient)
@@ -136,7 +140,10 @@ def parser(*args, **kwargs):
                      action="store_true",
                      help="Get Basic Security information.")
     cmd.add_argument("-d", "--duration")
-    cmd.add_argument("-s", "--security", help="Security to download")
+    cmd.add_argument("-s",
+                     "--security",
+                     nargs="+",
+                     help="Security to download")
     cmd.add_argument("-t",
                      "--type",
                      nargs=1,
