@@ -80,12 +80,12 @@ def basic_info(investments, brokerclient, security=None):
 
 
 def broker_download(args):
-    """
+    """!
     broker_download
 
     @param args
     """
-    logging.debug("Begin Function")
+    logging.debug10("Begin Function")
     conf = config.Config()
     conf.read_config()
 
@@ -114,6 +114,7 @@ def broker_download(args):
                 basic_info(investment, brokerclient)
 
     brokerclient.disconnect()
+    logger.debug10("End Function")
     return None
 
 
