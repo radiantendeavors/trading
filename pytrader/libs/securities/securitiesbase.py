@@ -34,8 +34,7 @@ import time
 from pytrader.libs.system import logging
 
 # Application Libraries
-from pytrader.libs.clients import nasdaq
-from pytrader.libs.clients import yahoo
+from pytrader.libs.clients import nasdaq, polygon, yahoo
 from pytrader.libs.securities import security
 # from pytrader.libs import indexes
 # from pytrader.libs.securities import etfs, stocks
@@ -91,6 +90,17 @@ class SecuritiesBase():
         client.download_list()
         logger.debug10("End Function")
         return None
+
+    def __update_info_polygon(self):
+        logger.debug10("Begin Function")
+        client = polygon.PolygonClient()
+        types = client.get_ticker_types()
+        #for item in types:
+        #    logger.debug("Ticker Types: %s", item)
+        tickers = client.list_tickers(limit=999, type="ETF")
+        for item in tickers:
+            logger.debug("Tickers: %s", item)
+        logger.debug10("End Function")
 
     def __update_info_yahoo(self):
         logger.debug10("Begin Function")
@@ -159,6 +169,8 @@ class SecuritiesBase():
             self.__update_info_broker()
         elif source == "nasdaq":
             self.__update_info_nasdaq()
+        elif source == "polygon":
+            self.__update_info_polygon()
         elif source == "yahoo":
             self.__update_info_yahoo()
         else:
