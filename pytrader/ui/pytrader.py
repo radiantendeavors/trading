@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """!@package pytrader.ui.pytrader
 
 The main user interface for the trading program.
@@ -37,9 +36,9 @@ from pytrader.libs.system import logging
 # Application Libraries
 from pytrader import DEBUG
 from pytrader.libs.clients import broker
-from pytrader.libs import security
+from pytrader.libs import utilities
 from pytrader.libs.utilities import config
-from pytrader.libs.utilities import text
+from pytrader import strategies
 
 # ==================================================================================================
 #
@@ -54,8 +53,8 @@ The base logger.
 Allows Color text on the console
 """
 logger = logging.getLogger(__name__)
-colortext = text.ConsoleText()
 client_id = 1
+import_path = "pytrader.strategies."
 
 
 # ==================================================================================================
@@ -73,39 +72,35 @@ def start_client(args):
     """
     # Create the client and connect to TWS or IB Gateway
     logger.debug10("Begin Function")
+    conf = config.Config()
+    conf.read_config()
 
-    client = broker.BrokerClient()
-
-    if args.checkserver:
-        logger.debug("Checking Server time")
-        client.check_server()
-        time.sleep(0.5)
-
-    elif args.security:
-        logger.debug("Security info")
-        sec = security.Security(client, "AAPL")
-        sec.set_security()
-        sec.get_security_data()
-        sec.get_security_pricing_data()
-        sec.get_option_chain()
-
-    elif args.order:
-        sec = security.Security(client, "AAPL")
-        logger.info("Ordering: %s", sec)
-        sec.place_order("BUY", "LMT", 130.00, 1.0, args.transmit)
-        time.sleep(20)
-        client.get_open_positions()
-        time.sleep(10)
-        client.get_account_summary()
-        time.sleep(10)
+    if args.address:
+        address = args.address
     else:
-        logger.debug("No command specified")
+        address = conf.brokerclient_address
 
-    # Disconnect
-    logger.debug("Disconnecting from server")
-    client.disconnect()
+    if args.port:
+        port = args.port
+    else:
+        port = conf.brokerclient_port
 
-    logger.debug("End Function")
+    brokerclient = broker.broker_connect(address, port, client_id=client_id)
+
+    strategy_list = args.strategy
+
+    for i in strategy_list:
+        strategy = utilities.get_plugin_function(program=i,
+                                                 cmd='run',
+                                                 import_path=import_path)
+        if args.security:
+            strategy(brokerclient, args.security)
+        else:
+            strategy(brokerclient)
+
+    brokerclient.disconnect()
+    logger.debug10("End Function")
+    return None
 
     return None
 
@@ -133,14 +128,15 @@ def init(args):
     parser.add_ibapi_connection_options()
     parser.add_logging_option()
 
-    parser.add_argument("-c", "--checkserver", action="store_true")
-    parser.add_argument("-o", "--order", action="store_true")
-    parser.add_argument("-s", "--security", action="store_true")
-    parser.add_argument("-t",
-                        "--transmit",
-                        action="store_true",
-                        default=False,
-                        help="Transmit Order Automatically")
+    parser.add_argument("-s",
+                        "--strategy",
+                        nargs="+",
+                        required=True,
+                        help="Strategy to run, can run multiple strategies")
+    parser.add_argument("-S",
+                        "--security",
+                        nargs="+",
+                        help="Securities to use for strategy")
 
     parser.set_defaults(debug=False, verbosity=0, loglevel='INFO')
 
