@@ -78,7 +78,7 @@ def init(args):
     parent_parser = parser.add_logging_option()
     subparsers = parser.create_subparsers()
 
-    subcommands = ["broker", "init", "nasdaq", "yahoo"]
+    subcommands = ["broker", "init", "nasdaq", "polygon", "yahoo"]
 
     for i in subcommands:
         subcommand = utilities.get_plugin_function(scmd='download',
