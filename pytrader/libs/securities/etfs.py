@@ -68,7 +68,7 @@ class Etfs(securitiesbase.SecuritiesBase):
                 [str(item) for item in securities_list])
             where = "`delisted_date` IS NULL AND `ticker` IN ('" + securities_string + "')"
         else:
-            where = "`delisted_date` IS NULL"
+            where = "`delisted_date` IS NULL AND `ipo_date` IS NULL AND `ticker` NOT IN ('UDN', 'USIG', 'VFVA', 'DBE')"
         self.securities_list = info.select(where_clause=where)
 
         return self.securities_list
