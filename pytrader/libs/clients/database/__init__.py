@@ -1,9 +1,9 @@
 """!
 @package pytrader.libs.clients.database
 
-Provides the database client
+Defines the database schema, and creates the database tables.
 
-@author Geoff S. derber
+@author Geoff S. Derber
 @version HEAD
 @date 2022
 @copyright GNU Affero General Public License
@@ -24,6 +24,7 @@ Provides the database client
 
 @file pytrader/libs/clients/database/__init__.py
 """
+
 # System Libraries
 from sqlalchemy import (BigInteger, Boolean, Column, Date, DateTime,
                         FetchedValue, Float, ForeignKey, Integer, String, Time)
@@ -48,13 +49,16 @@ from pytrader.libs.utilities import config
 #
 # ==================================================================================================
 """!
-@var logger
+@var logging logger
 The base logger.
 
-@var Base
+@var declarative_base Base
+The Base Database
 
-@var DBSession
+@var scoped_session DBSession
+The Database Session
 """
+
 logger = logging.getLogger(__name__)
 Base = declarative_base()
 DBSession = scoped_session(sessionmaker())
@@ -65,6 +69,49 @@ DBSession = scoped_session(sessionmaker())
 # Classes
 #
 # ==================================================================================================
+class ExchangeInfo(Base):
+    __tablename__ = "exchange_info"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(64))
+    symbol = Column(String(8))
+
+
+class CompanyId(Base):
+    __tablename__ = "company_id"
+    id = Column(Integer, primary_key=True)
+    unique_id = Column(String(64))
+
+
+class EtfId(Base):
+    __tablename__ = "etf_id"
+    id = Column(Integer, primary_key=True)
+    unique_id = Column(String(64))
+
+
+class IndexId(Base):
+    __tablename__ = "index_id"
+    id = Column(Integer, primary_key=True)
+    unique_id = Column(String(64))
+
+
+class EtfInfo(Base):
+    id = Column(Integer, primary_key=True)
+    etf_id = Column(Integer, ForeignKey("etf_id.id"))
+    etf = relationship(EtfId)
+    ticker_symbol = Column(String(6))
+    name = Column(String(64))
+
+
+class StockInfo(Base):
+    __tablename__ = "stock_info"
+    id = Column(Integer, primary_key=True)
+    ticker = Column(String, nullable=False)
+    company_id = Column(Integer, ForeignKey("company_id.id"))
+    company = relationship(CompanyId)
+    primary_exchange_id = Column(Integer, ForeignKey("exchange_info.id"))
+    primary_exchange = relationship(ExchangeInfo)
+
+
 class AddressCountry(Base):
     __tablename__ = "address_country"
     id = Column(Integer, primary_key=True)
@@ -183,17 +230,11 @@ class AggregateStockBarDaily(Base):
 class CompanyAddress(Base):
     __tablename__ = "company_address"
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer, ForeignKey("company_info.id"))
+    company_id = Column(Integer, ForeignKey("company_id.id"))
+    company = relationship(CompanyId)
     address_id = Column(Integer, ForeignKey("address_street.id"))
+    address = relationship(AddressStreet)
     beginning_date = Column(Date)
-    end_date = Column(Date)
-
-
-class CompanyInfo(Base):
-    __tablename__ = "company_info"
-    id = Column(Integer, primary_key=True)
-    cik = Column(Integer)
-    begin_date = Column(Date)
     end_date = Column(Date)
 
 
@@ -201,8 +242,8 @@ class CompanyName(Base):
     __tablename__ = "company_name"
     id = Column(Integer, primary_key=True)
     name = Column(String(64))
-    company_id = Column(Integer, ForeignKey("company_info.id"))
-    company = relationship(CompanyInfo)
+    company_id = Column(Integer, ForeignKey("company_id.id"))
+    company = relationship(CompanyId)
     begin_date = Column(Date)
     end_date = Column(Date)
 
@@ -210,54 +251,53 @@ class CompanyName(Base):
 class CompanySector(Base):
     __tablename__ = "company_sector"
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer, ForeignKey("company_info.id"))
+    company_id = Column(Integer, ForeignKey("company_id.id"))
     sector_id = Column(Integer, ForeignKey("stock_sectors.id"))
-    company = relationship(CompanyInfo)
+    company = relationship(CompanyId)
     sector = relationship(StockSectors)
 
 
 class CompanyIndustry(Base):
     __tablename__ = "company_industry"
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer, ForeignKey("company_info.id"))
+    company_id = Column(Integer, ForeignKey("company_id.id"))
     industry_id = Column(Integer, ForeignKey("stock_industries.id"))
-    company = relationship(CompanyInfo)
+    company = relationship(CompanyId)
     sector = relationship(StockSectors)
 
 
 class CompanyStockListing(Base):
     __tablename__ = "company_stock_listing"
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer, ForeignKey("company_info.id"))
-    company = relationship(CompanyInfo)
+    company_id = Column(Integer, ForeignKey("company_id.id"))
+    company = relationship(CompanyId)
     ipo_date = Column(Date)
 
 
 class CompanyStockDelisting(Base):
     __tablename__ = "company_stock_delisting"
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer, ForeignKey("company_info.id"))
-    company = relationship(CompanyInfo)
+    company_id = Column(Integer, ForeignKey("company_id.id"))
+    company = relationship(CompanyId)
     delisting_date = Column(Date)
 
 
-class EtfInfo(Base):
-    __tablename__ = "etf_info"
+class EtfListing(Base):
+    __tablename__ = "etf_listing"
     id = Column(Integer, primary_key=True)
-    ticker = Column(String, nullable=False)
-    name = Column(String, nullable=True, default=None)
-    yahoo_symbol = Column(String, nullable=True, default=None)
-    ipo_date = Column(DateTime, nullable=True, default=None)
-    first_seen = Column(Date, nullable=True, default=None)
-    last_seen = Column(Date, nullable=True, default=None)
-    delisted_date = Column(Date, nullable=True, default=None)
+    etf_id = Column(Integer, ForeignKey("etf_id.id"))
+    etf = relationship(EtfId)
 
 
-class ExchangeInfo(Base):
-    __tablename__ = "exchange_info"
+class EtfExchanges(Base):
+    __tablename__ = "etf_exchanges"
     id = Column(Integer, primary_key=True)
-    name = Column(String(64))
-    symbol = Column(String(8))
+    etf_id = Column(Integer, ForeignKey("etf_id.id"))
+    etf = relationship(EtfId)
+    exchange_id = Column(Integer, ForeignKey("exchange_info.id"))
+    exchange = relationship(ExchangeInfo)
+    begin_date = Column(Date)
+    end_date = Column(Date)
 
 
 class ExchangeOperatingHours(Base):
@@ -275,19 +315,21 @@ class ExchangeOperatingHours(Base):
 class IbkrEtfInfo(Base):
     __tablename__ = "ibkr_etf_info"
     id = Column(Integer, primary_key=True)
-    etf_id = Column(Integer, ForeignKey("etf_info.id"), nullable=False)
+    etf_id = Column(Integer, ForeignKey("etf_id.id"), nullable=False)
+    etf = relationship(EtfId)
     ticker_symbol = Column(String(6), nullable=False)
     contract_id = Column(Integer, nullable=False)
     primary_exchange = Column(String(32), nullable=False)
     exchange = Column(String(32), nullable=False)
     oldest_available = Column(DateTime)
-    etf = relationship(EtfInfo)
 
 
 class IbkrEtfBarDailyTrades(Base):
     __tablename__ = "ibkr_etf_bar_daily_trades"
     id = Column(Integer, primary_key=True)
     etf_id = Column(Integer, ForeignKey("ibkr_etf_info.id"), nullable=False)
+    etf = relationship(IbkrEtfInfo)
+    date = Column(Date)
     open = Column(Float, nullable=False)
     high = Column(Float, nullable=False)
     low = Column(Float, nullable=False)
@@ -298,13 +340,14 @@ class IbkrEtfBarDailyTrades(Base):
     date_downloaded = Column(Date,
                              server_default=func.current_timestamp(),
                              nullable=False)
-    etf = relationship(EtfInfo)
 
 
 class IbkrEtfBarDailyBids(Base):
     __tablename__ = "ibkr_etf_bar_daily_bids"
     id = Column(Integer, primary_key=True)
     etf_id = Column(Integer, ForeignKey("ibkr_etf_info.id"))
+    etf = relationship(IbkrEtfInfo)
+    date = Column(Date)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
@@ -319,6 +362,8 @@ class IbkrEtfBarDailyAsks(Base):
     __tablename__ = "ibkr_etf_bar_daily_asks"
     id = Column(Integer, primary_key=True)
     etf_id = Column(Integer, ForeignKey("ibkr_etf_info.id"))
+    etf = relationship(IbkrEtfInfo)
+    date = Column(Date)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
@@ -333,6 +378,8 @@ class IbkrEtfBarDailyAdjusuted(Base):
     __tablename__ = "ibkr_etf_bar_daily_adjusted"
     id = Column(Integer, primary_key=True)
     etf_id = Column(Integer, ForeignKey("ibkr_etf_info.id"))
+    etf = relationship(IbkrEtfInfo)
+    date = Column(Date)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
@@ -348,6 +395,8 @@ class IbkrEtfBarDailyHistoricalVolatility(Base):
     __tablename__ = "ibkr_etf_bar_daily_historical_volatility"
     id = Column(Integer, primary_key=True)
     etf_id = Column(Integer, ForeignKey("ibkr_etf_info.id"))
+    etf = relationship(IbkrEtfInfo)
+    date = Column(Date)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
@@ -361,6 +410,8 @@ class IbkrEtfBarDailyOptionImpliedVolatility(Base):
     __tablename__ = "ibkr_etf_bar_daily_option_implied_volatility"
     id = Column(Integer, primary_key=True)
     etf_id = Column(Integer, ForeignKey("ibkr_etf_info.id"))
+    etf = relationship(IbkrEtfInfo)
+    date = Column(Date)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
@@ -384,6 +435,8 @@ class IbkrIndexBarDailyTrades(Base):
     __tablename__ = "ibkr_index_bar_daily_trades"
     id = Column(Integer, primary_key=True)
     index_id = Column(Integer, ForeignKey("ibkr_index_info.id"))
+    index = relationship(IbkrIndexInfo)
+    date = Column(Date)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
@@ -398,6 +451,8 @@ class IbkrIndexBarDailyBids(Base):
     __tablename__ = "ibkr_index_bar_daily_bids"
     id = Column(Integer, primary_key=True)
     index_id = Column(Integer, ForeignKey("ibkr_index_info.id"))
+    index = relationship(IbkrIndexInfo)
+    date = Column(Date)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
@@ -411,6 +466,8 @@ class IbkrIndexBarDailyAsks(Base):
     __tablename__ = "ibkr_index_bar_daily_asks"
     id = Column(Integer, primary_key=True)
     index_id = Column(Integer, ForeignKey("ibkr_index_info.id"))
+    index = relationship(IbkrIndexInfo)
+    date = Column(Date)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
@@ -424,6 +481,8 @@ class IbkrIndexBarDailyAdjusuted(Base):
     __tablename__ = "ibkr_index_bar_daily_adjusted"
     id = Column(Integer, primary_key=True)
     index_id = Column(Integer, ForeignKey("ibkr_index_info.id"))
+    index = relationship(IbkrIndexInfo)
+    date = Column(Date)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
@@ -438,6 +497,8 @@ class IbkrIndexBarDailyHistoricalVolatility(Base):
     __tablename__ = "ibkr_index_bar_daily_historical_volatility"
     id = Column(Integer, primary_key=True)
     index_id = Column(Integer, ForeignKey("ibkr_index_info.id"))
+    index = relationship(IbkrIndexInfo)
+    date = Column(Date)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
@@ -451,6 +512,8 @@ class IbkrIndexBarDailyOptionImpliedVolatility(Base):
     __tablename__ = "ibkr_index_bar_daily_option_implied_volatility"
     id = Column(Integer, primary_key=True)
     index_id = Column(Integer, ForeignKey("ibkr_index_info.id"))
+    index = relationship(IbkrIndexInfo)
+    date = Column(Date)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
@@ -475,6 +538,8 @@ class IbkrStockBarDailyTrades(Base):
     __tablename__ = "ibkr_stock_bar_daily_trades"
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey("ibkr_stock_info.id"))
+    stock = relationship(IbkrStockInfo)
+    date = Column(Date)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
@@ -489,6 +554,8 @@ class IbkrStockBarDailyBids(Base):
     __tablename__ = "ibkr_stock_bar_daily_bids"
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey("ibkr_stock_info.id"))
+    stock = relationship(IbkrStockInfo)
+    date = Column(Date)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
@@ -502,6 +569,8 @@ class IbkrStockBarDailyAsks(Base):
     __tablename__ = "ibkr_stock_bar_daily_asks"
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey("ibkr_stock_info.id"))
+    stock = relationship(IbkrStockInfo)
+    date = Column(Date)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
@@ -515,6 +584,8 @@ class IbkrStockBarDailyAdjusuted(Base):
     __tablename__ = "ibkr_stock_bar_daily_adjusted"
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey("ibkr_stock_info.id"))
+    stock = relationship(IbkrStockInfo)
+    date = Column(Date)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
@@ -529,6 +600,8 @@ class IbkrStockBarDailyHistoricalVolatility(Base):
     __tablename__ = "ibkr_stock_bar_daily_historical_volatility"
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey("ibkr_stock_info.id"))
+    stock = relationship(IbkrStockInfo)
+    date = Column(Date)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
@@ -542,6 +615,8 @@ class IbkrStockBarDailyOptionImpliedVolatility(Base):
     __tablename__ = "ibkr_stock_bar_daily_option_implied_volatility"
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey("ibkr_stock_info.id"))
+    stock = relationship(IbkrStockInfo)
+    date = Column(Date)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
@@ -549,21 +624,6 @@ class IbkrStockBarDailyOptionImpliedVolatility(Base):
     date_downloaded = Column(Date,
                              server_default=func.current_timestamp(),
                              nullable=False)
-
-
-class IndexInfo(Base):
-    __tablename__ = "index_info"
-    id = Column(Integer, primary_key=True)
-    ticker = Column(String, nullable=False)
-    name = Column(String, nullable=True, default=None)
-    ibkr_symbol = Column(String, nullable=True, default=None)
-    ibkr_contract_id = Column(String, nullable=True, default=None)
-    ibkr_primary_exchange = Column(String, nullable=True, default=None)
-    yahoo_symbol = Column(String, nullable=True, default=None)
-    ipo_date = Column(DateTime, nullable=True, default=None)
-    first_seen = Column(Date, nullable=True, default=None)
-    last_seen = Column(Date, nullable=True, default=None)
-    delisted_date = Column(Date, nullable=True, default=None)
 
 
 class NasdaqEtfInfo(Base):
@@ -598,21 +658,13 @@ class Settings(Base):
     value = Column(String(64))
 
 
-class StockInfo(Base):
-    __tablename__ = "stock_info"
-    id = Column(Integer, primary_key=True)
-    ticker = Column(String, nullable=False)
-    company_id = Column(Integer, ForeignKey("company_info.id"))
-    primary_exchange_id = Column(Integer, ForeignKey("exchange_info.id"))
-    company = relationship(CompanyInfo)
-    primary_exchange = relationship(ExchangeInfo)
-
-
 class StockExchanges(Base):
     __tablename__ = "stock_exchanges"
     id = Column(Integer, primary_key=True)
-    stock_id = Column(Integer, ForeignKey("stock_info.id"))
+    company_id = Column(Integer, ForeignKey("company_id.id"))
+    company = relationship(CompanyId)
     exchange_id = Column(Integer, ForeignKey("exchange_info.id"))
+    exchange = relationship(ExchangeInfo)
     begin_date = Column(Date)
     end_date = Column(Date)
 
@@ -683,7 +735,7 @@ class YahooIndexInfo(Base):
 class YahooStockInfo(Base):
     __tablename__ = "yahoo_stock_info"
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer, ForeignKey("company_info.id"))
+    company_id = Column(Integer, ForeignKey("company_id.id"))
     ticker = Column(String(8), nullable=False)
     oldest_available = Column(DateTime)
     delisted_date = Column(Date, nullable=True, default=None)
@@ -694,7 +746,7 @@ class YahooStockInfo(Base):
 class YahooStockBarDaily(Base):
     __tablename__ = "yahoo_stock_bar_daily"
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer, ForeignKey("company_info.id"))
+    company_id = Column(Integer, ForeignKey("company_id.id"))
     date = Column(Date)
     open = Column(Float)
     high = Column(Float)
@@ -710,7 +762,7 @@ class YahooStockBarDaily(Base):
 class YahooStockDividends(Base):
     __tablename__ = "yahoo_stock_dividends"
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer, ForeignKey("company_info.id"))
+    company_id = Column(Integer, ForeignKey("company_id.id"))
     date = Column(Date)
     dividend = Column(Float)
     date_downloaded = Column(Date,
@@ -721,7 +773,7 @@ class YahooStockDividends(Base):
 class YahooStockSplits(Base):
     __tablename__ = "yahoo_stock_splits"
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer, ForeignKey("company_info.id"))
+    company_id = Column(Integer, ForeignKey("company_id.id"))
     date = Column(Date)
     split = Column(Float)
     date_downloaded = Column(Date,
