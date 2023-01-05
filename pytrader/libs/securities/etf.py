@@ -32,7 +32,7 @@ import datetime
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs.clients.mysql import etf_info
+from pytrader.libs.clients.mysql import ibkr_etf_info
 from pytrader.libs.securities import securitybase
 
 # ==================================================================================================
@@ -61,7 +61,7 @@ class Etf(securitybase.SecurityBase):
         self.security_type = "STK"
 
     def __get_info_from_database(self):
-        info = etf_info.EtfInfo()
+        info = ibkr_etf_info.EtfInfo()
         where_clause = "`ticker`='" + self.ticker_symbol + "'"
         return info.select(where_clause=where_clause)
 
