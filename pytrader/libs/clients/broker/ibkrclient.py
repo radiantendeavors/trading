@@ -197,60 +197,60 @@ class IbkrClient(EWrapper, EClient):
         logger.debug("Begin Function")
         self.data[req_id] = details
 
-        logger.debug("Contract Info")
-        logger.debug("Contract ID: %s", details.contract.conId)
-        logger.debug("Symbol: %s", details.contract.symbol)
-        logger.debug("Security Type: %s", details.contract.secType)
-        logger.debug("Exchange: %s", details.contract.exchange)
-        logger.debug("Primary Exchange: %s", details.contract.primaryExchange)
-        logger.debug("Currency: %s", details.contract.currency)
-        logger.debug2("Local Symbol: %s", details.contract.localSymbol)
-        logger.debug("Security ID Type: %s", details.contract.secIdType)
-        logger.debug("Security ID: %s", details.contract.secId)
+        # logger.debug("Contract Info")
+        # logger.debug("Contract ID: %s", details.contract.conId)
+        # logger.debug("Symbol: %s", details.contract.symbol)
+        # logger.debug("Security Type: %s", details.contract.secType)
+        # logger.debug("Exchange: %s", details.contract.exchange)
+        # logger.debug("Primary Exchange: %s", details.contract.primaryExchange)
+        # logger.debug("Currency: %s", details.contract.currency)
+        # logger.debug2("Local Symbol: %s", details.contract.localSymbol)
+        # logger.debug("Security ID Type: %s", details.contract.secIdType)
+        # logger.debug("Security ID: %s", details.contract.secId)
 
-        logger.debug("Contract Detail Info")
-        logger.debug2("Market name: %s", details.marketName)
-        logger.debug2("OrderTypes: %s", details.orderTypes)
-        logger.debug2("Valid Exchanges: %s", details.validExchanges)
-        logger.debug2("Underlying Contract ID: %s", details.underConId)
-        logger.debug("Long name: %s", details.longName)
-        logger.debug("Industry: %s", details.industry)
-        logger.debug("Category: %s", details.category)
-        logger.debug("Subcategory: %s", details.subcategory)
-        logger.debug2("Time Zone: %s", details.timeZoneId)
-        logger.debug2("Trading Hours: %s", details.tradingHours)
-        logger.debug2("Liquid Hours: %s", details.liquidHours)
-        logger.debug2("SecIdList: %s", details.secIdList)
-        logger.debug2("Underlying Symbol: %s", details.underSymbol)
-        logger.debug("Stock Type: %s", details.stockType)
-        logger.debug("Next Option Date: %s", details.nextOptionDate)
-        logger.debug3("Details: %s", details)
+        # logger.debug("Contract Detail Info")
+        # logger.debug2("Market name: %s", details.marketName)
+        # logger.debug2("OrderTypes: %s", details.orderTypes)
+        # logger.debug2("Valid Exchanges: %s", details.validExchanges)
+        # logger.debug2("Underlying Contract ID: %s", details.underConId)
+        # logger.debug("Long name: %s", details.longName)
+        # logger.debug("Industry: %s", details.industry)
+        # logger.debug("Category: %s", details.category)
+        # logger.debug("Subcategory: %s", details.subcategory)
+        # logger.debug2("Time Zone: %s", details.timeZoneId)
+        # logger.debug2("Trading Hours: %s", details.tradingHours)
+        # logger.debug2("Liquid Hours: %s", details.liquidHours)
+        # logger.debug2("SecIdList: %s", details.secIdList)
+        # logger.debug2("Underlying Symbol: %s", details.underSymbol)
+        # logger.debug("Stock Type: %s", details.stockType)
+        # logger.debug("Next Option Date: %s", details.nextOptionDate)
+        # logger.debug3("Details: %s", details)
 
-        if details.contract.secType == "Bond":
-            logger.debug("Description: %s", details.contract.description)
-            logger.debug("Issuer ID: %s", details.contract.issuerId)
-            logger.debug("Cusip", details.cusip)
+        # if details.contract.secType == "Bond":
+        #     logger.debug("Description: %s", details.contract.description)
+        #     logger.debug("Issuer ID: %s", details.contract.issuerId)
+        #     logger.debug("Cusip", details.cusip)
 
-        elif details.contract.secType == "IND":
-            db = index_info.IndexInfo()
-            db.update_ibkr_info(details.contract.symbol,
-                                details.contract.conId,
-                                details.contract.primaryExchange,
-                                details.contract.exchange, details.longName)
+        # elif details.contract.secType == "IND":
+        #     db = index_info.IndexInfo()
+        #     db.update_ibkr_info(details.contract.symbol,
+        #                         details.contract.conId,
+        #                         details.contract.primaryExchange,
+        #                         details.contract.exchange, details.longName)
 
-        if details.stockType == "ETF" or details.stockType == "ETN":
-            db = etf_info.EtfInfo()
-            db.update_ibkr_info(details.contract.symbol,
-                                details.contract.conId,
-                                details.contract.primaryExchange,
-                                details.contract.exchange)
+        # if details.stockType == "ETF" or details.stockType == "ETN":
+        #     db = etf_info.EtfInfo()
+        #     db.update_ibkr_info(details.contract.symbol,
+        #                         details.contract.conId,
+        #                         details.contract.primaryExchange,
+        #                         details.contract.exchange)
 
-        elif details.stockType == "STK":
-            db = stock_info.EtfInfo()
-            db.update_ibkr_info(details.contract.symbol,
-                                details.contract.conId,
-                                details.contract.primaryExchange,
-                                details.contract.exchange)
+        # elif details.stockType == "STK":
+        #     db = stock_info.EtfInfo()
+        #     db.update_ibkr_info(details.contract.symbol,
+        #                         details.contract.conId,
+        #                         details.contract.primaryExchange,
+        #                         details.contract.exchange)
 
         logger.debug("End Function")
 
