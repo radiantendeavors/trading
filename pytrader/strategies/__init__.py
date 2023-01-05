@@ -1,6 +1,6 @@
-"""!@package pytrader
+"""!@package pytrader.strategies
 
-Strategies
+Provides the Base Class for a Strategy.
 
 @author Geoff S. derber
 @version HEAD
@@ -25,3 +25,37 @@ Strategies
     Contains global variables for the pyTrader program.
 
 """
+# System libraries
+
+# 3rd Party libraries
+
+# System Library Overrides
+from pytrader.libs.system import logging
+
+# Application Libraries
+
+# ==================================================================================================
+#
+# Global Variables
+#
+# ==================================================================================================
+"""!
+@var logger
+The base logger.
+
+@var colortext
+Allows Color text on the console
+"""
+logger = logging.getLogger(__name__)
+
+# ==================================================================================================
+#
+# Classes
+#
+# ==================================================================================================
+
+# ==================================================================================================
+#
+# Functions
+#
+# ==================================================================================================
