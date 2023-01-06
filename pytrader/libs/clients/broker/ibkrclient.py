@@ -100,6 +100,9 @@ class IbkrClient(EWrapper, EClient):
             logger.error(
                 "Failed to connect to the server: Connection Time Unknown")
 
+    def get_client_id(self):
+        return self.clientId
+
     def get_data(self, req_id=None):
         logger.debug10("Begin Function")
 
@@ -200,6 +203,7 @@ class IbkrClient(EWrapper, EClient):
     def place_order(self, contract, order):
         logger.debug("Order: %s", order)
         self.placeOrder(self.next_order_id, contract, order)
+        return self.next_order_id
 
     @iswrapper
     def accountSummary(self, req_id, account, tag, value, currency):
