@@ -79,6 +79,7 @@ class SecurityBase():
         self.contract = contract
 
         logger.debug10("End Function")
+
         return contract
 
     def get_broker_info(self):
@@ -92,7 +93,13 @@ class SecurityBase():
 
     def place_order(self):
         logger.debug10("Begin Function")
-        order = orders.Order(order_type="market", action="BUY", quantity=1)
+        order = orders.Order(order_type="market",
+                             action="BUY",
+                             quantity=1,
+                             transmit=False,
+                             brokerclient=self.brokerclient)
+        logger.debug("Contract: %s", self.contract)
+        logger.debug("Order:\n%s", order)
+        order.place_order(self.contract)
 
-        self.brokerclient.place_order(self.contract, order)
         logger.debug10("End Function")
