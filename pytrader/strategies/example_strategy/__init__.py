@@ -69,7 +69,6 @@ def run(brokerclient, securities):
     investment = security.Security(security_type="etfs",
                                    ticker_symbol=securities[0],
                                    brokerclient=brokerclient)
-
     investment.set_contract()
     investment.get_broker_info()
     investment.place_order()
