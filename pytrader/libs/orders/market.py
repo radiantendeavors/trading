@@ -50,5 +50,6 @@ class MarketOrder(orderbase.OrderBase):
 
     def __init__(self, *args, **kwargs):
         logger.debug10("Begin Function")
-        self.orderType = "MKT"
         super().__init__(*args, **kwargs)
+        self.order.orderType = "MKT"
+        logger.debug10("End Function")

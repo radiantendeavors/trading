@@ -50,7 +50,8 @@ logger = logging.getLogger(__name__)
 class LimitOrder(orderbase.OrderBase):
 
     def __init__(self, *args, **kwargs):
-        logger.debug("Begin Function")
-        self.orderType = "LMT"
-        self.lmtPrice = kwargs["limit_price"]
+        logger.debug10("Begin Function")
         super().__init__(*args, **kwargs)
+        self.order.orderType = "LMT"
+        self.order.lmtPrice = kwargs["limit_price"]
+        logger.debug10("End Function")
