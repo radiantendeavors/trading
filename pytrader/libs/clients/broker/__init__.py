@@ -93,7 +93,8 @@ def broker_connect(address, port, client_id=0):
     broker_thread = threading.Thread(target=brokerclient.run)
     broker_thread.start()
     logger.debug2("Broker Client Thread Started")
-
+    next_order_id = brokerclient.get_next_order_id()
+    logger.debug("Received next order id: %s", next_order_id)
     time.sleep(1)
 
     brokerclient.check_server()
