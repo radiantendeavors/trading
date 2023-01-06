@@ -76,6 +76,7 @@ class IbkrClient(EWrapper, EClient):
         EClient.__init__(self, self)
 
         self.req_id = 0
+        self.next_order_id = None
         self.data = {}
 
     def cancel_head_timestamp(self, req_id):
@@ -136,6 +137,15 @@ class IbkrClient(EWrapper, EClient):
         time.sleep(sleep_time)
         return self.req_id
 
+    def get_next_order_id(self):
+        while True:
+            if self.next_order_id is None:
+                logger.debug("Waiting on the next order id")
+                time.sleep(1)
+            else:
+                return self.next_order_id
+                break
+
     def get_security_data(self, contract):
         logger.debug10("Begin Function")
         self.req_id += 1
@@ -186,6 +196,10 @@ class IbkrClient(EWrapper, EClient):
         time.sleep(60)
         logger.debug10("End Function")
         return self.req_id
+
+    def place_order(self, contract, order):
+        logger.debug("Order: %s", order)
+        self.placeOrder(self.next_order_id, contract, order)
 
     @iswrapper
     def accountSummary(self, req_id, account, tag, value, currency):
@@ -312,8 +326,8 @@ class IbkrClient(EWrapper, EClient):
         """ Provides the next order ID """
         super().nextValidId(order_id)
 
-        logger.debug("Setting nextValidOrderId: %s", order_id)
-        self.nextValidOrderId = order_id
+        logger.debug("Setting next_valid_order: %s", order_id)
+        self.next_order_id = order_id
         logger.info("The next valid Order ID: %s", order_id)
 
     @iswrapper
