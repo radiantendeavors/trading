@@ -1,9 +1,9 @@
 """!
-@package pytrader.strategies.example_strategy
+@package pytrader.libs.orders
 
-Provides an Example Strategy
+Provides the broker client
 
-@author Geoff S. Derber
+@author Geoff S. derber
 @version HEAD
 @date 2022
 @copyright GNU Affero General Public License
@@ -21,57 +21,37 @@ Provides an Example Strategy
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file pytrader/strategies/example_strategy/__init__.py
 
-Provides an Example Strategy
-
+@file security.py
 """
 # System libraries
 
 # 3rd Party libraries
+from ibapi import order
 
 # System Library Overrides
 from pytrader.libs.system import logging
 
-# Application Libraries
-from pytrader.libs.securities import security
+# Other Application Libraries
 
 # ==================================================================================================
 #
 # Global Variables
 #
 # ==================================================================================================
-"""!
-@var logger
-The base logger.
-
-@var colortext
-Allows Color text on the console
-"""
 logger = logging.getLogger(__name__)
+
 
 # ==================================================================================================
 #
 # Classes
 #
 # ==================================================================================================
+class OrderBase():
 
-
-# ==================================================================================================
-#
-# Functions
-#
-# ==================================================================================================
-def run(brokerclient, securities):
-    logger.debug10("Begin Function")
-    logger.debug9("Running Example Strategy")
-
-    investment = security.Security(security_type="etfs",
-                                   ticker_symbol=securities[0],
-                                   brokerclient=brokerclient)
-
-    investment.set_contract()
-    investment.get_broker_info()
-    investment.place_order()
-
-    logger.debug10("End Function")
+    def __init__(self, *args, **kwargs):
+        logger.debug("Kwargs: %s", kwargs)
+        self.order = order.Order()
+        self.action = kwargs["action"]
+        self.totalQuantity = kwargs["quantity"]
+        logger.debug("Begin Function")

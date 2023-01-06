@@ -33,6 +33,7 @@ from ibapi.contract import Contract
 from pytrader.libs.system import logging
 
 # Other Application Libraries
+from pytrader.libs import orders
 
 # ==================================================================================================
 #
@@ -88,3 +89,10 @@ class SecurityBase():
         req_id = self.brokerclient.get_security_data(self.contract)
         data = self.brokerclient.get_data(req_id)
         return data
+
+    def place_order(self):
+        logger.debug10("Begin Function")
+        order = orders.Order(order_type="market", action="BUY", quantity=1)
+
+        self.brokerclient.place_order(self.contract, order)
+        logger.debug10("End Function")
