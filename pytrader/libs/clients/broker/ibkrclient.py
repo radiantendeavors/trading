@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 # To avoid pacing violations, data can be requested no more than 60 requests in any 10 minute period.
 # There are 600 seconds in 10 minutes.
 # So, 1 request every 10 seconds, and add 1 second to ensure we don't cross the threshold.
-sleep_time = 11
+sleep_time = 15
 
 
 # ==================================================================================================
@@ -76,6 +76,7 @@ class IbkrClient(EWrapper, EClient):
         EClient.__init__(self, self)
 
         self.req_id = 0
+        self.next_order_id = None
         self.data = {}
 
     def cancel_head_timestamp(self, req_id):
@@ -104,7 +105,15 @@ class IbkrClient(EWrapper, EClient):
 
         if req_id:
             # Pop the key because otherwise this variable could become large with many requests
-            return self.data.pop(req_id)
+            while True:
+                if req_id in self.data:
+                    return self.data.pop(req_id)
+                    break
+                else:
+                    logger.debug("Waiting on response for Request ID: %s",
+                                 req_id)
+                    time.sleep(1)
+
         else:
             return self.data
 
@@ -127,6 +136,15 @@ class IbkrClient(EWrapper, EClient):
                                "AccountType, AvailableFunds")
         time.sleep(sleep_time)
         return self.req_id
+
+    def get_next_order_id(self):
+        while True:
+            if self.next_order_id is None:
+                logger.debug("Waiting on the next order id")
+                time.sleep(1)
+            else:
+                return self.next_order_id
+                break
 
     def get_security_data(self, contract):
         logger.debug10("Begin Function")
@@ -179,6 +197,10 @@ class IbkrClient(EWrapper, EClient):
         logger.debug10("End Function")
         return self.req_id
 
+    def place_order(self, contract, order):
+        logger.debug("Order: %s", order)
+        self.placeOrder(self.next_order_id, contract, order)
+
     @iswrapper
     def accountSummary(self, req_id, account, tag, value, currency):
         """ Read information about the account """
@@ -186,62 +208,63 @@ class IbkrClient(EWrapper, EClient):
 
     @iswrapper
     def contractDetails(self, req_id, details):
+        logger.debug("Begin Function")
         self.data[req_id] = details
 
-        logger.debug("Contract Info")
-        logger.debug("Contract ID: %s", details.contract.conId)
-        logger.debug("Symbol: %s", details.contract.symbol)
-        logger.debug("Security Type: %s", details.contract.secType)
-        logger.debug("Exchange: %s", details.contract.exchange)
-        logger.debug("Primary Exchange: %s", details.contract.primaryExchange)
-        logger.debug("Currency: %s", details.contract.currency)
-        logger.debug2("Local Symbol: %s", details.contract.localSymbol)
-        logger.debug("Security ID Type: %s", details.contract.secIdType)
-        logger.debug("Security ID: %s", details.contract.secId)
+        # logger.debug("Contract Info")
+        # logger.debug("Contract ID: %s", details.contract.conId)
+        # logger.debug("Symbol: %s", details.contract.symbol)
+        # logger.debug("Security Type: %s", details.contract.secType)
+        # logger.debug("Exchange: %s", details.contract.exchange)
+        # logger.debug("Primary Exchange: %s", details.contract.primaryExchange)
+        # logger.debug("Currency: %s", details.contract.currency)
+        # logger.debug2("Local Symbol: %s", details.contract.localSymbol)
+        # logger.debug("Security ID Type: %s", details.contract.secIdType)
+        # logger.debug("Security ID: %s", details.contract.secId)
 
-        logger.debug("Contract Detail Info")
-        logger.debug2("Market name: %s", details.marketName)
-        logger.debug2("OrderTypes: %s", details.orderTypes)
-        logger.debug2("Valid Exchanges: %s", details.validExchanges)
-        logger.debug2("Underlying Contract ID: %s", details.underConId)
-        logger.debug("Long name: %s", details.longName)
-        logger.debug("Industry: %s", details.industry)
-        logger.debug("Category: %s", details.category)
-        logger.debug("Subcategory: %s", details.subcategory)
-        logger.debug2("Time Zone: %s", details.timeZoneId)
-        logger.debug2("Trading Hours: %s", details.tradingHours)
-        logger.debug2("Liquid Hours: %s", details.liquidHours)
-        logger.debug2("SecIdList: %s", details.secIdList)
-        logger.debug2("Underlying Symbol: %s", details.underSymbol)
-        logger.debug("Stock Type: %s", details.stockType)
-        logger.debug("Next Option Date: %s", details.nextOptionDate)
-        logger.debug3("Details: %s", details)
+        # logger.debug("Contract Detail Info")
+        # logger.debug2("Market name: %s", details.marketName)
+        # logger.debug2("OrderTypes: %s", details.orderTypes)
+        # logger.debug2("Valid Exchanges: %s", details.validExchanges)
+        # logger.debug2("Underlying Contract ID: %s", details.underConId)
+        # logger.debug("Long name: %s", details.longName)
+        # logger.debug("Industry: %s", details.industry)
+        # logger.debug("Category: %s", details.category)
+        # logger.debug("Subcategory: %s", details.subcategory)
+        # logger.debug2("Time Zone: %s", details.timeZoneId)
+        # logger.debug2("Trading Hours: %s", details.tradingHours)
+        # logger.debug2("Liquid Hours: %s", details.liquidHours)
+        # logger.debug2("SecIdList: %s", details.secIdList)
+        # logger.debug2("Underlying Symbol: %s", details.underSymbol)
+        # logger.debug("Stock Type: %s", details.stockType)
+        # logger.debug("Next Option Date: %s", details.nextOptionDate)
+        # logger.debug3("Details: %s", details)
 
-        if details.contract.secType == "Bond":
-            logger.debug("Description: %s", details.contract.description)
-            logger.debug("Issuer ID: %s", details.contract.issuerId)
-            logger.debug("Cusip", details.cusip)
+        # if details.contract.secType == "Bond":
+        #     logger.debug("Description: %s", details.contract.description)
+        #     logger.debug("Issuer ID: %s", details.contract.issuerId)
+        #     logger.debug("Cusip", details.cusip)
 
-        elif details.contract.secType == "IND":
-            db = index_info.IndexInfo()
-            db.update_ibkr_info(details.contract.symbol,
-                                details.contract.conId,
-                                details.contract.primaryExchange,
-                                details.contract.exchange, details.longName)
+        # elif details.contract.secType == "IND":
+        #     db = index_info.IndexInfo()
+        #     db.update_ibkr_info(details.contract.symbol,
+        #                         details.contract.conId,
+        #                         details.contract.primaryExchange,
+        #                         details.contract.exchange, details.longName)
 
-        if details.stockType == "ETF" or details.stockType == "ETN":
-            db = etf_info.EtfInfo()
-            db.update_ibkr_info(details.contract.symbol,
-                                details.contract.conId,
-                                details.contract.primaryExchange,
-                                details.contract.exchange)
+        # if details.stockType == "ETF" or details.stockType == "ETN":
+        #     db = etf_info.EtfInfo()
+        #     db.update_ibkr_info(details.contract.symbol,
+        #                         details.contract.conId,
+        #                         details.contract.primaryExchange,
+        #                         details.contract.exchange)
 
-        elif details.stockType == "STK":
-            db = stock_info.EtfInfo()
-            db.update_ibkr_info(details.contract.symbol,
-                                details.contract.conId,
-                                details.contract.primaryExchange,
-                                details.contract.exchange)
+        # elif details.stockType == "STK":
+        #     db = stock_info.EtfInfo()
+        #     db.update_ibkr_info(details.contract.symbol,
+        #                         details.contract.conId,
+        #                         details.contract.primaryExchange,
+        #                         details.contract.exchange)
 
         logger.debug("End Function")
 
@@ -303,8 +326,8 @@ class IbkrClient(EWrapper, EClient):
         """ Provides the next order ID """
         super().nextValidId(order_id)
 
-        logger.debug("Setting nextValidOrderId: %s", order_id)
-        self.nextValidOrderId = order_id
+        logger.debug("Setting next_valid_order: %s", order_id)
+        self.next_order_id = order_id
         logger.info("The next valid Order ID: %s", order_id)
 
     @iswrapper

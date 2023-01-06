@@ -1,6 +1,6 @@
-"""!@package pytrader.strategies
+"""!@package pytrader
 
-Provides the Base Class for a Strategy.
+Algorithmic Trading Program
 
 @author Geoff S. derber
 @version HEAD
@@ -20,19 +20,26 @@ Provides the Base Class for a Strategy.
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file strategies/__init__.py
+@file plugins/download/init.py
 
     Contains global variables for the pyTrader program.
 
 """
-# System libraries
 
-# 3rd Party libraries
+# System Libraries
+# import os
+# import sys
 
+# 3rd Party Libraries
+
+# Application Libraries
 # System Library Overrides
 from pytrader.libs.system import logging
 
-# Application Libraries
+# Other Application Libraries
+from pytrader.libs.clients import database
+
+# Conditional Libraries
 
 # ==================================================================================================
 #
@@ -43,19 +50,30 @@ from pytrader.libs.system import logging
 @var logger
 The base logger.
 
-@var colortext
-Allows Color text on the console
 """
 logger = logging.getLogger(__name__)
 
-# ==================================================================================================
-#
-# Classes
-#
-# ==================================================================================================
 
 # ==================================================================================================
 #
 # Functions
 #
 # ==================================================================================================
+def initialize(args):
+    logger.debug10("Begin Function")
+    database.init_sqlalchemy()
+    logger.debug10("End Funuction")
+
+
+def parser(*args, **kwargs):
+    subparsers = args[0]
+    parent_parsers = list(args[1:])
+
+    cmd = subparsers.add_parser("init",
+                                aliases=["i"],
+                                parents=parent_parsers,
+                                help="Initial data download")
+
+    cmd.set_defaults(func=initialize)
+
+    return cmd

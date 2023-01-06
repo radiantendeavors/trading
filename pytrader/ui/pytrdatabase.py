@@ -53,7 +53,6 @@ from pytrader.libs.utilities import config
 The base logger.
 """
 logger = logging.getLogger(__name__)
-client_id = 2
 
 
 # ==================================================================================================
@@ -62,7 +61,7 @@ client_id = 2
 #
 # ==================================================================================================
 def init(args):
-    import_path = "pytrader.plugins.download."
+    import_path = "pytrader.plugins.dbmgr."
 
     epilog_text = """
     See man pytrader for more information.\n
@@ -74,14 +73,13 @@ def init(args):
                                    epilog=epilog_text)
 
     parser.add_version_option()
-    parser.add_ibapi_connection_options()
     parent_parser = parser.add_logging_option()
     subparsers = parser.create_subparsers()
 
-    subcommands = ["broker", "init", "nasdaq", "polygon", "yahoo"]
+    subcommands = ["init", "upgrade"]
 
     for i in subcommands:
-        subcommand = utilities.get_plugin_function(scmd='download',
+        subcommand = utilities.get_plugin_function(scmd='dbmgr',
                                                    program=i,
                                                    cmd='parser',
                                                    import_path=import_path)

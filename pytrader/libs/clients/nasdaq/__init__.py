@@ -29,7 +29,8 @@ Algorithmic Trading Program
 # System Libraries
 # import os
 import requests
-# import sys
+import sys
+import hashlib
 
 # 3rd Party Libraries
 
@@ -89,6 +90,13 @@ class NasdaqClient():
         where = "`ticker`='" + ticker + "'"
         row = db.select(where_clause=where)
         logger.debug("Row: %s", row)
+
+        company_hash = hashlib.sha256()
+        company_hash.update(bytes(name, 'utf-8'))
+        company_id = company_hash.hexdigest()
+
+        logger.debug("UUID: %s", company_id)
+        sys.exit(1)
 
         if row is None:
             db.insert(ticker, name)

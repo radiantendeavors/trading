@@ -76,8 +76,7 @@ class EtfInfo(mysql.MySQLDatabase):
             SELECT *
             """
 
-        sql += """
-        FROM `etf_info`
+        sql += """FROM `etf_info`
         """
 
         if where_clause:

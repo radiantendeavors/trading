@@ -1,6 +1,6 @@
-"""!@package pytrader.strategies
+"""!@package pytrader
 
-Provides the Base Class for a Strategy.
+Algorithmic Trading Program
 
 @author Geoff S. derber
 @version HEAD
@@ -20,19 +20,26 @@ Provides the Base Class for a Strategy.
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file strategies/__init__.py
+@file plugins/download/nasdaq.py
 
     Contains global variables for the pyTrader program.
 
 """
-# System libraries
 
-# 3rd Party libraries
+# System Libraries
+# import os
+# import sys
 
-# System Library Overrides
-from pytrader.libs.system import logging
+# 3rd Party Libraries
 
 # Application Libraries
+# System Library Overrides
+# from pytrader.libs.system import argparse
+from pytrader.libs.system import logging
+
+# Other Application Libraries
+from pytrader.libs import securities
+# Conditional Libraries
 
 # ==================================================================================================
 #
@@ -48,14 +55,45 @@ Allows Color text on the console
 """
 logger = logging.getLogger(__name__)
 
-# ==================================================================================================
-#
-# Classes
-#
-# ==================================================================================================
 
 # ==================================================================================================
 #
 # Functions
 #
 # ==================================================================================================
+def polygon_download(args):
+    logging.debug("Begin Function")
+
+    investments = "None"
+
+    if args.type:
+        investments = args.type
+    else:
+        investments = ["stocks", "etfs"]
+
+    for investment in investments:
+        info = securities.Securities(securities_type=investment)
+        logger.debug("Info: %s", info.__repr__())
+        info.update_info(source="polygon")
+
+    logging.debug("End Fuction")
+    return None
+
+
+def parser(*args, **kwargs):
+    subparsers = args[0]
+    parent_parsers = list(args[1:])
+
+    cmd = subparsers.add_parser("polygon",
+                                aliases=["p"],
+                                parents=parent_parsers,
+                                help="Downloads data from Polygon.IO")
+    cmd.add_argument("-t",
+                     "--type",
+                     nargs=1,
+                     choices=["etfs", "stocks"],
+                     help="Type of investments to download")
+
+    cmd.set_defaults(func=polygon_download)
+
+    return cmd

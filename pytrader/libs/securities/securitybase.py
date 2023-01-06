@@ -33,6 +33,7 @@ from ibapi.contract import Contract
 from pytrader.libs.system import logging
 
 # Other Application Libraries
+from pytrader.libs import orders
 
 # ==================================================================================================
 #
@@ -59,22 +60,15 @@ class SecurityBase():
 
         logger.debug10("End Function")
 
-    def set_contract(self,
-                     ticker_symbol,
-                     security_type,
-                     primary_exchange=None,
-                     exchange="SMART"):
+    def set_contract(self, primary_exchange=None, exchange="SMART"):
         """!@fn set_contract
 
-        @param security The ticker symbol for the contract
-        @param security_type The type of security for the contract.  Can be one of: CASH, CRYPTO, STK, IND, CFD, FUT, CONTFUT, FUT+CONTFUT, OPT, FOP, BOND, FUND
         @param exchange
-        @param currency
         """
         logger.debug10("Begin Function")
         contract = Contract()
-        contract.symbol = ticker_symbol
-        contract.secType = security_type
+        contract.symbol = self.ticker_symbol
+        contract.secType = self.security_type
         contract.exchange = exchange
         contract.currency = "USD"
         logger.debug("Primary Exchange: %s", primary_exchange)
@@ -86,3 +80,19 @@ class SecurityBase():
 
         logger.debug10("End Function")
         return contract
+
+    def get_broker_info(self):
+        """!
+        get_broker_info
+        """
+
+        req_id = self.brokerclient.get_security_data(self.contract)
+        data = self.brokerclient.get_data(req_id)
+        return data
+
+    def place_order(self):
+        logger.debug10("Begin Function")
+        order = orders.Order(order_type="market", action="BUY", quantity=1)
+
+        self.brokerclient.place_order(self.contract, order)
+        logger.debug10("End Function")

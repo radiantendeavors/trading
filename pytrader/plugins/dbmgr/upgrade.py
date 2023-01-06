@@ -1,6 +1,6 @@
-"""!@package pytrader.strategies
+"""!@package pytrader
 
-Provides the Base Class for a Strategy.
+Algorithmic Trading Program
 
 @author Geoff S. derber
 @version HEAD
@@ -20,19 +20,26 @@ Provides the Base Class for a Strategy.
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file strategies/__init__.py
+@file plugins/download/init.py
 
     Contains global variables for the pyTrader program.
 
 """
-# System libraries
 
-# 3rd Party libraries
+# System Libraries
+# import os
+# import sys
 
+# 3rd Party Libraries
+
+# Application Libraries
 # System Library Overrides
 from pytrader.libs.system import logging
 
-# Application Libraries
+# Other Application Libraries
+from pytrader.libs.clients.mysql import stock_info, ibkr_stock_info
+
+# Conditional Libraries
 
 # ==================================================================================================
 #
@@ -43,19 +50,39 @@ from pytrader.libs.system import logging
 @var logger
 The base logger.
 
-@var colortext
-Allows Color text on the console
 """
 logger = logging.getLogger(__name__)
 
-# ==================================================================================================
-#
-# Classes
-#
-# ==================================================================================================
 
 # ==================================================================================================
 #
 # Functions
 #
 # ==================================================================================================
+def upgrade(args):
+    logger.debug10("Begin Function")
+    info = stock_info.StockInfo()
+    new_info = ibkr_stock_info.IbkrStockInfo()
+    where = "`ibkr_contract_id` IS NOT NULL"
+    securities = info.select(where_clause=where)
+
+    for item in securities:
+        new_info.insert(item['id'], item['ticker'], item['ibkr_contract_id'],
+                        item['ibkr_primary_exchange'], item['ibkr_exchange'],
+                        item['ipo_date'])
+
+    logger.debug10("End Function")
+
+
+def parser(*args, **kwargs):
+    subparsers = args[0]
+    parent_parsers = list(args[1:])
+
+    cmd = subparsers.add_parser("upgrade",
+                                aliases=["u"],
+                                parents=parent_parsers,
+                                help="Upgrades the database")
+
+    cmd.set_defaults(func=upgrade)
+
+    return cmd

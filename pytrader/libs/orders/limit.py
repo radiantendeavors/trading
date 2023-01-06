@@ -1,6 +1,7 @@
-"""!@package pytrader.strategies
+"""!
+@package pytrader.libs.orders.limit
 
-Provides the Base Class for a Strategy.
+Provides the broker client
 
 @author Geoff S. derber
 @version HEAD
@@ -20,10 +21,8 @@ Provides the Base Class for a Strategy.
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file strategies/__init__.py
 
-    Contains global variables for the pyTrader program.
-
+@file security.py
 """
 # System libraries
 
@@ -32,30 +31,26 @@ Provides the Base Class for a Strategy.
 # System Library Overrides
 from pytrader.libs.system import logging
 
-# Application Libraries
+# Other Application Libraries
+from pytrader.libs.orders import orderbase
 
 # ==================================================================================================
 #
 # Global Variables
 #
 # ==================================================================================================
-"""!
-@var logger
-The base logger.
-
-@var colortext
-Allows Color text on the console
-"""
 logger = logging.getLogger(__name__)
+
 
 # ==================================================================================================
 #
 # Classes
 #
 # ==================================================================================================
+class LimitOrder(orderbase.OrderBase):
 
-# ==================================================================================================
-#
-# Functions
-#
-# ==================================================================================================
+    def __init__(self, *args, **kwargs):
+        logger.debug("Begin Function")
+        self.orderType = "LMT"
+        self.lmtPrice = kwargs["limit_price"]
+        super().__init__(*args, **kwargs)

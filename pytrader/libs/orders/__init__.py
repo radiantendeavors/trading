@@ -1,5 +1,5 @@
 """!
-@package pytrader.libs.security
+@package pytrader.libs.orders
 
 Provides the broker client
 
@@ -27,12 +27,13 @@ Provides the broker client
 # System libraries
 
 # 3rd Party libraries
-# from ibapi.order import Order
+from ibapi import order
 
 # System Library Overrides
 from pytrader.libs.system import logging
 
 # Other Application Libraries
+from pytrader.libs.orders import limit, market
 
 # ==================================================================================================
 #
@@ -47,10 +48,18 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class Orders():
+class Order():
 
-    def __init__(self):
-        logger.debug("Begin Function")
+    def __new__(cls, *args, **kwargs):
+        order_type = kwargs["order_type"]
+        subclass_map = {
+            "limit": limit.LimitOrder,
+            "market": market.MarketOrder
+        }
 
-    def get_open_positions(self):
-        self.reqPositions()
+        logger.debug("Subclass Map: %s", subclass_map)
+        logger.debug("Order Type: %s", order_type)
+        logger.debug("Securities Subclass: %s", subclass_map.get(order_type))
+
+        subclass = subclass_map.get(order_type)
+        return subclass(*args, **kwargs)

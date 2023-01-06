@@ -1,8 +1,9 @@
-"""!@package pytrader.strategies
+"""!
+@package pytrader.strategies.example_strategy
 
-Provides the Base Class for a Strategy.
+Provides an Example Strategy
 
-@author Geoff S. derber
+@author Geoff S. Derber
 @version HEAD
 @date 2022
 @copyright GNU Affero General Public License
@@ -20,9 +21,9 @@ Provides the Base Class for a Strategy.
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file strategies/__init__.py
+@file pytrader/strategies/example_strategy/__init__.py
 
-    Contains global variables for the pyTrader program.
+Provides an Example Strategy
 
 """
 # System libraries
@@ -33,6 +34,7 @@ Provides the Base Class for a Strategy.
 from pytrader.libs.system import logging
 
 # Application Libraries
+from pytrader.libs.securities import security
 
 # ==================================================================================================
 #
@@ -54,8 +56,22 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 
+
 # ==================================================================================================
 #
 # Functions
 #
 # ==================================================================================================
+def run(brokerclient, securities):
+    logger.debug10("Begin Function")
+    logger.debug9("Running Example Strategy")
+
+    investment = security.Security(security_type="etfs",
+                                   ticker_symbol=securities[0],
+                                   brokerclient=brokerclient)
+
+    investment.set_contract()
+    investment.get_broker_info()
+    investment.place_order()
+
+    logger.debug10("End Function")
