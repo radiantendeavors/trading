@@ -1,5 +1,5 @@
 """!
-@package pytrader.libs.security
+@package pytrader.libs.securitybase
 
 Provides the broker client
 
@@ -22,9 +22,10 @@ Provides the broker client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file security.py
+@file pytrader/libs/securitybase.py
 """
 # System libraries
+import pandas
 
 # 3rd Party libraries
 from ibapi.contract import Contract
@@ -33,6 +34,7 @@ from ibapi.contract import Contract
 from pytrader.libs.system import logging
 
 # Other Application Libraries
+from pytrader.libs import bars
 from pytrader.libs import orders
 
 # ==================================================================================================
@@ -58,6 +60,8 @@ class SecurityBase():
         if kwargs.get("brokerclient"):
             self.brokerclient = kwargs["brokerclient"]
 
+        self.bars = {}
+
         logger.debug10("End Function")
 
     def set_contract(self, primary_exchange=None, exchange="SMART"):
@@ -82,6 +86,40 @@ class SecurityBase():
 
         return contract
 
+    def update_broker_info(self):
+        result = self.__get_info_from_database()
+
+        logger.debug("Result: %s", result)
+
+        if result[0]["ibkr_exchange"] == "SMART" and result[0][
+                "ibkr_primary_exchange"]:
+            self.primary_exchange = result[0]["ibkr_primary_exchange"]
+            self.set_contract(self.ticker_symbol,
+                              self.security_type,
+                              primary_exchange=self.primary_exchange)
+        else:
+            self.set_contract(self.ticker_symbol, self.security_type)
+
+        logger.debug("Get Security Data")
+        req_id = self.brokerclient.get_security_data(self.contract)
+        logger.debug("Request ID: %s", req_id)
+        data = self.brokerclient.get_data(req_id)
+        logger.debug("Data: %s", data)
+
+        self.update_ipo_date()
+        logger.debug10("End Function")
+        return None
+
+    def update_info(self, source=None):
+        logger.debug10("Begin Function")
+
+        if source == "broker":
+            self.update_broker_info()
+        elif source == "yahoo":
+            self.update_yahoo_info()
+        else:
+            logger.error("Source Not Selected.")
+
     def get_broker_info(self):
         """!
         get_broker_info
@@ -90,6 +128,10 @@ class SecurityBase():
         req_id = self.brokerclient.get_security_data(self.contract)
         data = self.brokerclient.get_data(req_id)
         return data
+
+    def get_yahoo_info(self, ticker):
+        yc = yahoo.YahooClient()
+        yc.get_info(self.securities_type, ticker)
 
     def place_order(self):
         logger.debug10("Begin Function")
@@ -103,3 +145,31 @@ class SecurityBase():
         order.place_order(self.contract)
 
         logger.debug10("End Function")
+
+    def get_bars(self, bar_size):
+        logger.debug("Begin Function")
+        bars = self.bars[bar_size].get_bars()
+        logger.debug("Bars: %s", bars)
+        logger.debug("End Function")
+        return self.bars[bar_size].get_bars()
+
+    def download_bars(self,
+                      bar_size="1 day",
+                      duration="1 W",
+                      keep_up_to_date=False):
+        self.bars[bar_size] = bars.Bars(brokerclient=self.brokerclient,
+                                        contract=self.contract,
+                                        bar_size=bar_size,
+                                        duration=duration,
+                                        keep_up_to_date=keep_up_to_date)
+        self.bars[bar_size].download_bars()
+
+        logger.debug("Ticker: %s", self.ticker_symbol)
+        logger.debug("Bars: %s", bars)
+        return self.bars
+
+    def calculate_ema(self, bar_size, span):
+        self.bars[bar_size].calculate_ema(span)
+
+    def calculate_sma(self, bar_size, span):
+        self.bars[bar_size].calculate_sma(span)
