@@ -73,7 +73,10 @@ def polygon_download(args):
 
     for investment in investments:
         info = securities.Securities(securities_type=investment)
-        logger.debug("Info: %s", info.__repr__())
+
+    if args.security:
+        info.update_info(source="polygon", securities_list=args.security)
+    else:
         info.update_info(source="polygon")
 
     logging.debug("End Fuction")
@@ -88,6 +91,10 @@ def parser(*args, **kwargs):
                                 aliases=["p"],
                                 parents=parent_parsers,
                                 help="Downloads data from Polygon.IO")
+    cmd.add_argument("-s",
+                     "--security",
+                     nargs="+",
+                     help="Security to download")
     cmd.add_argument("-t",
                      "--type",
                      nargs=1,
