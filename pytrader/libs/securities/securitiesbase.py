@@ -80,7 +80,7 @@ class SecuritiesBase():
                                            brokerclient=self.brokerclient)
 
             logger.debug("Security: %s", investment)
-            investment.update_info("ibkr")
+            investment.update_info(source="ibkr")
 
         logger.debug10("End Function")
         return None
