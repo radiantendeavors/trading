@@ -71,7 +71,7 @@ class YahooClient():
 
     def get_ticker_list(self, info, check_symbol=1):
         if check_symbol:
-            where = "`delisted_date` IS NULL AND yahoo_symbol IS NOT NULL"
+            where = "`delisted_date` IS NULL and `ticker_symbol` IS NULL"
         else:
             where = "`delisted_date` IS NULL"
 
