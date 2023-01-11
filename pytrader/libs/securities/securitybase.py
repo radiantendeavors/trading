@@ -3,7 +3,7 @@
 
 Provides the broker client
 
-@author Geoff S. derber
+@author Geoff S. Derber
 @version HEAD
 @date 2022
 @copyright GNU Affero General Public License
