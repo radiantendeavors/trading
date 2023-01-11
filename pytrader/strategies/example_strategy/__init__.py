@@ -66,11 +66,16 @@ def run(brokerclient, securities):
     logger.debug10("Begin Function")
     logger.debug9("Running Example Strategy")
 
-    investment = security.Security(security_type="etfs",
-                                   ticker_symbol=securities[0],
-                                   brokerclient=brokerclient)
-    investment.set_contract()
-    investment.get_broker_info()
-    investment.place_order()
+    x = 0
+    investment = []
+    for item in securities:
+        investment.append(
+            security.Security(security_type="etfs",
+                              ticker_symbol=item,
+                              brokerclient=brokerclient))
+        investment[x].set_contract()
+        investment[x].get_historical_bars()
+        #investment.place_order()
+        x += 1
 
     logger.debug10("End Function")
