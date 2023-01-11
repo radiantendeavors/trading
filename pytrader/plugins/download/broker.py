@@ -85,7 +85,7 @@ def broker_download(args):
 
     @param args
     """
-    logging.debug10("Begin Function")
+    logger.debug10("Begin Function")
     conf = config.Config()
     conf.read_config()
 
