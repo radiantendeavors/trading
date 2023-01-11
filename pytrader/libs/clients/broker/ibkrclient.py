@@ -27,7 +27,7 @@ Provides the client for Interactive Brokers
 # System Libraries
 import sys
 import time
-from datetime import datetime
+import datetime
 
 # IB API
 from ibapi.client import EClient
@@ -47,9 +47,18 @@ from pytrader.libs.system import logging
 # ==================================================================================================
 logger = logging.getLogger(__name__)
 
-# To avoid pacing violations, data can be requested no more than 60 requests in any 10 minute period.
-# There are 600 seconds in 10 minutes.
-# So, 1 request every 10 seconds, and add 1 second to ensure we don't cross the threshold.
+# ==================================================================================================
+#
+# Pacing Violations
+#
+# 1. To avoid pacing violations, historical data can be requested no more than 60 requests in any 10
+# minute period.
+# 2. There are 600 seconds in 10 minutes.
+# 3. Therefore, 1 request every 15 seconds to ensure we don't cross the threshold.
+#
+# https://interactivebrokers.github.io/tws-api/historical_limitations.html#pacing_violations
+#
+# ==================================================================================================
 sleep_time = 15
 
 
@@ -75,6 +84,12 @@ class IbkrClient(EWrapper, EClient):
         EWrapper.__init__(self)
         EClient.__init__(self, self)
 
+        self.historical_data_req_timestamp = datetime.datetime(year=1980,
+                                                               month=1,
+                                                               day=1,
+                                                               hour=0,
+                                                               minute=0,
+                                                               second=0)
         self.req_id = 0
         self.next_order_id = None
         self.data = {}
@@ -117,16 +132,35 @@ class IbkrClient(EWrapper, EClient):
         logger.debug10("Begin Function")
 
         if req_id and purge:
-            # Pop the key because otherwise this variable could become large with many requests
-            while True:
-                if req_id in self.data:
-                    return self.data.pop(req_id)
-                    break
-                else:
+            if isinstance(self.data[req_id], list):
+                while len(self.data[req_id]) == 0:
+                    logger.debug("Waiting on response for Request ID: %s",
+                                 req_id)
+                    time.sleep(1)
+            else:
+                while req_id not in self.data:
                     logger.debug("Waiting on response for Request ID: %s",
                                  req_id)
                     time.sleep(1)
 
+            # Pop the key because otherwise this variable could become large with many requests
+            return self.data.pop(req_id)
+        elif req_id:
+            logger.debug("Data: %s", self.data)
+            if isinstance(self.data[req_id], list):
+                while len(self.data[req_id]) == 0:
+                    logger.debug("Waiting on response for Request ID: %s",
+                                 req_id)
+                    time.sleep(1)
+            else:
+                while req_id not in self.data:
+                    logger.debug("Waiting on response for Request ID: %s",
+                                 req_id)
+                    time.sleep(1)
+
+            logger.debug3("Data After Waiting: %s", self.data)
+            logger.debug3("Returning: %s", self.data[req_id])
+            return self.data[req_id]
         else:
             return self.data
 
@@ -148,14 +182,31 @@ class IbkrClient(EWrapper, EClient):
         if keep_up_to_date:
             end_date_time = ""
 
+        time_diff = datetime.datetime.now(
+        ) - self.historical_data_req_timestamp
+        while time_diff.total_seconds() < sleep_time:
+            logger.debug("Now: %s", datetime.datetime.now())
+            logger.debug("Last Request: %s",
+                         self.historical_data_req_timestamp)
+            logger.debug("Time Difference: %s seconds",
+                         time_diff.total_seconds())
+            remaining_sleep_time = sleep_time - time_diff.total_seconds()
+            logger.debug("Sleep Time: %s", remaining_sleep_time)
+            time.sleep(sleep_time - time_diff.total_seconds())
+            time_diff = datetime.datetime.now(
+            ) - self.historical_data_req_timestamp
+
+        logger.debug("Requesting Historical Bars: %s", bar_size_setting)
         self.reqHistoricalData(self.req_id, contract, end_date_time,
                                duration_str, bar_size_setting, what_to_show,
                                use_regular_trading_hours, format_date,
                                keep_up_to_date, chart_options)
+        self.historical_data_req_timestamp = datetime.datetime.now()
+        logger.debug("Request Timestamp: %s",
+                     self.historical_data_req_timestamp)
         self.data[self.req_id] = []
         logger.debug4("Data: %s", self.data)
         logger.debug10("End Funuction")
-        time.sleep(sleep_time)
         return self.req_id
 
     def get_ipo_date(self,
@@ -179,13 +230,16 @@ class IbkrClient(EWrapper, EClient):
         return self.req_id
 
     def get_next_order_id(self):
-        while True:
-            if self.next_order_id is None:
-                logger.debug("Waiting on the next order id")
-                time.sleep(1)
-            else:
-                return self.next_order_id
-                break
+        logger.debug10("Begin Function")
+        while self.next_order_id is None:
+            logger.debug("Waiting on the next order id")
+            time.sleep(1)
+
+        logger.debug("Next Order Id Received.  Next Order Id is: %s",
+                     self.next_order_id)
+
+        logger.debug10("End Function")
+        return self.next_order_id
 
     def get_security_data(self, contract):
         logger.debug10("Begin Function")
@@ -300,7 +354,7 @@ class IbkrClient(EWrapper, EClient):
 
     @iswrapper
     def currentTime(self, cur_time):
-        time_now = datetime.fromtimestamp(cur_time)
+        time_now = datetime.datetime.fromtimestamp(cur_time)
         logger.info("Current time: %s", time_now)
 
     @iswrapper
