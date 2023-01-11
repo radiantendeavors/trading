@@ -84,10 +84,10 @@ class Bars():
             self.bar_size,
             duration_str=self.duration,
             keep_up_to_date=self.keep_up_to_date)
-        bar_dict = self.brokerclient.get_data(req_id, purge=False)
+        bar_list = self.brokerclient.get_data(req_id, purge=False)
         self.bar_list = []
 
-        for bar in bar_dict[req_id]:
+        for bar in bar_list:
             date = bar.date
             open = bar.open
             high = bar.high
