@@ -1,6 +1,6 @@
-"""!@package pytrader
+"""!@package pytrader.libs.clients.yahoo
 
-Algorithmic Trading Program
+Provides a client for gathering data from Yahoo! Finance
 
 @author Geoff S. derber
 @version HEAD
@@ -20,9 +20,12 @@ Algorithmic Trading Program
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file lib/nasdaqclient/__init__.py
+@file pytrader/libs/clients/yahoo/__init__.py
 
-    Contains global variables for the pyTrader program.
+Provides a client for interfacing with Yahoo! Finance
+
+Uses the yfinance library.
+yFinance Documuentation: https://pypi.org/project/yfinance/
 
 """
 # System Libraries
