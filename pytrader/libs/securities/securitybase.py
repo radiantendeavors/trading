@@ -87,33 +87,34 @@ class SecurityBase():
         return contract
 
     def update_broker_info(self):
-        result = self.__get_info_from_database()
+        # result = self.__get_info_from_database()
 
-        logger.debug("Result: %s", result)
+        # logger.debug("Result: %s", result)
 
-        if result[0]["ibkr_exchange"] == "SMART" and result[0][
-                "ibkr_primary_exchange"]:
-            self.primary_exchange = result[0]["ibkr_primary_exchange"]
-            self.set_contract(self.ticker_symbol,
-                              self.security_type,
-                              primary_exchange=self.primary_exchange)
-        else:
-            self.set_contract(self.ticker_symbol, self.security_type)
+        # if result[0]["ibkr_exchange"] == "SMART" and result[0][
+        #         "ibkr_primary_exchange"]:
+        #     self.primary_exchange = result[0]["ibkr_primary_exchange"]
+        #     self.set_contract(self.ticker_symbol,
+        #                       self.security_type,
+        #                       primary_exchange=self.primary_exchange)
+        # else:
+        #     self.set_contract(self.ticker_symbol, self.security_type)
 
+        self.set_contract()
         logger.debug("Get Security Data")
         req_id = self.brokerclient.get_security_data(self.contract)
         logger.debug("Request ID: %s", req_id)
         data = self.brokerclient.get_data(req_id)
         logger.debug("Data: %s", data)
 
-        self.update_ipo_date()
+        # self.update_ipo_date()
         logger.debug10("End Function")
         return None
 
     def update_info(self, source=None):
         logger.debug10("Begin Function")
 
-        if source == "broker":
+        if source == "broker" or source == "ibkr":
             self.update_broker_info()
         elif source == "yahoo":
             self.update_yahoo_info()
@@ -167,6 +168,33 @@ class SecurityBase():
         logger.debug("Ticker: %s", self.ticker_symbol)
         logger.debug("Bars: %s", bars)
         return self.bars
+
+    # def update_ipo_date(self):
+    #     logger.debug10("Begin Function")
+    #     result = self.__get_info_from_database()
+
+    #     if result[0]["ibkr_exchange"] == "SMART" and result[0][
+    #             "ibkr_primary_exchange"]:
+    #         self.primary_exchange = result[0]["ibkr_primary_exchange"]
+    #         self.set_contract(self.ticker_symbol,
+    #                           self.security_type,
+    #                           primary_exchange=self.primary_exchange)
+    #     else:
+    #         self.set_contract(self.ticker_symbol, self.security_type)
+
+    #     logger.debug("Get Security Data")
+    #     req_id = self.brokerclient.get_ipo_date(self.contract)
+    #     logger.debug("Request ID: %s", req_id)
+    #     data = self.brokerclient.get_data(req_id)
+    #     self.brokerclient.cancel_head_timestamp(req_id)
+    #     ipo_date = datetime.datetime.strptime(data, "%Y%m%d-%H:%M:%S")
+    #     logger.debug("Data: %s", ipo_date)
+
+    #     db = etf_info.EtfInfo()
+    #     db.update_ibkr_ipo_date(self.ticker_symbol, ipo_date)
+
+    #     logger.debug10("End Function")
+    #     return None
 
     def calculate_ema(self, bar_size, span):
         self.bars[bar_size].calculate_ema(span)
