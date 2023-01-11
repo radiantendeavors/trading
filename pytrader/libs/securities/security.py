@@ -60,10 +60,10 @@ class Security():
             "indexes": index.Index
         }
 
-        logger.debug("Subclass Map: %s", subclass_map)
-        logger.debug("Securities Type: %s", security_type)
-        logger.debug("Securities Subclass: %s",
-                     subclass_map.get(security_type))
+        logger.debug3("Subclass Map: %s", subclass_map)
+        logger.debug2("Securities Type: %s", security_type)
+        logger.debug2("Securities Subclass: %s",
+                      subclass_map.get(security_type))
 
         subclass = subclass_map.get(security_type)
         return subclass(*args, **kwargs)
