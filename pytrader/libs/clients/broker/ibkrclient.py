@@ -78,6 +78,7 @@ class IbkrClient(EWrapper, EClient):
         self.req_id = 0
         self.next_order_id = None
         self.data = {}
+        self.bars = []
 
     def cancel_head_timestamp(self, req_id):
         self.cancelHeadTimeStamp(req_id)
@@ -100,13 +101,22 @@ class IbkrClient(EWrapper, EClient):
             logger.error(
                 "Failed to connect to the server: Connection Time Unknown")
 
+    def get_bars(self):
+        while True:
+            if len(self.bars) > 0:
+                return self.bars
+                break
+            else:
+                logger.debug("Waiting on response")
+                time.sleep(1)
+
     def get_client_id(self):
         return self.clientId
 
-    def get_data(self, req_id=None):
+    def get_data(self, req_id=None, purge=True):
         logger.debug10("Begin Function")
 
-        if req_id:
+        if req_id and purge:
             # Pop the key because otherwise this variable could become large with many requests
             while True:
                 if req_id in self.data:
@@ -119,6 +129,34 @@ class IbkrClient(EWrapper, EClient):
 
         else:
             return self.data
+
+    def get_historical_bars(self,
+                            contract,
+                            bar_size_setting,
+                            end_date_time="",
+                            duration_str=None,
+                            what_to_show="TRADES",
+                            use_regular_trading_hours=1,
+                            format_date=1,
+                            keep_up_to_date=False,
+                            chart_options=[]):
+        logger.debug10("Begin Function")
+        self.req_id += 1
+
+        # if keep_up_to_date is true, end_date_time must be blank.
+        # https://interactivebrokers.github.io/tws-api/historical_bars.html
+        if keep_up_to_date:
+            end_date_time = ""
+
+        self.reqHistoricalData(self.req_id, contract, end_date_time,
+                               duration_str, bar_size_setting, what_to_show,
+                               use_regular_trading_hours, format_date,
+                               keep_up_to_date, chart_options)
+        self.data[self.req_id] = []
+        logger.debug4("Data: %s", self.data)
+        logger.debug10("End Funuction")
+        time.sleep(sleep_time)
+        return self.req_id
 
     def get_ipo_date(self,
                      contract,
@@ -157,22 +195,6 @@ class IbkrClient(EWrapper, EClient):
         time.sleep(sleep_time)
         logger.debug10("End Function")
         return self.req_id
-
-    def get_security_historical_bars(self,
-                                     contract,
-                                     duration_str,
-                                     bar_size_setting,
-                                     what_to_show,
-                                     chart_options,
-                                     end_date_time="",
-                                     use_regular_trading_hours=1,
-                                     format_date=1,
-                                     keep_up_to_date=False):
-        self.req_id += 1
-        self.reqHistoricalData(self.req_id, contract, end_date_time,
-                               duration_str, bar_size_setting, what_to_show,
-                               use_regular_trading_hours, format_date,
-                               keep_up_to_date, chart_options)
 
     def get_security_pricing_data(self, contract):
         logger.debug10("Begin Function")
@@ -288,13 +310,20 @@ class IbkrClient(EWrapper, EClient):
         error_codes = [
             100, 102, 103, 104, 105, 106, 107, 109, 110, 111, 113, 116, 117,
             118, 119, 120, 121, 122, 123, 124, 125, 126, 129, 131, 132, 162,
-            200, 320, 502, 503, 504, 1101, 2100, 2101, 2102, 2103, 2168, 2169,
-            10038
+            200, 320, 321, 502, 503, 504, 1101, 2100, 2101, 2102, 2103, 2168,
+            2169, 10038
         ]
         warning_codes = [101, 501, 1100, 2105, 2107, 2108, 2109, 2110, 2137]
         info_codes = [1102]
         debug_codes = [2104, 2106, 2158]
 
+        if code in critical_codes:
+            if advanced_order_rejection:
+                logger.critical(
+                    "ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s",
+                    req_id, code, msg, advanced_order_rejection)
+            else:
+                logger.critical("ReqID# %s, Code: %s (%s)", req_id, code, msg)
         if code in error_codes:
             if advanced_order_rejection:
                 logger.error(
@@ -309,13 +338,27 @@ class IbkrClient(EWrapper, EClient):
                     req_id, code, msg, advanced_order_rejection)
             else:
                 logger.warning("ReqID# %s, Code: %s (%s)", req_id, code, msg)
-        else:
+        elif code in info_codes:
+            if advanced_order_rejection:
+                logger.info(
+                    "ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s",
+                    req_id, code, msg, advanced_order_rejection)
+            else:
+                logger.info("ReqID# %s, Code: %s (%s)", req_id, code, msg)
+        elif code in debug_codes:
             if advanced_order_rejection:
                 logger.debug(
                     "ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s",
                     req_id, code, msg, advanced_order_rejection)
             else:
                 logger.debug("ReqID# %s, Code: %s (%s)", req_id, code, msg)
+        else:
+            if advanced_order_rejection:
+                logger.error(
+                    "ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s",
+                    req_id, code, msg, advanced_order_rejection)
+            else:
+                logger.error("ReqID# %s, Code: %s (%s)", req_id, code, msg)
 
         logger.debug10("End Function")
         return None
@@ -324,6 +367,43 @@ class IbkrClient(EWrapper, EClient):
     def headTimestamp(self, req_id, head_time_stamp):
         logger.debug("ReqID: %s, IPO Date: %s", req_id, head_time_stamp)
         self.data[req_id] = head_time_stamp
+
+    @iswrapper
+    def historicalData(self, req_id, bar):
+        logger.debug10("Begin Function")
+        logger.debug3("ReqID: %s", req_id)
+        logger.debug2("Bar: %s", bar)
+
+        self.data[req_id].append(bar)
+        logger.debug10("End Function")
+
+    @iswrapper
+    def historicalDataEnd(self, req_id, start, end):
+        logger.debug("ReqID: %s", req_id)
+
+    @iswrapper
+    def historicalDataUpdate(self, req_id, bar):
+        logger.debug("Begin Function")
+        logger.debug("ReqID: %s", req_id)
+        logger.debug("Bar: %s", bar)
+
+    @iswrapper
+    def historicalNews(self, req_id, time, provider_code, article_id,
+                       headline):
+        logger.debug("ReqId: %s", req_id)
+
+    @iswrapper
+    def historicalNewsEnd(self, req_id, has_more):
+        logger.debug("ReqId: %s", req_id)
+
+    @iswrapper
+    def historicalSchedule(self, req_id, start_date_time, end_date_time,
+                           timezone, sessions):
+        logger.debug("ReqId: %s", req_id)
+
+    @iswrapper
+    def historicalTicks(self, req_id, ticks, done):
+        logger.debug("ReqId: %s", req_id)
 
     @iswrapper
     def nextValidId(self, order_id: int):
