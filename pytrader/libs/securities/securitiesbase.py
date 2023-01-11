@@ -26,6 +26,7 @@ Provides the Base Class for Securities
 """
 # System libraries
 import random
+import string
 import time
 
 # 3rd Party libraries
@@ -79,7 +80,7 @@ class SecuritiesBase():
                                            brokerclient=self.brokerclient)
 
             logger.debug("Security: %s", investment)
-            investment.update_info()
+            investment.update_info("ibkr")
 
         logger.debug10("End Function")
         return None
@@ -93,29 +94,49 @@ class SecuritiesBase():
 
     def __update_info_polygon(self):
         logger.debug10("Begin Function")
+
+        if self.securities_type == "etfs":
+            ticker_type = "etf"
+        elif self.securities_type == "stocks":
+            ticker_type = "cs"
+        else:
+            logger.error("Invalid ticker type: %s", self.securities_type)
+
         client = polygon.PolygonClient()
-        types = client.get_ticker_types()
-        #for item in types:
-        #    logger.debug("Ticker Types: %s", item)
-        tickers = client.list_tickers(limit=999, type="ETF")
+        tickers = []
+        i = 0
+        alphabet = string.ascii_uppercase
+        while i < len(alphabet) - 2:
+            logger.debug3("1st Letter: %s", alphabet[i])
+            logger.debug3("2nd Letter: %s", alphabet[i + 1])
+
+            tickers.append(
+                client.list_tickers(ticker_gte=alphabet[i],
+                                    ticker_lt=alphabet[i + 2],
+                                    limit=1000,
+                                    type=ticker_type))
+            i += 2
+            time.sleep(15)
+
         for item in tickers:
             logger.debug("Tickers: %s", item)
+
         logger.debug10("End Function")
 
     def __update_info_yahoo(self):
         logger.debug10("Begin Function")
         for ticker in self.securities_list:
             logger.debug("Ticker: %s", ticker["yahoo_symbol"])
+
             if ticker["yahoo_symbol"]:
                 yahoo_symbol = ticker["yahoo_symbol"]
             else:
                 yahoo_symbol = ticker["ticker"]
 
-            yc = yahoo.YahooClient()
-            yc.get_info(self.securities_type, yahoo_symbol)
-            if ticker != self.securities_list[-1]:
-                time.sleep(random.randint(min_sleeptime, max_sleeptime))
+            investment = security.Security(security_type=self.securities_type,
+                                           ticker_symbol=yahoo_symbol)
 
+            investment.update_info("yahoo")
         logger.debug10("End Function")
         return None
 
