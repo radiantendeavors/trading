@@ -1,4 +1,4 @@
-"""
+"""!
 @package pytrader.libs.clients.broker
 Creates a basic interface for interacting with a broker
 
@@ -50,27 +50,39 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class BrokerClient(ibkrclient.IbkrClient):
-    """
-    @brief Short term, this class does absolutely nothing.  Long term, I'd like to add the ability
-    to interface with multiple brokers.  This class will act as the interface between the different
-    brokers.
+class BrokerClient():
+    """!
+    @brief Acts as a unifying class for various brokers.  Dynamically selects the correct broker at
+    runtime.
 
+    Currently, only supports Interactive Brokers
     """
 
-    def __init__(self, *args, **kwargs):
-        """
+    def __new__(cls, *args, **kwargs):
+        """!
         Broker Client Class initializer.
 
         @param *args
         @param **kwargs
         """
+        broker = kwargs["broker"]
+        subclass_map = {"ibkr": ibkrclient.IbkrClient}
 
-        super().__init__(*args, **kwargs)
+        logger.debug3("Subclass Map: %s", subclass_map)
+        logger.debug2("Broker: %s", broker)
+        logger.debug2("Securities Subclass: %s", subclass_map.get(broker))
+
+        subclass = subclass_map.get(broker)
+        return subclass(*args, **kwargs)
 
 
+# ==================================================================================================
+#
+# Functions
+#
+# ==================================================================================================
 def broker_connect(address, port, client_id=0):
-    """
+    """!
     Used to initialize the broker connection.
 
     @param address
@@ -86,7 +98,7 @@ def broker_connect(address, port, client_id=0):
         logger.debug("Client ID: %s", client_id)
 
     # Connect to TWS or IB Gateway
-    brokerclient = BrokerClient()
+    brokerclient = BrokerClient(broker="ibkr")
     brokerclient.connect(address, port, client_id)
 
     logger.debug2("Start Broker Client Thread")
