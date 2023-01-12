@@ -69,14 +69,15 @@ def polygon_download(args):
     if args.type:
         investments = args.type
     else:
-        investments = ["stocks", "etfs"]
+        investments = ["etfs", "indexes", "stocks"]
 
     for investment in investments:
-        info = securities.Securities(securities_type=investment)
+        if args.security:
+            info = securities.Securities(securities_type=investment,
+                                         securities_list=args.security)
+        else:
+            info = securities.Securities(securities_type=investment)
 
-    if args.security:
-        info.update_info(source="polygon", securities_list=args.security)
-    else:
         info.update_info(source="polygon")
 
     logging.debug("End Fuction")
@@ -98,7 +99,7 @@ def parser(*args, **kwargs):
     cmd.add_argument("-t",
                      "--type",
                      nargs=1,
-                     choices=["etfs", "stocks"],
+                     choices=["etfs", "indexes", "stocks"],
                      help="Type of investments to download")
 
     cmd.set_defaults(func=polygon_download)

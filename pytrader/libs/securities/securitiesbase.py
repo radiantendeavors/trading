@@ -59,7 +59,11 @@ max_sleeptime = 121
 class SecuritiesBase():
 
     def __init__(self, *args, **kwargs):
-        self.securities_list = {}
+        if kwargs.get("securities_list"):
+            self.securities_list = kwargs["securities_list"]
+        else:
+            self.securities_list = {}
+
         if kwargs.get("client_id"):
             self.client_id = kwargs["client_id"]
         else:
@@ -71,6 +75,10 @@ class SecuritiesBase():
 
     def __update_info_broker(self):
         logger.debug10("Begin Function")
+        if self.securities_list:
+            logger.debug("Securities List: %s", self.securities_list)
+        else:
+            self.get_list()
 
         for item in self.securities_list:
             logger.debug2("Item: %s", item)
@@ -92,39 +100,72 @@ class SecuritiesBase():
         logger.debug10("End Function")
         return None
 
-    def __update_info_polygon(self):
+    def __get_polygon_ticker_type(self):
         logger.debug10("Begin Function")
+        polygon_ticker_types = {
+            "etfs": "ETF",
+            "etns": "ETN",
+            "indexes": "INDEX",
+            "stocks": "CS"
+        }
 
-        if self.securities_type == "etfs":
-            ticker_type = "etf"
-        elif self.securities_type == "stocks":
-            ticker_type = "cs"
+        if self.securities_type in polygon_ticker_types:
+            return polygon_ticker_types[self.securities_type]
         else:
-            logger.error("Invalid ticker type: %s", self.securities_type)
+            raise Exception("Invalid Securities Type")
+        logger.debug10("End Function")
 
+    def __get_polygon_ticker_list(self, ticker_type):
+        logger.debug10("Begin Function")
         client = polygon.PolygonClient()
         tickers = []
         i = 0
         alphabet = string.ascii_uppercase
-        while i < len(alphabet) - 2:
-            logger.debug3("1st Letter: %s", alphabet[i])
-            logger.debug3("2nd Letter: %s", alphabet[i + 1])
 
-            tickers.append(
-                client.list_tickers(ticker_gte=alphabet[i],
-                                    ticker_lt=alphabet[i + 2],
-                                    limit=1000,
-                                    type=ticker_type))
+        while i < len(alphabet):
+            begin = alphabet[i]
+            end = alphabet[i + 1] + "ZZZZZZ"
+
+            logger.debug3("1st Letter: %s", begin)
+            logger.debug3("2nd Letter: %s", end)
+
+            ticker_list = client.list_tickers(ticker_gte=begin,
+                                              ticker_lte=end,
+                                              limit=1000,
+                                              type=ticker_type)
+            logger.debug4("Ticker List: %s", ticker_list)
+            for item in ticker_list:
+                tickers.append(item)
+                logger.debug3("Ticker Item: %s", item)
+
             i += 2
-            time.sleep(15)
+            if i < len(alphabet):
+                time.sleep(15)
+
+        logger.debug10("End Function")
+        return tickers
+
+    def __update_info_polygon(self):
+        logger.debug10("Begin Function")
+
+        ticker_type = self.__get_polygon_ticker_type()
+        logger.debug2("Ticker Type: %s", ticker_type)
+
+        tickers = self.__get_polygon_ticker_list(ticker_type)
 
         for item in tickers:
-            logger.debug("Tickers: %s", item)
+            logger.debug2("Tickers: %s", item)
+            logger.debug("Ticker: %s Name: %s", item.ticker, item.name)
 
         logger.debug10("End Function")
 
     def __update_info_yahoo(self):
         logger.debug10("Begin Function")
+        if self.securities_list:
+            logger.debug("Securities List: %s", self.securities_list)
+        else:
+            self.get_list()
+
         for ticker in self.securities_list:
             logger.debug("Ticker: %s", ticker["yahoo_symbol"])
 
@@ -180,11 +221,6 @@ class SecuritiesBase():
     def update_info(self, source=None, securities_list=None):
         logger.debug10("Begin Function")
         logger.debug("Source: %s", source)
-
-        if self.securities_list:
-            logger.debug("Securities List: %s", self.securities_list)
-        else:
-            self.get_list(securities_list)
 
         if source == "broker":
             self.__update_info_broker()
