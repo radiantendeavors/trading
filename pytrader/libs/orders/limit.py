@@ -53,5 +53,5 @@ class LimitOrder(orderbase.OrderBase):
         logger.debug10("Begin Function")
         super().__init__(*args, **kwargs)
         self.order.orderType = "LMT"
-        self.order.lmtPrice = kwargs["limit_price"]
+        self.order.lmtPrice = kwargs["price"]
         logger.debug10("End Function")
