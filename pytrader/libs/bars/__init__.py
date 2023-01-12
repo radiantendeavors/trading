@@ -26,6 +26,7 @@ Provides the broker client
 """
 # System libraries
 import pandas
+import sys
 
 # 3rd Party libraries
 
@@ -85,9 +86,12 @@ class Bars():
             duration_str=self.duration,
             keep_up_to_date=self.keep_up_to_date)
         bar_list = self.brokerclient.get_data(req_id, purge=False)
+        logger.debug4("Bar List: %s", bar_list)
+
         self.bar_list = []
 
         for bar in bar_list:
+            logger.debug3("Bar: %s", bar)
             date = bar.date
             open = bar.open
             high = bar.high
@@ -100,6 +104,7 @@ class Bars():
             self.bar_list.append(
                 [date, open, high, low, close, volume, wap, count])
 
+        logger.debug4("Bar List: %s", self.bar_list[0])
         self.__convert_bars_to_panda()
         logger.debug10("End Function")
 
