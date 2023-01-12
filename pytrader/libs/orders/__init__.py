@@ -33,7 +33,8 @@ from ibapi import order
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs.orders import limit, market
+from pytrader.libs.orders import (auction, discretionary, limit, market,
+                                  marketiftouched, marketonclose, marketonopen)
 
 # ==================================================================================================
 #
@@ -53,8 +54,12 @@ class Order():
     def __new__(cls, *args, **kwargs):
         order_type = kwargs["order_type"]
         subclass_map = {
+            "auction": auction.AuctionOrder,
+            "discretionary": discretionary.DiscretionaryOrder,
             "limit": limit.LimitOrder,
-            "market": market.MarketOrder
+            "market": market.MarketOrder,
+            "marketiftouched": marketiftouched.MarketIfTouchedOrder,
+            "marketonclose": marketonclose.MarketOnCloseOrder
         }
 
         logger.debug("Subclass Map: %s", subclass_map)
