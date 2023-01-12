@@ -1,3 +1,10 @@
+/***************************************************************************************************
+ *
+ * @file brokerclient/brokerclient.hpp
+ *
+ * This file provides the broker client class
+ *
+ **************************************************************************************************/
 #ifndef BROKER_CLIENT_H
 #define BROKER_CLIENT_H
 
