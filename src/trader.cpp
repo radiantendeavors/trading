@@ -1,5 +1,9 @@
 /**************************************************************************************************
  *
+ * @package trader
+ *
+ * Algorithmic Trading Program
+ *
  * @file trader.cpp
  *
  * This file is part of trader.
