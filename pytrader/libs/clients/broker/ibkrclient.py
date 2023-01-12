@@ -438,13 +438,19 @@ class IbkrClient(EWrapper, EClient):
 
     @iswrapper
     def historicalDataEnd(self, req_id, start, end):
-        logger.debug("ReqID: %s", req_id)
+        logger.debug10("Begin Function")
+        logger.debug("Data Complete for ReqID: %s from: %s to: %s", req_id,
+                     start, end)
+        logger.debug10("End Function")
 
     @iswrapper
-    def historicalDataUpdate(self, req_id, bar):
-        logger.debug("Begin Function")
-        logger.debug("ReqID: %s", req_id)
-        logger.debug("Bar: %s", bar)
+    def historicalDataUpdate(self, req_id: int, bar):
+        logger.debug10("Begin Function")
+        logger.debug3("ReqID: %s", req_id)
+        logger.debug2("Bar: %s", bar)
+
+        #self.data[req_id].
+        logger.debug10("End Function")
 
     @iswrapper
     def historicalNews(self, req_id, time, provider_code, article_id,
