@@ -222,11 +222,10 @@ class IbkrClient(EWrapper, EClient):
         time.sleep(sleep_time)
         return self.req_id
 
-    def get_account_summary(self):
+    def get_account_summary(self, account_types="ALL", tags=[]):
         self.req_id += 1
-        self.reqAccountSummary(self.req_id, "ALL",
-                               "AccountType, AvailableFunds")
-        time.sleep(sleep_time)
+        tags_string = ", ".join([str(item) for item in tags])
+        self.reqAccountSummary(self.req_id, account_types, tags_string)
         return self.req_id
 
     def get_next_order_id(self):
@@ -282,9 +281,15 @@ class IbkrClient(EWrapper, EClient):
         return self.next_order_id
 
     @iswrapper
-    def accountSummary(self, req_id, account, tag, value, currency):
+    def accountSummaryEnd(self, req_id: int):
+        logger.debug("Account Summary Completed.  ReqId: %s", req_id)
+
+    @iswrapper
+    def accountSummary(self, req_id: int, account, tag, value, currency):
         """ Read information about the account """
-        logger.info("Account {}: {} = {}".format(account, tag, value))
+        logger.info(
+            "Account Summary. ReqId: %s\nAccount: %s, Tag: %s, Value: %s, Currency: %s",
+            req_id, account, tag, value, currency)
 
     @iswrapper
     def contractDetails(self, req_id, details):
