@@ -1,6 +1,8 @@
-"""!@package pytrader
+"""!
 
-Algorithmic Trading Program
+@package pytrader.plugins
+
+Provides subcommands for pytrader commands.
 
 @author Geoff S. derber
 @version HEAD
@@ -22,6 +24,6 @@ Algorithmic Trading Program
 
 @file plugins/__init__.py
 
-    Contains global variables for the pyTrader program.
+Provides subcommands for pytrader commands.
 
 """
