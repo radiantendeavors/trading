@@ -39,16 +39,17 @@ Similar Projects {#similar-projects}
 ---------------------------------------------
 
 References {#references}
-------------------------------
+------------
 - [TWS API v9.72+](https://interactivebrokers.github.io/tws-api/index.html)
 - [Algorithmic Trading with Interactive Brokers](https://algo-book.com/)
 - [Interactive Brokers Python API](https://algotrading101.com/learn/interactive-brokers-python-api-native-guide/)
 - [Getting Started with the TWS C++ API Guide](https://brokerpoint.de/wp-content/uploads/2020/05/TWS_Getting_Started_CAPI.pdf)
 
-[Contributing](CONTRIBUTING.md) {#contributing}
------------------------------------------------------------
+[Contributing] {#contributing}
+-------------------------------------
+See [CONTRIBUTING.md](CONTRIBUTING.md)
 
-[License](LICENSE.md) {#license}
+[License] {#license}
 ----------------------------------------
 
 This project is licensed under the [GNU Affero General Public License v3.0](LICENSE.md).
