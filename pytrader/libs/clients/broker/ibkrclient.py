@@ -647,6 +647,9 @@ class IbkrClient(EWrapper, EClient):
         """!
         Errors sent by the TWS are received here.
 
+        Error Code Descriptions can be found at:
+        https://interactivebrokers.github.io/tws-api/message_codes.html
+
       	@param req_id - The request identifier which generated the error. Note: -1 will indicate a
         notification and not true error condition.
         @param code - The Code identifying the error
