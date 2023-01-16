@@ -1,6 +1,6 @@
-"""!@package pytrader
+"""!@package pytrader.plugins.download.polygon
 
-Algorithmic Trading Program
+Downloads External Data from Polygon.io
 
 @author Geoff S. derber
 @version HEAD
@@ -20,9 +20,9 @@ Algorithmic Trading Program
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file plugins/download/nasdaq.py
+@file pytrader/plugins/download/polygon.py
 
-    Contains global variables for the pyTrader program.
+Downloads External Data from Polygon.io
 
 """
 

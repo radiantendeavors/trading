@@ -1,7 +1,7 @@
 """!
-@package pytrader.libs.securitybase
+@package pytrader.libs.bars
 
-Provides the broker client
+Provides Bar Data
 
 @author Geoff S. derber
 @version HEAD
@@ -22,7 +22,7 @@ Provides the broker client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file pytrader/libs/securitybase.py
+@file pytrader/libs/bars/__init__.py
 """
 # System libraries
 import pandas
@@ -85,7 +85,7 @@ class Bars():
             self.bar_size,
             duration_str=self.duration,
             keep_up_to_date=self.keep_up_to_date)
-        bar_list = self.brokerclient.get_data(req_id, purge=False)
+        bar_list = self.brokerclient.get_data(req_id)
         logger.debug4("Bar List: %s", bar_list)
 
         self.bar_list = []

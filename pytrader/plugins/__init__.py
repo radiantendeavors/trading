@@ -22,7 +22,7 @@ Provides subcommands for pytrader commands.
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file plugins/__init__.py
+@file pytrader/plugins/__init__.py
 
 Provides subcommands for pytrader commands.
 

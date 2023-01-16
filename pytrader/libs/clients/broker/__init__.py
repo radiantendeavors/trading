@@ -6,9 +6,9 @@ Creates a basic interface for interacting with a broker
 
 Creates a basic interface for interacting with a broker
 
-@author Geoff S. derber
+@author Geoff S. Derber
 @version HEAD
-@date 2022
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -52,8 +52,7 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 class BrokerClient():
     """!
-    @brief Acts as a unifying class for various brokers.  Dynamically selects the correct broker at
-    runtime.
+    Acts as a unifying class for various brokers.  Dynamically selects the correct broker at runtime.
 
     Currently, only supports Interactive Brokers
     """
@@ -64,6 +63,8 @@ class BrokerClient():
 
         @param *args
         @param **kwargs
+
+        @returun subclass - An instance of one of the potential broker clients.
         """
         broker = kwargs["broker"]
         subclass_map = {"ibkr": ibkrclient.IbkrClient}
@@ -85,10 +86,11 @@ def broker_connect(address, port, client_id=0):
     """!
     Used to initialize the broker connection.
 
-    @param address
-    @param port
-    @param client_id
+    @param address - The URL / IP address for the broker server
+    @param port - The Port used by the broker server
+    @param client_id - The Client ID number.
 
+    @return brokerclient - An instance of the broker client.
     """
     logger.debug10("Begin Function")
     logger.debug("Address: %s Port: %s", address, port)

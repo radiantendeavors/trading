@@ -1,11 +1,11 @@
 """!
-@package pytrader.libs.orders
+@package pytrader.libs.accounts
 
-Provides the broker client
+Provides the Accounts Class for interacting with multiple accounts
 
-@author Geoff S. derber
+@author Geoff S. Derber
 @version HEAD
-@date 2022
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,8 @@ Provides the broker client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file security.py
+@file pytrader/libs/accounts/__init__.py
+Provides the Accounts Class for interacting with multiple accounts
 """
 # System libraries
 
@@ -52,8 +53,32 @@ class Accounts():
     """
 
     def __init__(self, brokerclient):
+        """!
+        Initializes the Accounts class
+
+        @param brokerclient - Provides the brokerclient
+
+        @return None
+        """
+        logger.debug10("Begin Function")
+
+        ## Brokerclient - Provides the Brokerclient
         self.brokerclient = brokerclient
 
+        logger.debug10("End Function")
+        return None
+
     def get_accounts(self):
+        """!
+        Gets a summary of the available accounts.
+
+        @return None
+        """
+        logger.debug10("Begin Function")
         tags = ["AccountType", "TotalCashValue"]
-        self.brokerclient.get_account_summary(tags=tags)
+        req_id = self.brokerclient.get_account_summary(tags=tags)
+        accounts = self.brokerclient.get_data(req_id)
+
+        logger.debug("Accounts: %s", accounts)
+        logger.debug10("End Function")
+        return None

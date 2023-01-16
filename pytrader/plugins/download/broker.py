@@ -2,9 +2,9 @@
 
 The Broker SubCommand for pytrdownload
 
-@author Geoff S. derber
+@author Geoff S. Derber
 @version HEAD
-@date 2022
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify

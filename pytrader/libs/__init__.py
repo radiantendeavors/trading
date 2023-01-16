@@ -3,9 +3,9 @@
 
 Provides the internal libraries for pytrader
 
-@author Geoff S. derber
+@author Geoff S. Derber
 @version HEAD
-@date 2022
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -21,5 +21,7 @@ Provides the internal libraries for pytrader
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+@file pytrader/libs/__init__.py
 
+Provides the internal libraries for pytrader
 """

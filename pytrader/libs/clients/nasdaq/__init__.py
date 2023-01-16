@@ -1,6 +1,6 @@
-"""!@package pytrader
+"""!@package pytrader.libs.clients.nasdaq
 
-Algorithmic Trading Program
+Creates a client interface for downloading NASDAQ data.
 
 @author Geoff S. derber
 @version HEAD
@@ -20,9 +20,9 @@ Algorithmic Trading Program
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file libs/clients/nasdaq/__init__.py
+@file pytrader/libs/clients/nasdaq/__init__.py
 
-    Creates a client interface for downloading NASDAQ data.
+Creates a client interface for downloading NASDAQ data.
 
 """
 

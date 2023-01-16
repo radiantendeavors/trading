@@ -1,11 +1,11 @@
 """!
-@file __init__.py
+@package pytrader.libs.clients
 
 Provides the libraries for interacting with various outside services
 
-@author Geoff S. derber
+@author Geoff S. Derber
 @version HEAD
-@date 2022
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -23,4 +23,5 @@ Provides the libraries for interacting with various outside services
 
   Creates a basic interface for interacting with Interactive Brokers.
 
+@file pytrader/libs/clients/__init__.py
 """

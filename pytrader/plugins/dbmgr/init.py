@@ -1,10 +1,10 @@
-"""!@package pytrader
+"""!@package pytrader.plugins.dbmgr.init
 
-Algorithmic Trading Program
+Initializes the database
 
-@author Geoff S. derber
+@author Geoff S. Derber
 @version HEAD
-@date 2022
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -20,9 +20,9 @@ Algorithmic Trading Program
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file plugins/download/init.py
+@file pytrader/plugins/dbmgr/init.py
 
-    Contains global variables for the pyTrader program.
+Initializes the database
 
 """
 
@@ -46,11 +46,7 @@ from pytrader.libs.clients import database
 # Global Variables
 #
 # ==================================================================================================
-"""!
-@var logger
-The base logger.
-
-"""
+## An instance of the logging class
 logger = logging.getLogger(__name__)
 
 
