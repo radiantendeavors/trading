@@ -18,6 +18,8 @@ Trader is an automated trading/investing platform.  It works with stocks, etfs, 
 options.  It provides a framework for creating, testing, and using your own trading strategies.  A
 couple sample strategies are provided.
 
+NOTE: This is a very early alpha stage program.  It's functionality will change without notice.
+
 
 Installation and Usage
 ---------------------------
