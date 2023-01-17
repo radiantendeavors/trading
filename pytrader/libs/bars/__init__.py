@@ -64,7 +64,7 @@ class Bars():
         """
 
         ## Data Frame used to hold bar history.
-        self.bars = pandas.Dataframe()
+        self.bars = pandas.DataFrame()
 
         ## List to hold bar history in list format
         self.bar_list = []
@@ -76,7 +76,7 @@ class Bars():
         self.bar_size = "1 day"
 
         ## Bar history length
-        self.duration = "10D"
+        self.duration = "10 D"
 
         logger.debug10("Begin Function")
         if kwargs.get("brokerclient"):
@@ -85,7 +85,7 @@ class Bars():
         if kwargs.get("bar_size"):
             self.bar_size = kwargs["bar_size"]
 
-        if kwargs.get("duruation"):
+        if kwargs.get("duration"):
             self.duration = kwargs["duration"]
 
         if kwargs.get("keep_up_to_date"):
