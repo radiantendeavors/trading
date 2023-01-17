@@ -1,6 +1,6 @@
-"""!@package pytrader
+"""!@package pytrader.plugins.download.nasdaq
 
-Algorithmic Trading Program
+Downloads External Data from NASDAQ
 
 @author Geoff S. derber
 @version HEAD
@@ -20,9 +20,9 @@ Algorithmic Trading Program
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file plugins/download/nasdaq.py
+@file pytrader/plugins/download/nasdaq.py
 
-    Contains global variables for the pyTrader program.
+Downloads External Data from NASDAQ
 
 """
 
@@ -38,8 +38,7 @@ Algorithmic Trading Program
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs.clients import nasdaq
-
+from pytrader.libs import securities
 # Conditional Libraries
 
 # ==================================================================================================
@@ -62,28 +61,20 @@ logger = logging.getLogger(__name__)
 # Functions
 #
 # ==================================================================================================
-def client(investments):
-    client = nasdaq.NasdaqClient(investments=investments)
-    client.download_list()
-
-
 def nasdaq_download(args):
     logging.debug("Begin Function")
 
     investments = "None"
 
-    if args.etfs:
-        client("etfs")
-    elif args.stocks:
-        client("stocks")
-    elif args.type:
-        logger.debug("Type: %s", args.type)
-        for investment in args.type:
-            client(investment)
+    if args.type:
+        investments = args.type
     else:
-        investments = ["stocks", "etf"]
-        for investment in investments:
-            client(investment)
+        investments = ["stocks", "etfs"]
+
+    for investment in investments:
+        info = securities.Securities(securities_type=investment)
+        logger.debug("Info: %s", info.__repr__())
+        info.update_info(source="nasdaq")
 
     logging.debug("End Fuction")
     return None
@@ -102,14 +93,6 @@ def parser(*args, **kwargs):
                      nargs=1,
                      choices=["etfs", "stocks"],
                      help="Type of investments to download")
-    cmd.add_argument("-e",
-                     "--etfs",
-                     action="store_true",
-                     help="Download list of ETFs")
-    cmd.add_argument("-s",
-                     "--stocks",
-                     action="store_true",
-                     help="Download list of Stocks")
 
     cmd.set_defaults(func=nasdaq_download)
 

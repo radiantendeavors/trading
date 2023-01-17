@@ -53,6 +53,7 @@ from pytrader.libs.utilities import config
 The base logger.
 """
 logger = logging.getLogger(__name__)
+client_id = 2
 
 
 # ==================================================================================================
@@ -77,7 +78,7 @@ def init(args):
     parent_parser = parser.add_logging_option()
     subparsers = parser.create_subparsers()
 
-    subcommands = ["broker", "init", "nasdaq", "yahoo"]
+    subcommands = ["broker", "init", "nasdaq", "polygon", "yahoo"]
 
     for i in subcommands:
         subcommand = utilities.get_plugin_function(scmd='download',
@@ -118,7 +119,7 @@ def init(args):
             parser.print_help()
             logger.debug("No command was given")
 
-    logger.debug("End real main")
+    logger.debug10("End Function")
     return None
 
 
@@ -138,7 +139,7 @@ def main(args=None):
         init(args)
 
     logger.debug("End Application")
-    return None
+    return 1
 
 
 # ==================================================================================================

@@ -1,10 +1,10 @@
-"""!@package pytrader
+"""!@package pytrader.plugins.download.broker
 
-Algorithmic Trading Program
+The Broker SubCommand for pytrdownload
 
-@author Geoff S. derber
+@author Geoff S. Derber
 @version HEAD
-@date 2022
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -20,16 +20,11 @@ Algorithmic Trading Program
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file plugins/download/broker.py
-
-    Contains global variables for the pyTrader program.
 
 """
 
 # System Libraries
-import time
 # import os
-import sys
 
 # 3rd Party Libraries
 
@@ -38,11 +33,10 @@ import sys
 from pytrader.libs.system import logging
 
 # Other Application Libraries
+from pytrader.libs import securities
 from pytrader.libs.clients import broker
-from pytrader.libs.clients.mysql import etf_info
-from pytrader.libs.clients.mysql import index_info
-from pytrader.libs.clients.mysql import stock_info
 from pytrader.libs.utilities import config
+from pytrader.ui.pytrdownload import client_id
 
 # Conditional Libraries
 
@@ -64,101 +58,48 @@ logger = logging.getLogger(__name__)
 # Functions
 #
 # ==================================================================================================
-def get_data_tickers(brokerclient, info, contract_id=1):
-    if contract_id == 1:
-        where = "`delisted_date` IS NULL AND `ibkr_symbol` IS NULL"
-    else:
-        where = "`delisted_date` IS NULL"
-    return info.select(where_clause=where)
+def basic_info(investments, brokerclient, security=None):
+    """
+    basic_info
 
-
-def get_ipo_tickers(brokerclient, info):
-    where = "`delisted_date` IS NULL AND `ibkr_contract_id` IS NOT NULL"
-    return info.select(where_clause=where)
-
-
-def update_data_info(brokerclient, all_tickers, investments):
-    logger.debug10("Begin Function")
-    for item in all_tickers:
-        logger.debug2("Item: %s", item)
-        ticker = item["ticker"]
-        if investments == "indexes":
-            security_type = "IND"
-        else:
-            security_type = "STK"
-
-        if item["ibkr_exchange"]:
-            exchange = item["ibkr_exchange"]
-        else:
-            exchange = "SMART"
-
-        logger.debug("Ticker: %s", ticker)
-        logger.debug("Security Type: %s", security_type)
-        logger.debug("Exchange: %s", exchange)
-
-        if investments == "indexes":
-            brokerclient.set_contract(ticker,
-                                      security_type=security_type,
-                                      exchange=exchange)
-        else:
-            brokerclient.set_contract(ticker)
-        brokerclient.get_security_data()
-        time.sleep(10)
-    logger.debug10("End Function")
-    return None
-
-
-def update_ipo_info(brokerclient, all_tickers):
-    logger.debug10("Begin Function")
-
-    for item in all_tickers:
-        ticker = item["ticker"]
-        logger.debug("Ticker: %s", ticker)
-        brokerclient.set_contract(ticker)
-        ticker, req_id = brokerclient.get_ipo_date()
-        logger.debug("Request ID: %s, Ticker: %s", req_id, ticker)
-        time.sleep(10)
-
-    logger.debug10("End Function")
-    return None
-
-
-def basic_info(investments, security=None):
+    @param investments
+    @param brokerclient
+    @param security
+    """
     logger.debug("Begin Function")
 
-    brokerclient = broker.BrokerClient()
-    time.sleep(10)
+    info = securities.Securities(brokerclient=brokerclient,
+                                 securities_type=investments)
 
-    if investments == "indexes":
-        info = index_info.IndexInfo()
-    elif investments == "etfs":
-        info = etf_info.EtfInfo()
-    elif investments == "stocks":
-        info = stock_info.StockInfo()
+    if security:
+        info.update_info(source="broker", securities_list=security)
     else:
-        logger.error("No investments were selected")
-        sys.exit(1)
-
-    for item in ["data", "ipo_date"]:
-        if item == "data":
-            if security:
-                update_data_info(brokerclient, [security], investments)
-            else:
-                all_tickers = get_data_tickers(brokerclient, info)
-                logger.debug("All tickers: %s", all_tickers)
-                update_data_info(brokerclient, all_tickers, investments)
-        if item == "ipo_date":
-            if security:
-                update_ipo_info(brokerclient, [security])
-            else:
-                all_tickers = get_ipo_tickers(brokerclient, info)
-                update_ipo_info(brokerclient, all_tickers)
+        info.update_info(source="broker")
 
     logger.debug("End Function")
 
 
 def broker_download(args):
-    logging.debug("Begin Function")
+    """!
+    broker_download
+
+    @param args
+    """
+    logger.debug10("Begin Function")
+    conf = config.Config()
+    conf.read_config()
+
+    if args.address:
+        address = args.address
+    else:
+        address = conf.brokerclient_address
+
+    if args.port:
+        port = args.port
+    else:
+        port = conf.brokerclient_port
+
+    brokerclient = broker.broker_connect(address, port, client_id=client_id)
 
     if args.type:
         investments = args.type
@@ -167,11 +108,13 @@ def broker_download(args):
 
     if args.info:
         if args.security:
-            basic_info("stocks", security=args.security)
+            basic_info(investments[0], brokerclient, security=args.security)
         else:
             for investment in investments:
-                basic_info(investment)
+                basic_info(investment, brokerclient)
 
+    brokerclient.disconnect()
+    logger.debug10("End Function")
     return None
 
 
@@ -182,12 +125,26 @@ def parser(*args, **kwargs):
                                 aliases=["b"],
                                 parents=parent_parsers,
                                 help="Downloads data from broker")
-    cmd.add_argument("-b", "--bar-size", help="Bar Size")
+    cmd.add_argument("-b",
+                     "--bar-size",
+                     choices=[
+                         "1 secs", "5 secs", "10 secs", "15 secs", "30 secs",
+                         "1 min", "2 mins", "3 mins", "5 mins", "10 mins",
+                         "15 mins", "20 mins", "30 mins", "1 hour", "2 hours",
+                         "3 hours", "4 hours", "8 hours", "1 day", "1 week",
+                         "1 month"
+                     ],
+                     default="1 day",
+                     help="Bar Size")
     cmd.add_argument("-i",
                      "--info",
                      action="store_true",
                      help="Get Basic Security information.")
-    cmd.add_argument("-s", "--security", help="Security to download")
+    cmd.add_argument("-d", "--duration")
+    cmd.add_argument("-s",
+                     "--security",
+                     nargs="+",
+                     help="Security to download")
     cmd.add_argument("-t",
                      "--type",
                      nargs=1,

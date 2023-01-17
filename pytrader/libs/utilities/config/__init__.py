@@ -21,10 +21,8 @@ import yaml
 from pytrader.libs.system import logging
 # Other Application Libraries
 
-from pytrader.libs.utilities.config import logconfig
-from pytrader.libs.utilities.config import brokerconfig
-from pytrader.libs.utilities.config import database
-from pytrader.libs.utilities.config import redditconfig
+from pytrader.libs.utilities.config import (logconfig, brokerconfig, database,
+                                            polygon, redditconfig)
 # ==================================================================================================
 #
 # Global Variables
@@ -52,7 +50,8 @@ config = yaml.safe_load(config_stream)
 #
 # ==================================================================================================
 class Config(brokerconfig.BrokerConfig, database.DatabaseConfig,
-             logconfig.LogConfig, redditconfig.RedditConfig):
+             logconfig.LogConfig, polygon.PolygonConfig,
+             redditconfig.RedditConfig):
 
     def __init__(self, *args, **kwargs):
         self.nasdaq_client_key = None
@@ -64,3 +63,4 @@ class Config(brokerconfig.BrokerConfig, database.DatabaseConfig,
         logconfig.LogConfig.read_config(self, config=config)
         database.DatabaseConfig.read_config(self, config=config)
         brokerconfig.BrokerConfig.read_config(self, config=config)
+        polygon.PolygonConfig.read_config(self, config=config)

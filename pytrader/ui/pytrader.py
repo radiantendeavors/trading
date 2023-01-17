@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """!@package pytrader.ui.pytrader
 
 The main user interface for the trading program.
@@ -37,9 +36,9 @@ from pytrader.libs.system import logging
 # Application Libraries
 from pytrader import DEBUG
 from pytrader.libs.clients import broker
-from pytrader.libs import security
+from pytrader.libs import utilities
 from pytrader.libs.utilities import config
-from pytrader.libs.utilities import text
+from pytrader import strategies
 
 # ==================================================================================================
 #
@@ -54,7 +53,8 @@ The base logger.
 Allows Color text on the console
 """
 logger = logging.getLogger(__name__)
-colortext = text.ConsoleText()
+client_id = 1
+import_path = "pytrader.strategies."
 
 
 # ==================================================================================================
@@ -62,6 +62,37 @@ colortext = text.ConsoleText()
 # Functions
 #
 # ==================================================================================================
+def fix_bar_size_format(bar_sizes):
+    bar_size_map = {
+        "1secs": "1 secs",
+        "5secs": "5 secs",
+        "10secs": "10 secs",
+        "15secs": "15 secs",
+        "30secs": "30 secs",
+        "1min": "1 min",
+        "2mins": "2 mins",
+        "3mins": "3 mins",
+        "5mins": "5 mins",
+        "10mins": "10 mins",
+        "15mins": "15 mins",
+        "20mins": "20 mins",
+        "30mins": "30 mins",
+        "1hour": "1 hour",
+        "2hours": "2 hours",
+        "3hours": "3 hours",
+        "4hours": "4 hours",
+        "8hours": "8 hours",
+        "1day": "1 day",
+        "1week": "1 week",
+        "1month": "1 month"
+    }
+    fixed_bar_sizes = []
+    for item in bar_sizes:
+        fixed_bar_sizes.append(bar_size_map[item])
+
+    return fixed_bar_sizes
+
+
 def start_client(args):
     """! Starts the broker client.
 
@@ -72,40 +103,44 @@ def start_client(args):
     """
     # Create the client and connect to TWS or IB Gateway
     logger.debug10("Begin Function")
+    conf = config.Config()
+    conf.read_config()
 
-    client = broker.BrokerClient()
-
-    if args.checkserver:
-        logger.debug("Checking Server time")
-        client.check_server()
-        time.sleep(0.5)
-
-    elif args.security:
-        logger.debug("Security info")
-        sec = security.Security(client, "AAPL")
-        sec.set_security()
-        sec.get_security_data()
-        sec.get_security_pricing_data()
-        sec.get_option_chain()
-
-    elif args.order:
-        sec = security.Security(client, "AAPL")
-        logger.info("Ordering: %s", sec)
-        sec.place_order("BUY", "LMT", 130.00, 1.0, args.transmit)
-        time.sleep(20)
-        client.get_open_positions()
-        time.sleep(10)
-        client.get_account_summary()
-        time.sleep(10)
+    if args.address:
+        address = args.address
     else:
-        logger.debug("No command specified")
+        address = conf.brokerclient_address
 
-    # Disconnect
-    logger.debug("Disconnecting from server")
-    client.disconnect()
+    if args.port:
+        port = args.port
+    else:
+        port = conf.brokerclient_port
 
-    logger.debug("End Function")
+    brokerclient = broker.broker_connect(address, port, client_id=client_id)
 
+    strategy_list = args.strategy
+
+    if args.bar_sizes:
+        bar_sizes = fix_bar_size_format(args.bar_sizes)
+    else:
+        bar_sizes = None
+
+    logger.debug("Bar Sizes: %s", bar_sizes)
+
+    if args.security:
+        securities = args.security
+    else:
+        securities = None
+
+    for i in strategy_list:
+        strategy = utilities.get_plugin_function(program=i,
+                                                 cmd='run',
+                                                 import_path=import_path)
+
+        strategy(brokerclient, securities_list=securities, bar_sizes=bar_sizes)
+
+    brokerclient.disconnect()
+    logger.debug10("End Function")
     return None
 
 
@@ -132,14 +167,26 @@ def init(args):
     parser.add_ibapi_connection_options()
     parser.add_logging_option()
 
-    parser.add_argument("-c", "--checkserver", action="store_true")
-    parser.add_argument("-o", "--order", action="store_true")
-    parser.add_argument("-s", "--security", action="store_true")
-    parser.add_argument("-t",
-                        "--transmit",
-                        action="store_true",
-                        default=False,
-                        help="Transmit Order Automatically")
+    parser.add_argument("-b",
+                        "--bar-sizes",
+                        choices=[
+                            "1secs", "5secs", "10secs", "15secs", "30secs",
+                            "1min", "2mins", "3mins", "5mins", "10mins",
+                            "15mins", "20mins", "30mins", "1hour", "2hours",
+                            "3hours", "4hours", "8hours", "1day", "1week",
+                            "1month"
+                        ],
+                        nargs="+",
+                        help="Bar Size")
+    parser.add_argument("-s",
+                        "--strategy",
+                        nargs="+",
+                        required=True,
+                        help="Strategy to run, can run multiple strategies")
+    parser.add_argument("-S",
+                        "--security",
+                        nargs="+",
+                        help="Securities to use for strategy")
 
     parser.set_defaults(debug=False, verbosity=0, loglevel='INFO')
 

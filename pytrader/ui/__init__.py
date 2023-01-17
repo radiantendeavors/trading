@@ -22,5 +22,7 @@ Provides the user interfaces for pytrader
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file __init__.py
+@file pytrader/ui/__init__.py
+
+Provides the user interfaces for pytrader
 """

@@ -1,11 +1,14 @@
 """!
 @package pytrader.libs.clients.broker
+Creates a basic interface for interacting with a broker
 
-Provides the broker client
+@file pytrader/libs/clients/broker/__init__.py
 
-@author Geoff S. derber
+Creates a basic interface for interacting with a broker
+
+@author Geoff S. Derber
 @version HEAD
-@date 2022
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -21,26 +24,18 @@ Provides the broker client
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
-@file lib/clients/broker/__init__.py
-
-  Creates a basic interface for interacting with a broker
-
 """
 # System libraries
-import sys
+import threading
 import time
 
 # 3rd Party libraries
-from ibapi.client import Contract
-from ibapi.order import Order
 
 # System Library Overrides
 from pytrader.libs.system import logging
 
 # Application Libraries
 from pytrader.libs.clients.broker import ibkrclient
-from pytrader.libs.utilities import config
 
 # ==================================================================================================
 #
@@ -55,187 +50,68 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class BrokerClient(ibkrclient.IbkrClient):
-    """! @class BrokerClient
+class BrokerClient():
+    """!
+    Acts as a unifying class for various brokers.  Dynamically selects the correct broker at runtime.
 
-    @brief Provides the client interface to the broker"""
+    Currently, only supports Interactive Brokers
+    """
 
-    def __init__(self, address=None, port=None, client_id=0):
-        """! Broker Client Class initializer.
+    def __new__(cls, *args, **kwargs):
+        """!
+        Broker Client Class initializer.
 
-        @param address The IP Address for the client.
-        @param port The port for the client.
-        @param client_id The id number for the client
+        @param *args
+        @param **kwargs
+
+        @returun subclass - An instance of one of the potential broker clients.
         """
+        broker = kwargs["broker"]
+        subclass_map = {"ibkr": ibkrclient.IbkrClient}
 
-        conf = config.Config()
-        conf.read_config()
+        logger.debug3("Subclass Map: %s", subclass_map)
+        logger.debug2("Broker: %s", broker)
+        logger.debug2("Securities Subclass: %s", subclass_map.get(broker))
 
-        if address is None:
-            address = conf.brokerclient_address
-        else:
-            address = address
+        subclass = subclass_map.get(broker)
+        return subclass(*args, **kwargs)
 
-        if port is None:
-            port = conf.brokerclient_port
-        else:
-            port = port
 
-        logger.debug("Address: %s Port: %s", address, port)
+# ==================================================================================================
+#
+# Functions
+#
+# ==================================================================================================
+def broker_connect(address, port, client_id=0):
+    """!
+    Used to initialize the broker connection.
 
-        self.req_id = 0
-        self.client_id = client_id
-        super(BrokerClient, self).__init__(address, port, client_id)
+    @param address - The URL / IP address for the broker server
+    @param port - The Port used by the broker server
+    @param client_id - The Client ID number.
 
-    def check_server(self):
-        """! @fn check_server
+    @return brokerclient - An instance of the broker client.
+    """
+    logger.debug10("Begin Function")
+    logger.debug("Address: %s Port: %s", address, port)
+    if client_id < 1:
+        logger.warning("Self.Client ID: %s", client_id)
+    else:
+        logger.debug("Client ID: %s", client_id)
 
-        """
-        self.reqCurrentTime()
-        if self.serverVersion() is not None:
-            logger.info("Server Version: %s", self.serverVersion())
-        else:
-            logger.error(
-                "Failed to connect to the server: Server Version Unknown")
-        if self.twsConnectionTime() is not None:
-            logger.info("Connection time: %s",
-                        self.twsConnectionTime().decode())
-        else:
-            logger.error(
-                "Failed to connect to the server: Connection Time Unknown")
+    # Connect to TWS or IB Gateway
+    brokerclient = BrokerClient(broker="ibkr")
+    brokerclient.connect(address, port, client_id)
 
-    def set_contract(self,
-                     security,
-                     security_type="STK",
-                     exchange="SMART",
-                     currency="USD"):
-        """!@fn set_contract
+    logger.debug2("Start Broker Client Thread")
+    broker_thread = threading.Thread(target=brokerclient.run)
+    broker_thread.start()
+    logger.debug2("Broker Client Thread Started")
+    next_order_id = brokerclient.get_next_order_id()
+    logger.debug("Received next order id: %s", next_order_id)
+    time.sleep(1)
 
-        @param security The ticker symbol for the contract
-        @param security_type The type of security for the contract.  Can be one of: CASH, CRYPTO, STK, IND, CFD, FUT, CONTFUT, FUT+CONTFUT, OPT, FOP, BOND, FUND
-        @param exchange
-        @param currency
-        """
-        contract = Contract()
-        contract.symbol = security
-        contract.secType = security_type
-        contract.exchange = exchange
-        contract.currency = currency
+    brokerclient.check_server()
 
-        logger.debug("Contract: %s", contract)
-
-        self.contract = contract
-
-    def get_ipo_date(self,
-                     what_to_show="TRADES",
-                     use_regular_trading_hours=1,
-                     format_date=1):
-        self.req_id += 1
-
-        logger.debug("Ticker: %s", self.contract.symbol)
-        self.reqHeadTimeStamp(self.req_id, self.contract, what_to_show,
-                              use_regular_trading_hours, format_date)
-        return self.contract.symbol, self.req_id
-
-    def get_security_data(self):
-        self.req_id += 1
-
-        self.reqContractDetails(self.req_id, self.contract)
-        time.sleep(10)
-
-    def get_security_pricing_data(self):
-        self.req_id += 1
-        self.reqMktData(self.req_id, self.contract, "233", False, False, [])
-
-    def get_option_chain(self):
-        self.req_id += 1
-        security = self.contract.symbol
-        security_type = self.contract.secType
-        logger.debug("Contract ID: %s", self.contract.contract_id)
-        contract_id = self.contract.contract_id
-
-        logger.debug10("Get the Option Chain")
-        logger.debug2("Request ID: %s", self.req_id)
-        logger.debug("Security:%s", security)
-        logger.debug("Security Type: %s", security_type)
-        logger.debug("Contract ID: %s", contract_id)
-        self.reqSecDefOptParams(self.req_id, security, "", security_type,
-                                contract_id)
-        time.sleep(60)
-
-    def place_order(self,
-                    security,
-                    action,
-                    order_type,
-                    order_price=None,
-                    quantity=1.0,
-                    time_in_force="DAY",
-                    transmit=False):
-        self.req_id += 1
-
-        logger.debug("BrokerClient.place_order")
-        logger.debug("Security: %s", security)
-        logger.debug("Action: %s", action)
-        logger.debug("Order Type: %s", order_type)
-        logger.debug("Order Price: %s", order_price)
-        logger.debug("Quantity: %s", quantity)
-        logger.debug("Time in Force: %s", time_in_force)
-        logger.debug("Transmit: %s", transmit)
-
-        # Request details for the stock
-        contract = Contract()
-        contract.symbol = security
-        contract.secType = "STK"
-        contract.exchange = "SMART"
-        contract.currency = "USD"
-
-        # Define limit order
-        order = Order()
-        order.action = action
-        order.totalQuantity = quantity
-        order.orderType = order_type
-        order.tif = time_in_force
-
-        if order_type == "LMT":
-            order.lmtPrice = order_price
-
-        order.transmit = transmit
-
-        time.sleep(10)
-
-        logger.debug("Contract: %s", contract)
-        logger.debug("Order: %s", order)
-
-        if self.nextValidOrderId:
-            logger.info("Order IDs: %s", self.nextValidOrderId)
-            self.placeOrder(self.nextValidOrderId, contract, order)
-            time.sleep(5)
-
-            logger.debug("Requesting Open Orders")
-            self.reqOpenOrders()
-            time.sleep(20)
-            logger.debug("Requesting All Open Orders")
-            self.reqAllOpenOrders()
-            time.sleep(30)
-        else:
-            logger.error("Order ID not received.  Ending application.")
-            sys.exit()
-
-    def get_open_positions(self):
-        self.reqPositions()
-
-    def get_account_summary(self):
-        self.req_id += 1
-        self.reqAccountSummary(self.req_id, "ALL",
-                               "AccountType, AvailableFunds")
-
-    def get_security_details(self, security):
-        self.req_id += 1
-
-        contract = Contract()
-        contract.symbol = security
-        contract.secType = "STK"
-        contract.exchange = "SMART"
-        contract.currency = "USD"
-
-        self.reqContractDetails(self.req_id, security)
+    logger.debug10("End Function")
+    return brokerclient

@@ -1,3 +1,10 @@
+/***************************************************************************************************
+ *
+ * @file brokerclient/brokerclient.hpp
+ *
+ * This file provides the broker client class
+ *
+ **************************************************************************************************/
 #ifndef BROKER_CLIENT_H
 #define BROKER_CLIENT_H
 
@@ -15,7 +22,7 @@
 template<class ItemType>
 /***************************************************************************************************
  *
- * BrokerClient
+ * @class BrokerClient brokerclient.hpp "brokerclient/brokerclient.hpp"
  *
  * @param host
  * @param port

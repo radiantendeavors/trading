@@ -1,6 +1,6 @@
-"""!@package pytrader
+"""!@package pytrader.libs.clients.nasdaq
 
-Algorithmic Trading Program
+Creates a client interface for downloading NASDAQ data.
 
 @author Geoff S. derber
 @version HEAD
@@ -20,16 +20,17 @@ Algorithmic Trading Program
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file libs/clients/nasdaq/__init__.py
+@file pytrader/libs/clients/nasdaq/__init__.py
 
-    Creates a client interface for downloading NASDAQ data.
+Creates a client interface for downloading NASDAQ data.
 
 """
 
 # System Libraries
 # import os
 import requests
-# import sys
+import sys
+import hashlib
 
 # 3rd Party Libraries
 
@@ -68,7 +69,7 @@ class NasdaqClient():
     """
 
     def __init__(self, *args, **kwargs):
-        if kwargs["investments"] == "etfs":
+        if kwargs.get("investments") == "etfs":
             self.investments = "etf"
         else:
             self.investments = kwargs['investments']
@@ -86,8 +87,16 @@ class NasdaqClient():
         name = table_row["companyName"]
 
         db = etf_info.EtfInfo()
-        row = db.select(ticker)
+        where = "`ticker`='" + ticker + "'"
+        row = db.select(where_clause=where)
         logger.debug("Row: %s", row)
+
+        company_hash = hashlib.sha256()
+        company_hash.update(bytes(name, 'utf-8'))
+        company_id = company_hash.hexdigest()
+
+        logger.debug("UUID: %s", company_id)
+        sys.exit(1)
 
         if row is None:
             db.insert(ticker, name)
@@ -102,7 +111,8 @@ class NasdaqClient():
         sector = table_row["sector"]
 
         db = stock_info.StockInfo()
-        row = db.select(ticker)
+        where = "`ticker`='" + ticker + "'"
+        row = db.select(where_clause=where)
 
         if row is None:
             db.insert(ticker, name, country, industry, sector)

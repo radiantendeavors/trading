@@ -1,7 +1,6 @@
-"""!
-@package pytrader.libs.dbclient
+"""!@file pytrader/libs/clients/mysql/stock_info.py
 
-Provides the database client
+Provides the interface with the stock_info table
 
 @author Geoff S. derber
 @version HEAD
@@ -22,7 +21,6 @@ Provides the database client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file __init__.py
 """
 # System Libraries
 import pymysql
@@ -66,11 +64,11 @@ class StockInfo(mysql.MySQLDatabase):
         super().__init__()
 
     def select(self, select_clause=None, where_clause=None):
-        logger.debug("Begin Function")
+        logger.debug10("Begin Function")
 
         if select_clause:
             sql = """
-            SELECT""" + select_clause + "\n"
+            SELECT """ + select_clause + "\n"
         else:
             sql = """
             SELECT *
@@ -81,20 +79,22 @@ class StockInfo(mysql.MySQLDatabase):
         if where_clause:
             sql += "WHERE " + where_clause
 
-        logger.debug("SQL: %s", sql)
+        logger.debug3("SQL: %s", sql)
 
         cursor = self.mycursor
         try:
             cursor.execute(sql)
             result = cursor.fetchall()
-            logger.debug("Result: %s", result)
+            logger.debug3("Result: %s", result)
+            logger.debug10("End Function")
             return result
         except pymysql.Error as e:
             logger.error("Select Error: %s", e)
+            logger.debug10("End Function")
             return None
 
     def insert(self, ticker, name, country, industry, sector):
-        logger.debug("Begin Function")
+        logger.debug10("Begin Function")
         first_listed = date.today()
         last_seen = date.today()
 
@@ -114,7 +114,7 @@ class StockInfo(mysql.MySQLDatabase):
         """
 
         logger.debug("Ticker: %s", ticker)
-        logger.debug("SQL: %s", sql)
+        logger.debug3("SQL: %s", sql)
 
         cursor = self.mycursor
         try:
@@ -132,7 +132,7 @@ class StockInfo(mysql.MySQLDatabase):
 
         self.mydb.commit()
 
-        logger.debug("End Function")
+        logger.debug10("End Function")
         return None
 
     def update_last_seen(self, ticker, name, country, industry, sector):
@@ -162,7 +162,7 @@ class StockInfo(mysql.MySQLDatabase):
         except pymysql.Error as e:
             logger.error("Update Error 1: %s", e)
 
-        logger.debug("SQL: %s", sql)
+        logger.debug3("SQL: %s", sql)
         self.mydb.commit()
 
         logger.debug("End Function")
@@ -175,10 +175,11 @@ class StockInfo(mysql.MySQLDatabase):
         logger.debug("Delisted: %s", delisted)
         cursor = self.mycursor
 
-        ticker_info = self.select(ticker)
+        where = "`ticker`='" + ticker + "'"
+        ticker_info = self.select(where_clause=where)
 
-        logger.debug("Ticker Info: %s", ticker_info)
-        last_seen = ticker_info["last_seen"]
+        logger.debug("Ticker Info: %s", ticker_info[0])
+        last_seen = ticker_info[0]["last_seen"]
         logger.debug("Last Seen: %s", last_seen)
 
         days_since_last_seen = delisted - last_seen
@@ -188,7 +189,8 @@ class StockInfo(mysql.MySQLDatabase):
         # We only want to mark them as delisted if there has been some time since
         # the ticker was last seen.  This is an attempt to reduce false delistings from
         # bad data downloads.
-        if days_since_last_seen.days > 7:
+        if days_since_last_seen.days > 7 and ticker_info[0][
+                "delisted_date"] is None:
             sql = """
             UPDATE `stock_info`
             SET `delisted_date`=%s
@@ -199,7 +201,7 @@ class StockInfo(mysql.MySQLDatabase):
             except pymysql.Error as e:
                 logger.error("Update Delisting Error: %s", e)
 
-            logger.debug("SQL: %s", sql)
+            logger.debug3("SQL: %s", sql)
             self.mydb.commit()
 
         logger.debug("End Function")
@@ -222,8 +224,28 @@ class StockInfo(mysql.MySQLDatabase):
         except pymysql.Error as e:
             logger.error("Update Delisting Error: %s", e)
 
-        logger.debug("SQL: %s", sql)
+        logger.debug3("SQL: %s", sql)
         self.mydb.commit()
+
+    def update_ibkr_ipo_date(self, symbol, ipo_date):
+        logger.debug10("Begin Function")
+        cursor = self.mycursor
+
+        sql = """
+        UPDATE `stock_info`
+        SET `ipo_date`=%s
+        WHERE `ticker`=%s
+        """
+
+        try:
+            cursor.execute(sql, (ipo_date, symbol))
+        except pymysql.Error as e:
+            logger.error("Update Delisting Error: %s", e)
+
+        logger.debug3("SQL: %s", sql)
+        self.mydb.commit()
+        logger.debug10("End Function")
+        return None
 
     def update_yahoo_info(self, ticker, yahoo_security=None):
         logger.debug("Begin Function")
@@ -243,7 +265,7 @@ class StockInfo(mysql.MySQLDatabase):
         except pymysql.Error as e:
             logger.error("Update Interactive Brokers Information Error: %s", e)
 
-        logger.debug("SQL: %s", sql)
+        logger.debug3("SQL: %s", sql)
         self.mydb.commit()
         logger.debug("End Function")
         return None

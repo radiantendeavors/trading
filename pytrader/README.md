@@ -30,9 +30,11 @@ You must download the tws-api from https://interactivebrokers.github.io and inst
 
 ## References
 
-## [Contributing](../CONTRIBUTING.md)
+## Contributing
 
-## [License](../LICENSE.md)
+See [CONTRIBUTING.md](../CONTRIBUTING.md)
+
+## License
 
 This project is licensed under the [GNU Affero General Public License v3.0](LICENSE.md).
 
