@@ -1,9 +1,9 @@
 add_subdirectory(version)
-add_subdirectory(brokerclient)
+add_subdirectory(clients)
 
 add_executable(trader trader.cpp)
 
-target_link_libraries(${PROJECT_NAME} PUBLIC brokerclient)
+target_link_libraries(${PROJECT_NAME} PUBLIC clients)
 
 
 target_include_directories(${PROJECT_NAME} PUBLIC
