@@ -49,22 +49,43 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class Bars():
+    """!
+    Contains bar history for a security
+    """
 
     def __init__(self, *args, **kwargs):
+        """!
+        Initializes the class
+
+        @param args -
+        @param kwargs -
+
+        @return None
+        """
+
+        ## Data Frame used to hold bar history.
+        self.bars = pandas.Dataframe()
+
+        ## List to hold bar history in list format
+        self.bar_list = []
+
+        ## Bar contract
+        self.contract = kwargs["contract"]
+
+        ## Size of the bars
+        self.bar_size = "1 day"
+
+        ## Bar history length
+        self.duration = "10D"
+
         logger.debug10("Begin Function")
         if kwargs.get("brokerclient"):
             self.brokerclient = kwargs["brokerclient"]
 
-        self.contract = kwargs["contract"]
-
         if kwargs.get("bar_size"):
             self.bar_size = kwargs["bar_size"]
-        else:
-            self.bar_size = "1 day"
 
         if kwargs.get("duruation"):
-            self.duration = kwargs["duration"]
-        else:
             self.duration = kwargs["duration"]
 
         if kwargs.get("keep_up_to_date"):
@@ -74,6 +95,7 @@ class Bars():
 
         self.bar_size_long_duration = ["1 day", "1 week", "1 month"]
         logger.debug10("End Function")
+        return None
 
     def get_bars(self):
         return self.bars
@@ -87,8 +109,6 @@ class Bars():
             keep_up_to_date=self.keep_up_to_date)
         bar_list = self.brokerclient.get_data(req_id)
         logger.debug4("Bar List: %s", bar_list)
-
-        self.bar_list = []
 
         for bar in bar_list:
             logger.debug3("Bar: %s", bar)
@@ -105,10 +125,10 @@ class Bars():
                 [date, open, high, low, close, volume, wap, count])
 
         logger.debug4("Bar List: %s", self.bar_list[0])
-        self.__convert_bars_to_panda()
+        self._convert_bars_to_panda()
         logger.debug10("End Function")
 
-    def __convert_bars_to_panda(self):
+    def _convert_bars_to_panda(self):
         logger.debug10("Begin Function")
         if self.bar_size in self.bar_size_long_duration:
             self.bars = pandas.DataFrame(self.bar_list,
