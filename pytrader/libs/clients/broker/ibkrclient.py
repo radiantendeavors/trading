@@ -28,7 +28,9 @@ Provides the client for Interactive Brokers
 Provides the client for Interactive Brokers
 """
 # System Libraries
-import sys
+from threading import current_thread
+from multiprocessing import current_process
+import threading
 import time
 import datetime
 
@@ -95,6 +97,11 @@ class IbkrClient(EWrapper, EClient):
         EWrapper.__init__(self)
         EClient.__init__(self, self)
 
+        logger.debug("Broker: %s", args[0])
+
+        ## Multiprocessing Queue
+        self.process_queue = None
+
         ## Used as a way to track when the last historical data request was made
         self.__historical_data_req_timestamp = datetime.datetime(year=1980,
                                                                  month=1,
@@ -115,8 +122,17 @@ class IbkrClient(EWrapper, EClient):
         ## Used to store any data requested using a request ID.
         self.data = {}
 
-    def cancel_head_timestamp(self, req_id):
-        self.cancelHeadTimeStamp(req_id)
+        ## Used to store allowed intraday bar sizes
+        self.intraday_bar_sizes = [
+            "1 secs", "5 secs", "10 secs", "15 secs", "30 secs", "1 min",
+            "2 mins", "3 mins", "5 mins", "10 mins", "15 mins", "20 mins",
+            "30 mins", "1 hour", "2 hours", "3 hours", "4 hours", "8 hours"
+        ]
+
+        ## Used to store allowed bar sizes
+        self.bar_sizes = self.intraday_bar_sizes + [
+            "1 day", "1 week", "1 month"
+        ]
 
     def check_server(self):
         """check_server
@@ -171,7 +187,50 @@ class IbkrClient(EWrapper, EClient):
         else:
             return self.data
 
-    def get_historical_bars(self,
+    def get_next_order_id(self):
+        logger.debug10("Begin Function")
+
+        process_name = current_process().name
+        thread_name = current_thread().name
+
+        logger.debug("Thread %s in Process %s.", thread_name, process_name)
+
+        while self.next_order_id is None:
+            logger.debug("Waiting on the next order id")
+            time.sleep(1)
+
+        logger.debug("Next Order Id Received.  Next Order Id is: %s",
+                     self.next_order_id)
+
+        logger.debug10("End Function")
+        return self.next_order_id
+
+    def set_process_queue(self, process_queue):
+        logger.debug10("Begin Function")
+        self.process_queue = process_queue
+        logger.debug10("End Function")
+        return None
+
+    def run_loop(self, process_queue):
+        logger.debug10("Begin Function")
+        self.process_queue = process_queue
+        #self.api_thread = threading.Thread(target=self.run, deamon=True)
+        logger.debug2("Start Broker Client Thread")
+        #self.api_thread.start()
+        logger.debug2("Broker Client Thread Started")
+        logger.debug10("End Function")
+
+    # ==============================================================================================
+    #
+    # The following functions are wrappers around the eClient functions.  All are lowercased, and
+    # update the request id prior to calling the API function.  In addition, they provide any
+    # formatting and error checking to ensure the API function receives the correct inputs.
+    #
+    # ==============================================================================================
+    def cancel_head_timestamp(self, req_id):
+        self.cancelHeadTimeStamp(req_id)
+
+    def req_historical_data(self,
                             contract,
                             bar_size_setting,
                             end_date_time="",
@@ -209,11 +268,11 @@ class IbkrClient(EWrapper, EClient):
         logger.debug10("End Funuction")
         return self.req_id
 
-    def get_ipo_date(self,
-                     contract,
-                     what_to_show="TRADES",
-                     use_regular_trading_hours=1,
-                     format_date=1):
+    def req_head_timestamp(self,
+                           contract,
+                           what_to_show="TRADES",
+                           use_regular_trading_hours=1,
+                           format_date=1):
         """!
         Requests the earliest available bar data for a contract.
 
@@ -241,25 +300,13 @@ class IbkrClient(EWrapper, EClient):
         logger.debug10("End Function")
         return self.req_id
 
-    def get_account_summary(self, account_types="ALL", tags=[]):
+    def req_account_summary(self, account_types="ALL", tags=[]):
         self.req_id += 1
         tags_string = ", ".join([str(item) for item in tags])
         self.reqAccountSummary(self.req_id, account_types, tags_string)
         return self.req_id
 
-    def get_next_order_id(self):
-        logger.debug10("Begin Function")
-        while self.next_order_id is None:
-            logger.debug("Waiting on the next order id")
-            time.sleep(1)
-
-        logger.debug("Next Order Id Received.  Next Order Id is: %s",
-                     self.next_order_id)
-
-        logger.debug10("End Function")
-        return self.next_order_id
-
-    def get_security_data(self, contract):
+    def req_contract_details(self, contract):
         logger.debug10("Begin Function")
         self.req_id += 1
         logger.debug("Requesting Contract Details for contract: %s", contract)
@@ -268,14 +315,21 @@ class IbkrClient(EWrapper, EClient):
         logger.debug10("End Function")
         return self.req_id
 
-    def get_security_pricing_data(self, contract):
+    def req_market_data(self, contract):
         logger.debug10("Begin Function")
         self.req_id += 1
         self.reqMktData(self.req_id, contract, "233", False, False, [])
         logger.debug10("End Function")
         return self.req_id
 
-    def get_option_chain(self, contract):
+    def req_sec_def_opt_params(self, contract):
+        """!
+        Requests security definition option parameters for viewing a contract's option chain
+
+        @param contract - The Contract for the request
+
+        @return req_id - The Request's identifier
+        """
         logger.debug10("Begin Function")
         self.req_id += 1
         security = contract.symbol

@@ -59,7 +59,18 @@ class SecurityBase():
             self.ticker_symbol = kwargs["ticker_symbol"]
         if kwargs.get("brokerclient"):
             self.brokerclient = kwargs["brokerclient"]
+        if kwargs.get("process_queue"):
+            self.process_queue = kwargs["process_queue"]
 
+        if kwargs.get("bar_sizes"):
+            self.bar_sizes = kwargs["bar_sizes"]
+        else:
+            self.bar_sizes = "1 day"
+
+        ## Used to hold the contract information
+        self.contract = None
+
+        ## Used to hold the bar information
         self.bars = {}
 
         logger.debug10("End Function")
@@ -85,6 +96,9 @@ class SecurityBase():
         logger.debug10("End Function")
 
         return contract
+
+    def get_bars(self):
+        return self.bars
 
     def update_broker_info(self):
         # result = self.__get_info_from_database()
@@ -147,27 +161,18 @@ class SecurityBase():
 
         logger.debug10("End Function")
 
-    def get_bars(self, bar_size):
-        logger.debug("Begin Function")
-        bars = self.bars[bar_size].get_bars()
+    def retreive_bar_history(self, keep_up_to_date=False):
+        for size in self.bar_sizes:
+            bars_ = bars.Bars(brokerclient=self.brokerclient,
+                              queue=self.process_queue,
+                              contract=self.contract,
+                              bar_size=size)
+            bars_.retrieve_bar_history(keep_up_to_date=keep_up_to_date)
+            self.bars[bar_size] = bars_.get_bars()
+
         logger.debug("Bars: %s", bars)
         logger.debug("End Function")
-        return self.bars[bar_size].get_bars()
-
-    def download_bars(self,
-                      bar_size="1 day",
-                      duration="1 W",
-                      keep_up_to_date=False):
-        self.bars[bar_size] = bars.Bars(brokerclient=self.brokerclient,
-                                        contract=self.contract,
-                                        bar_size=bar_size,
-                                        duration=duration,
-                                        keep_up_to_date=keep_up_to_date)
-        self.bars[bar_size].download_bars()
-
-        logger.debug("Ticker: %s", self.ticker_symbol)
-        logger.debug("Bars: %s", bars)
-        return self.bars
+        return None
 
     # def update_ipo_date(self):
     #     logger.debug10("Begin Function")

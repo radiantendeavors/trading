@@ -27,7 +27,7 @@ Provides an Example Strategy
 
 """
 # System libraries
-
+import datetime
 # 3rd Party libraries
 
 # System Library Overrides
@@ -35,7 +35,7 @@ from pytrader.libs.system import logging
 
 # Application Libraries
 from pytrader.libs.securities import security
-
+from pytrader import strategy
 # ==================================================================================================
 #
 # Global Variables
@@ -50,11 +50,25 @@ Allows Color text on the console
 """
 logger = logging.getLogger(__name__)
 
+
 # ==================================================================================================
 #
 # Classes
 #
 # ==================================================================================================
+class Strategy(strategy.Strategy):
+
+    def __init__(self,
+                 brokerclient,
+                 queue,
+                 securities_list=None,
+                 bar_sizes=None):
+        if not securities_list:
+            securities_list = ["SPY"]
+        super().__init__(brokerclient,
+                         queue,
+                         securities_list=securities_list,
+                         bar_sizes=bar_sizes)
 
 
 # ==================================================================================================
@@ -62,20 +76,14 @@ logger = logging.getLogger(__name__)
 # Functions
 #
 # ==================================================================================================
-def run(brokerclient, securities):
+def run(brokerclient, queue, securities_list=None, bar_sizes=None):
     logger.debug10("Begin Function")
     logger.debug9("Running Example Strategy")
 
-    x = 0
-    investment = []
-    for item in securities:
-        investment.append(
-            security.Security(security_type="etfs",
-                              ticker_symbol=item,
-                              brokerclient=brokerclient))
-        investment[x].set_contract()
-        investment[x].get_historical_bars()
-        #investment.place_order()
-        x += 1
+    strategy = Strategy(brokerclient,
+                        queue,
+                        securities_list=securities_list,
+                        bar_sizes=bar_sizes)
+    strategy.run()
 
     logger.debug10("End Function")

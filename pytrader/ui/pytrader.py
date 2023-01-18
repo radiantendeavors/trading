@@ -24,6 +24,8 @@ The main user interface for the trading program.
 
 """
 # System libraries
+import multiprocessing
+import random
 import sys
 import time
 
@@ -45,15 +47,13 @@ from pytrader import strategies
 # Global Variables
 #
 # ==================================================================================================
-"""!
-@var logger
-The base logger.
-
-@var colortext
-Allows Color text on the console
-"""
+## The Base logger
 logger = logging.getLogger(__name__)
+
+## Client ID Used for the Interactive Brokers API
 client_id = 1
+
+## The python formatted location of the strategies
 import_path = "pytrader.strategies."
 
 
@@ -63,6 +63,13 @@ import_path = "pytrader.strategies."
 #
 # ==================================================================================================
 def fix_bar_size_format(bar_sizes):
+    """!
+    Converts the input format from args.bar_sizes to the format required by Interactive Brokers
+
+    @param bar_sizes - The bar sizes requested using the command line arguments.
+
+    @return fixed_bar_sizes - A list of bar sizes in the format required by Interactive Brokers
+    """
     bar_size_map = {
         "1secs": "1 secs",
         "5secs": "5 secs",
@@ -93,32 +100,52 @@ def fix_bar_size_format(bar_sizes):
     return fixed_bar_sizes
 
 
-def start_client(args):
-    """! Starts the broker client.
+def broker_address(args, conf):
+    """!
+    Returns the address to be used by the broker.
 
-    @param args
-    Provides the arguments from the command line.
+    @param args - Provides the arguments from the command line
+    @param conf - Provides the configuration information from config files.
+
+    @return address - The brokeclient's address
+    """
+    if args.address:
+        return args.address
+    else:
+        return conf.brokerclient_address
+
+
+def broker_port(args, conf):
+    """!
+    Returns the port to be used by the broker.
+
+    @param args - Provides the arguments from the command line
+    @param conf - Provides the configuration information from config files.
+
+    @return port - The brokeclient's port
+    """
+    if args.port:
+        return args.port
+    else:
+        return conf.brokerclient_port
+
+
+def process_arguments(args, conf):
+    """!
+    Processes the arguments received from the command line.
+
+    @param args - Provides the arguments from the command line.
+    @param conf - Provides the configuration from config files.
 
     @return None
     """
     # Create the client and connect to TWS or IB Gateway
     logger.debug10("Begin Function")
-    conf = config.Config()
-    conf.read_config()
 
-    if args.address:
-        address = args.address
-    else:
-        address = conf.brokerclient_address
+    address = broker_address(args, conf)
+    port = broker_port(args, conf)
 
-    if args.port:
-        port = args.port
-    else:
-        port = conf.brokerclient_port
-
-    brokerclient = broker.broker_connect(address, port, client_id=client_id)
-
-    strategy_list = args.strategy
+    strategy_list = args.strategies
 
     if args.bar_sizes:
         bar_sizes = fix_bar_size_format(args.bar_sizes)
@@ -127,19 +154,104 @@ def start_client(args):
 
     logger.debug("Bar Sizes: %s", bar_sizes)
 
-    if args.security:
-        securities = args.security
+    if args.securities:
+        securities = args.securities
     else:
         securities = None
 
-    for i in strategy_list:
-        strategy = utilities.get_plugin_function(program=i,
-                                                 cmd='run',
-                                                 import_path=import_path)
+    processed_args = (address, port, strategy_list, bar_sizes, securities)
+    logger.debug10("End Function")
+    return processed_args
 
-        strategy(brokerclient, securities_list=securities, bar_sizes=bar_sizes)
 
-    brokerclient.disconnect()
+# generate work
+def producer(queue):
+    print('Producer: Running', flush=True)
+    # generate work
+    for i in range(10):
+        # generate a value
+        value = random.random()
+        # block
+        time.sleep(value)
+        # add to the queue
+        queue.put(value)
+    # all done
+    queue.put(None)
+    print('Producer: Done', flush=True)
+
+
+# consume work
+def consumer(queue):
+    print('Consumer: Running', flush=True)
+    # consume work
+    while True:
+        # get a unit of work
+        item = queue.get()
+        # check for stop
+        if item is None:
+            break
+        # report
+        print(f'>got {item}', flush=True)
+    # all done
+    print('Consumer: Done', flush=True)
+
+
+def start_brokerclient_process(brokerclient, queue, address, port, client_id):
+    brokerclient.connect(address, port, client_id)
+    brokerclient.set_process_queue(queue)
+
+    #broker_process = multiprocessing.Process(target=brokerclient.run, args=())
+    broker_process = multiprocessing.Process(target=broker.run_loop,
+                                             args=(brokerclient, ))
+
+    #producer_ = multiprocessing.Process(target=producer, args=(queue, ))
+    #producer_.start()
+    broker_process.start()
+    next_order_id = brokerclient.get_next_order_id()
+    logger.debug("Received next order id: %s", next_order_id)
+    return broker_process
+
+
+def start_strategy_process(strategy, brokerclient, queue, securities_list,
+                           bar_sizes):
+
+    strategy_process = multiprocessing.Process(target=consumer, args=(queue, ))
+    strategy_process.start()
+
+    return strategy_process
+    # strategy(brokerclient,
+    #          securities_list=securities_list,
+    #          bar_sizes=bar_sizes)
+
+
+def run_processes(processed_args):
+    address = processed_args[0]
+    port = processed_args[1]
+    strategy_list = processed_args[2]
+    bar_sizes = processed_args[3]
+    securities = processed_args[4]
+
+    queue = multiprocessing.Queue()
+    brokerclient = broker.brokerclient("ibkr")
+
+    strategy_process = start_strategy_process("A", brokerclient, queue,
+                                              securities, bar_sizes)
+    # strategy_processes = {}
+    # for i in strategy_list:
+    #     strategy = utilities.get_plugin_function(program=i,
+    #                                              cmd='run',
+    #                                              import_path=import_path)
+    #     strategy_processes[i] = start_strategy_process(strategy, brokerclient,
+    #                                                    queue, securities_list,
+    #                                                    bar_sizes)
+
+    broker_process = start_brokerclient_process(brokerclient, queue, address,
+                                                port, client_id)
+
+    broker_process.join()
+    strategy_process.join()
+    #brokerclient.disconnect()
+
     logger.debug10("End Function")
     return None
 
@@ -179,14 +291,17 @@ def init(args):
                         nargs="+",
                         help="Bar Size")
     parser.add_argument("-s",
-                        "--strategy",
+                        "--strategies",
                         nargs="+",
                         required=True,
-                        help="Strategy to run, can run multiple strategies")
+                        help="One or more strategies to run.")
     parser.add_argument("-S",
-                        "--security",
-                        nargs="+",
-                        help="Securities to use for strategy")
+                        "--securities",
+                        nargs="?",
+                        help="""
+        Optionally one or more securities to use for strategy.  If not
+        set, the strategies default securities list will be used.
+        """)
 
     parser.set_defaults(debug=False, verbosity=0, loglevel='INFO')
 
@@ -204,14 +319,16 @@ def init(args):
     if DEBUG is False:
         logger.debug("Attempting to start client")
         try:
-            start_client(args)
+            processed_args = process_arguments(args, conf)
+            run_processes(processed_args)
         except Exception as msg:
             parser.print_help()
             logger.error('No command was given')
             logger.critical(msg)
     else:
         logger.debug("Starting Client")
-        start_client(args)
+        processed_args = process_arguments(args, conf)
+        run_processes(processed_args)
 
     logger.debug("End real main")
     return 0
@@ -220,7 +337,7 @@ def init(args):
 def main(args=None):
     """! The main program.
 
-    @param args The input from the command line.
+    @param args - The input from the command line.
     @return 0
     """
     logger.debug("Begin Application")
