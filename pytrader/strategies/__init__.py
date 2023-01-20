@@ -64,6 +64,7 @@ class Strategy():
         self.process_queue = queue
         self.securities = securities_list
 
+        logger.debug("Bar Sizes: %s", bar_sizes)
         if bar_sizes:
             self.bar_size_list = bar_sizes
         else:
@@ -71,12 +72,14 @@ class Strategy():
                 "5 mins", "15 mins", "30 mins", "1 hour", "1 day"
             ]
 
+        logger.debug("Bar Size List: %s", self.bar_size_list)
+
         self.intraday_bar_sizes = brokerclient.intraday_bar_sizes
         self.bar_size_long_duration = ["1 day", "1 week", "1 month"]
         self.investments = {}
 
         self.endtime = datetime.datetime.combine(
-            datetime.date.today(), datetime.time(hour=16, minute=16))
+            datetime.date.today(), datetime.time(hour=20, minute=16))
         self.time_now = datetime.datetime.now()
 
     def set_investments(self):
@@ -85,7 +88,7 @@ class Strategy():
                 security_type="etfs",
                 ticker_symbol=item,
                 brokerclient=self.brokerclient,
-                queue=self.process_queue,
+                process_queue=self.process_queue,
                 bar_sizes=self.bar_size_list)
             self.investments[item].set_contract()
 
@@ -93,12 +96,15 @@ class Strategy():
         prev_minute = self.time_now.minute - (self.time_now.minute % 5)
         time_rounded = self.time_now.replace(minute=prev_minute, second=0)
 
-        while self.time_now < self.endtime:
+        for item in self.investments:
+            self.investments[item].retrieve_bar_history(keep_up_to_date=True)
 
+        for item in self.investments:
+            self.investments[item].update_bars()
+
+        while self.time_now < self.endtime:
             time_rounded += datetime.timedelta(minutes=5)
 
-            self.get_securities(bar_sizes=["5 mins"])
-            self.print_bars()
             time_now = datetime.datetime.now()
             time_to_wait = (time_rounded - time_now).total_seconds()
 
@@ -109,7 +115,7 @@ class Strategy():
     def run_once(self):
         logger.debug("Begin Function")
         for item in self.securities:
-            self.investments[item].retreive_bar_history(keep_up_to_date=True)
+            self.investments[item].retrieve_bar_history(keep_up_to_date=False)
 
             bars = self.investments[item].get_bars()
             logger.debug("Bars: %s", bars)

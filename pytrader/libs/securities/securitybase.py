@@ -25,6 +25,7 @@ Provides the broker client
 @file pytrader/libs/securitybase.py
 """
 # System libraries
+import multiprocessing
 import pandas
 
 # 3rd Party libraries
@@ -65,7 +66,7 @@ class SecurityBase():
         if kwargs.get("bar_sizes"):
             self.bar_sizes = kwargs["bar_sizes"]
         else:
-            self.bar_sizes = "1 day"
+            self.bar_sizes = ["1 day"]
 
         ## Used to hold the contract information
         self.contract = None
@@ -161,14 +162,22 @@ class SecurityBase():
 
         logger.debug10("End Function")
 
-    def retreive_bar_history(self, keep_up_to_date=False):
+    def retrieve_bar_history(self, keep_up_to_date=False):
         for size in self.bar_sizes:
-            bars_ = bars.Bars(brokerclient=self.brokerclient,
-                              queue=self.process_queue,
-                              contract=self.contract,
-                              bar_size=size)
-            bars_.retrieve_bar_history(keep_up_to_date=keep_up_to_date)
-            self.bars[bar_size] = bars_.get_bars()
+            self.bars[size] = bars.Bars(brokerclient=self.brokerclient,
+                                        queue=self.process_queue,
+                                        contract=self.contract,
+                                        keep_up_to_date=keep_up_to_date,
+                                        bar_size=size)
+            self.bars[size].retrieve_bar_history()
+
+    def update_bars(self):
+        bar_process = {}
+        for size in self.bar_sizes:
+            bar_process[size] = multiprocessing.Process(
+                target=self.bars[size].update_bars, args=())
+            bar_process[size].start()
+            # bars_.update_bars()
 
         logger.debug("Bars: %s", bars)
         logger.debug("End Function")
