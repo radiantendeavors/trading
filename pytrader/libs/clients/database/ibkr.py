@@ -84,7 +84,7 @@ class IbkrEtfInfo(Base):
 
 
 class IbkrEtfBarDailyTrades(Base):
-    __tablename__ = "ibkr_etf_bar_daily_trades"
+    __tablename__ = "z_ibkr_etf_bar_daily_trades"
     id = Column(Integer, primary_key=True)
     etf_id = Column(Integer, ForeignKey("ibkr_etf_info.id"), nullable=False)
     etf = relationship(IbkrEtfInfo)
@@ -102,7 +102,7 @@ class IbkrEtfBarDailyTrades(Base):
 
 
 class IbkrEtfBarDailyBids(Base):
-    __tablename__ = "ibkr_etf_bar_daily_bids"
+    __tablename__ = "z_ibkr_etf_bar_daily_bids"
     id = Column(Integer, primary_key=True)
     etf_id = Column(Integer, ForeignKey("ibkr_etf_info.id"))
     etf = relationship(IbkrEtfInfo)
@@ -118,7 +118,7 @@ class IbkrEtfBarDailyBids(Base):
 
 
 class IbkrEtfBarDailyAsks(Base):
-    __tablename__ = "ibkr_etf_bar_daily_asks"
+    __tablename__ = "z_ibkr_etf_bar_daily_asks"
     id = Column(Integer, primary_key=True)
     etf_id = Column(Integer, ForeignKey("ibkr_etf_info.id"))
     etf = relationship(IbkrEtfInfo)
@@ -134,7 +134,7 @@ class IbkrEtfBarDailyAsks(Base):
 
 
 class IbkrEtfBarDailyAdjusuted(Base):
-    __tablename__ = "ibkr_etf_bar_daily_adjusted"
+    __tablename__ = "z_ibkr_etf_bar_daily_adjusted"
     id = Column(Integer, primary_key=True)
     etf_id = Column(Integer, ForeignKey("ibkr_etf_info.id"))
     etf = relationship(IbkrEtfInfo)
@@ -151,7 +151,7 @@ class IbkrEtfBarDailyAdjusuted(Base):
 
 
 class IbkrEtfBarDailyHistoricalVolatility(Base):
-    __tablename__ = "ibkr_etf_bar_daily_historical_volatility"
+    __tablename__ = "z_ibkr_etf_bar_daily_historical_volatility"
     id = Column(Integer, primary_key=True)
     etf_id = Column(Integer, ForeignKey("ibkr_etf_info.id"))
     etf = relationship(IbkrEtfInfo)
@@ -166,7 +166,7 @@ class IbkrEtfBarDailyHistoricalVolatility(Base):
 
 
 class IbkrEtfBarDailyOptionImpliedVolatility(Base):
-    __tablename__ = "ibkr_etf_bar_daily_option_implied_volatility"
+    __tablename__ = "z_ibkr_etf_bar_daily_option_implied_volatility"
     id = Column(Integer, primary_key=True)
     etf_id = Column(Integer, ForeignKey("ibkr_etf_info.id"))
     etf = relationship(IbkrEtfInfo)
@@ -181,7 +181,7 @@ class IbkrEtfBarDailyOptionImpliedVolatility(Base):
 
 
 class IbkrIndexInfo(Base):
-    __tablename__ = "ibkr_index_info"
+    __tablename__ = "z_ibkr_index_info"
     id = Column(Integer, primary_key=True)
     index_id = Column(Integer, ForeignKey("index_info.id"))
     ticker_symbol = Column(String(6))
@@ -191,7 +191,7 @@ class IbkrIndexInfo(Base):
 
 
 class IbkrIndexBarDailyTrades(Base):
-    __tablename__ = "ibkr_index_bar_daily_trades"
+    __tablename__ = "z_ibkr_index_bar_daily_trades"
     id = Column(Integer, primary_key=True)
     index_id = Column(Integer, ForeignKey("ibkr_index_info.id"))
     index = relationship(IbkrIndexInfo)
@@ -207,7 +207,7 @@ class IbkrIndexBarDailyTrades(Base):
 
 
 class IbkrIndexBarDailyBids(Base):
-    __tablename__ = "ibkr_index_bar_daily_bids"
+    __tablename__ = "z_ibkr_index_bar_daily_bids"
     id = Column(Integer, primary_key=True)
     index_id = Column(Integer, ForeignKey("ibkr_index_info.id"))
     index = relationship(IbkrIndexInfo)
@@ -222,7 +222,7 @@ class IbkrIndexBarDailyBids(Base):
 
 
 class IbkrIndexBarDailyAsks(Base):
-    __tablename__ = "ibkr_index_bar_daily_asks"
+    __tablename__ = "z_ibkr_index_bar_daily_asks"
     id = Column(Integer, primary_key=True)
     index_id = Column(Integer, ForeignKey("ibkr_index_info.id"))
     index = relationship(IbkrIndexInfo)
@@ -237,7 +237,7 @@ class IbkrIndexBarDailyAsks(Base):
 
 
 class IbkrIndexBarDailyAdjusuted(Base):
-    __tablename__ = "ibkr_index_bar_daily_adjusted"
+    __tablename__ = "z_ibkr_index_bar_daily_adjusted"
     id = Column(Integer, primary_key=True)
     index_id = Column(Integer, ForeignKey("ibkr_index_info.id"))
     index = relationship(IbkrIndexInfo)
@@ -253,7 +253,7 @@ class IbkrIndexBarDailyAdjusuted(Base):
 
 
 class IbkrIndexBarDailyHistoricalVolatility(Base):
-    __tablename__ = "ibkr_index_bar_daily_historical_volatility"
+    __tablename__ = "z_ibkr_index_bar_daily_historical_volatility"
     id = Column(Integer, primary_key=True)
     index_id = Column(Integer, ForeignKey("ibkr_index_info.id"))
     index = relationship(IbkrIndexInfo)
@@ -268,7 +268,7 @@ class IbkrIndexBarDailyHistoricalVolatility(Base):
 
 
 class IbkrIndexBarDailyOptionImpliedVolatility(Base):
-    __tablename__ = "ibkr_index_bar_daily_option_implied_volatility"
+    __tablename__ = "z_ibkr_index_bar_daily_option_implied_volatility"
     id = Column(Integer, primary_key=True)
     index_id = Column(Integer, ForeignKey("ibkr_index_info.id"))
     index = relationship(IbkrIndexInfo)
@@ -283,7 +283,7 @@ class IbkrIndexBarDailyOptionImpliedVolatility(Base):
 
 
 class IbkrStockInfo(Base):
-    __tablename__ = "ibkr_stock_info"
+    __tablename__ = "z_ibkr_stock_info"
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey("stock_info.id"))
     ticker_symbol = Column(String(6))
@@ -294,7 +294,7 @@ class IbkrStockInfo(Base):
 
 
 class IbkrStockBarDailyTrades(Base):
-    __tablename__ = "ibkr_stock_bar_daily_trades"
+    __tablename__ = "z_ibkr_stock_bar_daily_trades"
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey("ibkr_stock_info.id"))
     stock = relationship(IbkrStockInfo)
@@ -310,7 +310,7 @@ class IbkrStockBarDailyTrades(Base):
 
 
 class IbkrStockBarDailyBids(Base):
-    __tablename__ = "ibkr_stock_bar_daily_bids"
+    __tablename__ = "z_ibkr_stock_bar_daily_bids"
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey("ibkr_stock_info.id"))
     stock = relationship(IbkrStockInfo)
@@ -325,7 +325,7 @@ class IbkrStockBarDailyBids(Base):
 
 
 class IbkrStockBarDailyAsks(Base):
-    __tablename__ = "ibkr_stock_bar_daily_asks"
+    __tablename__ = "z_ibkr_stock_bar_daily_asks"
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey("ibkr_stock_info.id"))
     stock = relationship(IbkrStockInfo)
@@ -340,7 +340,7 @@ class IbkrStockBarDailyAsks(Base):
 
 
 class IbkrStockBarDailyAdjusuted(Base):
-    __tablename__ = "ibkr_stock_bar_daily_adjusted"
+    __tablename__ = "z_ibkr_stock_bar_daily_adjusted"
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey("ibkr_stock_info.id"))
     stock = relationship(IbkrStockInfo)
@@ -356,7 +356,7 @@ class IbkrStockBarDailyAdjusuted(Base):
 
 
 class IbkrStockBarDailyHistoricalVolatility(Base):
-    __tablename__ = "ibkr_stock_bar_daily_historical_volatility"
+    __tablename__ = "z_ibkr_stock_bar_daily_historical_volatility"
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey("ibkr_stock_info.id"))
     stock = relationship(IbkrStockInfo)
@@ -371,7 +371,7 @@ class IbkrStockBarDailyHistoricalVolatility(Base):
 
 
 class IbkrStockBarDailyOptionImpliedVolatility(Base):
-    __tablename__ = "ibkr_stock_bar_daily_option_implied_volatility"
+    __tablename__ = "z_ibkr_stock_bar_daily_option_implied_volatility"
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey("ibkr_stock_info.id"))
     stock = relationship(IbkrStockInfo)
