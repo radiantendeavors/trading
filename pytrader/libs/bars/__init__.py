@@ -25,6 +25,7 @@ Provides Bar Data
 @file pytrader/libs/bars/__init__.py
 """
 # System libraries
+import queue
 import pandas
 import sys
 
@@ -93,6 +94,7 @@ class Bars():
 
         if kwargs.get("bar_size"):
             self.bar_size = kwargs["bar_size"]
+            self._fix_bar_size_format()
 
         if kwargs.get("duration"):
             self.duration = kwargs["duration"]
@@ -105,21 +107,51 @@ class Bars():
         self.bar_size_long_duration = ["1 day", "1 week", "1 month"]
         logger.debug10("End Function")
 
+        self.bar_queue = queue.Queue()
+
         return None
 
     def get_bars(self):
         return self.bars
 
-    def retreive_bar_history(self, keep_up_to_date=False):
+    def retrieve_bar_history(self):
         logger.debug10("Begin Function")
+        logger.debug("Duration: %s", self.duration)
+        self._set_duration()
+        logger.debug("Duration: %s", self.duration)
+
         if self.brokerclient:
-            self._retreive_broker_bar_history(keep_up_to_date)
+            self._retreive_broker_bar_history()
         else:
             raise NotImplementedError
 
         logger.debug10("End Function")
         return None
 
+    def update_bars(self):
+        logger.debug10("Begin Function")
+        while True:
+            bar_update = self.bar_queue.get()
+            logger.debug3("Got Queue Item: %s", bar_update)
+
+            for i in bar_update:
+                logger.debug("Bar Update for bar size %s: %s", self.bar_size,
+                             i)
+
+    def calculate_ema(self, span):
+        name = str(span) + "EMA"
+        self.bars[name] = self.bars["Close"].ewm(span=span,
+                                                 adjust=False).mean()
+
+    def calculate_sma(self, span):
+        name = str(span) + "SMA"
+        self.bars[name] = self.bars["Close"].rolling(span).mean()
+
+    # ==============================================================================================
+    #
+    # Internal Use only functions.  These should not be used outside the class.
+    #
+    # ==============================================================================================
     def _convert_bars_to_panda(self):
         logger.debug10("Begin Function")
         if self.bar_size in self.bar_size_long_duration:
@@ -140,12 +172,50 @@ class Bars():
                 self.bars["DateTime"], format="%Y%m%d %H:%M:%S %Z")
         logger.debug10("End Function")
 
+    def _fix_bar_size_format(self):
+        """!
+        Converts the input format for self.bar_size to the format required by Interactive Brokers.
+
+        @param bar_sizes - The bar sizes requested using the command line arguments.
+
+        @return None
+        """
+        bar_size_map = {
+            "1secs": "1 secs",
+            "5secs": "5 secs",
+            "10secs": "10 secs",
+            "15secs": "15 secs",
+            "30secs": "30 secs",
+            "1min": "1 min",
+            "2mins": "2 mins",
+            "3mins": "3 mins",
+            "5mins": "5 mins",
+            "10mins": "10 mins",
+            "15mins": "15 mins",
+            "20mins": "20 mins",
+            "30mins": "30 mins",
+            "1hour": "1 hour",
+            "2hours": "2 hours",
+            "3hours": "3 hours",
+            "4hours": "4 hours",
+            "8hours": "8 hours",
+            "1day": "1 day",
+            "1week": "1 week",
+            "1month": "1 month"
+        }
+
+        fixed_bar_size = bar_size_map[self.bar_size]
+        self.bar_size = fixed_bar_size
+        return None
+
     def _retreive_broker_bar_history(self):
         req_id = self.brokerclient.req_historical_data(
             self.contract,
             self.bar_size,
             duration_str=self.duration,
             keep_up_to_date=self.keep_up_to_date)
+
+        self.brokerclient.add_bar_queue(req_id, self.bar_queue)
         bar_list = self.brokerclient.get_data(req_id)
         logger.debug4("Bar List: %s", bar_list)
 
@@ -168,7 +238,9 @@ class Bars():
         logger.debug10("End Function")
 
     def _set_duration(self):
-        if not self.duration:
+        logger.debug10("Begin Function")
+        if self.duration is None:
+            logger.debug("Setting Duration for Bar Size: %s", self.bar_size)
             if self.bar_size == "1 month":
                 self.duration = "2 Y"
             elif self.bar_size == "1 week":
@@ -183,13 +255,6 @@ class Bars():
                 self.duration = "10 D"
             elif self.bar_size == "5 mins":
                 self.duration = "4 D"
+            logger.debug("Duration Set to %s", self.duration)
+        logger.debug10("End Function")
         return None
-
-    def calculate_ema(self, span):
-        name = str(span) + "EMA"
-        self.bars[name] = self.bars["Close"].ewm(span=span,
-                                                 adjust=False).mean()
-
-    def calculate_sma(self, span):
-        name = str(span) + "SMA"
-        self.bars[name] = self.bars["Close"].rolling(span).mean()
