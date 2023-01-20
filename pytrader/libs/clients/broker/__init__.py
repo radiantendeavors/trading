@@ -112,4 +112,4 @@ def run_loop(client):
     api_thread.start()
     logger.debug2("Broker Client Thread Started")
     logger.debug10("End Function")
-    #return api_thread
+    return api_thread
