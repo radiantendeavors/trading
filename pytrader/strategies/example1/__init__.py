@@ -28,6 +28,7 @@ Provides an Example Strategy
 """
 # System libraries
 import datetime
+import time
 # 3rd Party libraries
 
 # System Library Overrides
@@ -35,7 +36,7 @@ from pytrader.libs.system import logging
 
 # Application Libraries
 from pytrader.libs.securities import security
-from pytrader import strategy
+from pytrader import strategies
 # ==================================================================================================
 #
 # Global Variables
@@ -56,15 +57,18 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class Strategy(strategy.Strategy):
+class Strategy(strategies.Strategy):
 
     def __init__(self,
                  brokerclient,
                  queue,
                  securities_list=None,
-                 bar_sizes=None):
+                 bar_sizes=[]):
+        if bar_sizes is None:
+            bar_sizes = ["1 day"]
         if not securities_list:
             securities_list = ["SPY"]
+        logger.debug("Bar Sizes: %s", bar_sizes)
         super().__init__(brokerclient,
                          queue,
                          securities_list=securities_list,
