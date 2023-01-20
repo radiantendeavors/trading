@@ -32,3 +32,16 @@ class TraderException(Exception):
     """!
     Trader Exception
     """
+    pass
+
+
+class BrokerError(Exception):
+    pass
+
+
+class BrokerNotConnectedError(BrokerError):
+    pass
+
+
+class BrokerWarning(Warning):
+    pass
