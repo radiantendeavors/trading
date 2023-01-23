@@ -16,6 +16,11 @@ VERSION=0.0.3
 # Global Variables
 #
 # -------
+VENV_DIR := $(HOME)/.local/lib/pytrader
+PYTHON := /usr/bin/python3
+VENV := $(PYTHON) -m venv $(VENV_DIR)
+PIP := $(VENV_DIR)/bin/pip
+
 #COLORS
 GREEN  := $(shell tput -Txterm setaf 2)
 WHITE  := $(shell tput -Txterm setaf 7)
@@ -49,17 +54,21 @@ cleancpp: ##@Clean Cleans up C++ Build files
 	@rm -rf build
 
 # Python related targets
-cleanpython: ##@Clean Cleans up python cache files
-	@rm -rf __pycache__
-
 venv: ##@Python Creates Python VENV
-	python3 -m venv
+	@mkdir -p $(VENV_DIR)
+	@$(VENV)
 
 setup: venv ##@Python Installs required packages
-	./venv/bin/pip install -r requirements.txt
+	$(PIP) install requirements.txt
 
-requirements:
-	@cd pytrader && pip freeze > requirements.txt
+requirements: ##@Python Creates requirements.txt
+	@$(PIP) freeze > requirements.txt
+
+clean_venv:
+	@rm -rf $(VENV_DIR)
+
+cleanpython: ##@Clean Cleans up python cache files
+	@rm -rf __pycache__
 
 # Combined targets
 clean: cleancpp cleanpython ##@Clean
