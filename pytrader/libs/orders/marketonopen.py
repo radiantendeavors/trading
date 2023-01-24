@@ -32,7 +32,7 @@ Provides the broker client
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs.orders import orderbase
+from pytrader.libs.orders import market
 
 # ==================================================================================================
 #
@@ -47,11 +47,10 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class MarketOnOpenOrder(orderbase.OrderBase):
+class MarketOnOpenOrder(market.MarketOrder):
 
     def __init__(self, *args, **kwargs):
         logger.debug10("Begin Function")
         super().__init__(*args, **kwargs)
-        self.order.orderType = "MKT"
         self.order.tif = "OPG"
         logger.debug10("End Function")
