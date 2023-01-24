@@ -9,7 +9,7 @@ cryptography==39.0.0
 exceptiongroup==1.1.0
 frozendict==2.3.4
 html5lib==1.1
-ibapi
+ibapi==9.81.1.post1
 idna==3.4
 lxml==4.9.2
 multitasking==0.0.11
