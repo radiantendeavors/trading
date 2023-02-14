@@ -38,10 +38,7 @@ from pytrader.libs.system import logging
 # Application Libraries
 from pytrader import DEBUG
 from pytrader.libs.applications import trader
-from pytrader.libs.clients import broker
-from pytrader.libs import utilities
 from pytrader.libs.utilities import config
-from pytrader import strategies
 
 # ==================================================================================================
 #
@@ -50,12 +47,6 @@ from pytrader import strategies
 # ==================================================================================================
 ## The Base logger
 logger = logging.getLogger(__name__)
-
-## Client ID Used for the Interactive Brokers API
-client_id = 1001
-
-## The python formatted location of the strategies
-import_path = "pytrader.strategies."
 
 
 # ==================================================================================================
