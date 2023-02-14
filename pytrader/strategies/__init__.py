@@ -102,16 +102,6 @@ class Strategy():
         for item in self.investments:
             self.investments[item].update_bars()
 
-        while self.time_now < self.endtime:
-            time_rounded += datetime.timedelta(minutes=5)
-
-            time_now = datetime.datetime.now()
-            time_to_wait = (time_rounded - time_now).total_seconds()
-
-            logger.debug("Time To Wait: %s", time_to_wait)
-
-            time.sleep(time_to_wait)
-
     def run_once(self):
         logger.debug("Begin Function")
         for item in self.securities:
