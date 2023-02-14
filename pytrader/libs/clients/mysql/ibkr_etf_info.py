@@ -59,10 +59,10 @@ colortext = text.ConsoleText()
 # Classes
 #
 # ==================================================================================================
-class IbkrEtfInfo(mysql.MySQLDatabase):
+class IbkrEtfContracts(mysql.MySQLDatabase):
 
     def __init__(self):
-        self.table_name = "ibkr_etf_info"
+        self.table_name = "z_ibkr_etf_contracts"
         super().__init__()
 
     def select(self, select_clause=None, where_clause=None):
@@ -76,7 +76,7 @@ class IbkrEtfInfo(mysql.MySQLDatabase):
             SELECT *
             """
 
-        sql += """FROM `etf_info`
+        sql += """FROM `z_ibkr_etf_contracts`
         """
 
         if where_clause:
@@ -96,32 +96,27 @@ class IbkrEtfInfo(mysql.MySQLDatabase):
             logger.debug10("End Function")
             return None
 
-    def insert(self,
-               etf_id,
-               ticker,
-               contract_id,
-               primary_exchange,
-               exchange="SMART",
-               oldest_available=None):
-        logger.debug("Begin Function")
-        logger.debug("ETF Id: %s", etf_id)
-        logger.debug("Ticker: %s", ticker)
+    def insert(self, contract_id, ticker_symbol, security_type, exchange,
+               currency, local_symbol, primary_exchange, trading_class):
+        logger.debug10("Begin Function")
         logger.debug("Contract ID: %s", contract_id)
+        logger.debug("Ticker: %s", ticker_symbol)
+
         logger.debug("Primary Exchange: %s", primary_exchange)
         logger.debug("Exchange: %s", exchange)
-        logger.debug("Oldest Available Date: %s", oldest_available)
         sql = """
-        INSERT INTO `ibkr_etf_info`
-        (`etf_id`, `ticker_symbol`, `contract_id`, `primary_exchange`, `exchange`, `oldest_available`)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        INSERT INTO `z_ibkr_etf_contracts`
+        (`contract_id`, `ticker_symbol`, `security_type`, `exchange`, `currency`, `local_symbol`, `primary_exchange`, `trading_class`)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
 
         logger.debug2("SQL: %s", sql)
 
         cursor = self.mycursor
         try:
-            cursor.execute(sql, (etf_id, ticker, contract_id, primary_exchange,
-                                 exchange, oldest_available))
+            cursor.execute(sql,
+                           (contract_id, ticker_symbol, exchange, currency,
+                            local_symbol, primary_exchange, trading_class))
         except pymysql.Error as e:
             logger.error("Insert Error: %s", e)
 
