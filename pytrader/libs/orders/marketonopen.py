@@ -1,5 +1,5 @@
 """!
-@package pytrader.libs.orders.limit
+@package pytrader.libs.orders.marketonopen
 
 Provides the broker client
 
@@ -22,7 +22,7 @@ Provides the broker client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file security.py
+@file pytrader/libs/orders/marketonopen.py
 """
 # System libraries
 
