@@ -31,7 +31,6 @@ Provides the client for Interactive Brokers
 from multiprocessing import current_process
 from threading import current_thread
 import datetime
-import multiprocessing
 import threading
 import time
 
@@ -46,7 +45,6 @@ from ibapi.utils import iswrapper
 from ibapi.wrapper import EWrapper
 
 # System Library Overrides
-from pytrader.libs.clients.mysql import etf_info, index_info, stock_info
 from pytrader.libs.system import logging
 
 # Other Libraries
@@ -111,6 +109,10 @@ class IbkrClient(EWrapper, EClient):
                                                                  minute=0,
                                                                  second=0)
 
+        ## Used to track when the contract deitals data request was made
+        self.__contract_details_data_req_timestamp = datetime.datetime(
+            year=1980, month=1, day=1, hour=0, minute=0, second=0)
+
         ## Used to track the number of active historical data requests.
         self.__active_historical_data_requests = 0
 
@@ -126,11 +128,20 @@ class IbkrClient(EWrapper, EClient):
         ## Used to track the next order id
         self.next_order_id = None
 
+        ## Used to track if the next valid id is available
+        self.next_valid_id_available = threading.Event()
+
         ## Used to track available accounts
         self.accounts = []
 
+        ## Used to track if account list is available
+        self.accounts_available = threading.Event()
+
         ## Used to store any data requested using a request ID.
         self.data = {}
+
+        ## Used to track if requested data is available
+        self.data_available = {}
 
         ## Used to store allowed intraday bar sizes
         self.intraday_bar_sizes = [
@@ -168,7 +179,21 @@ class IbkrClient(EWrapper, EClient):
             logger.error(
                 "Failed to connect to the server: Connection Time Unknown")
 
+    def get_account_list(self):
+        """!
+        Returns the list of accounts
+
+        @return accounts - List of accounts
+        """
+        self.accounts_available.wait()
+        return self.accounts
+
     def get_client_id(self):
+        """!
+        Returns the client id
+
+        @return client_id - The id of the connected client.
+        """
         return self.clientId
 
     def get_data(self, req_id=None):
@@ -180,54 +205,29 @@ class IbkrClient(EWrapper, EClient):
         @return self.data[req_id] - The data from the specific request.
         @return self.data - If no req_id is provided, returns all data from all requests.
         """
-        logger.debug10("Begin Function")
-
         if req_id:
-            logger.debug("Data: %s", self.data)
-
-            # We want to ensure that the data has been received.
-            if isinstance(self.data[req_id], list):
-                while len(self.data[req_id]) == 0:
-                    logger.debug("Waiting on response for Request ID: %s",
-                                 req_id)
-                    time.sleep(1)
-            else:
-                while req_id not in self.data:
-                    logger.debug("Waiting on response for Request ID: %s",
-                                 req_id)
-                    time.sleep(1)
-
-            logger.debug3("Data After Waiting: %s", self.data)
-            logger.debug3("Returning: %s", self.data[req_id])
+            self.data_available[req_id].wait()
+            logger.debug("Data: %s", self.data[req_id])
             return self.data[req_id]
         else:
             return self.data
 
     def get_next_order_id(self):
-        logger.debug10("Begin Function")
-
-        process_name = current_process().name
-        thread_name = current_thread().name
-
-        logger.debug("Thread %s in Process %s.", thread_name, process_name)
-
-        while self.next_order_id is None:
-            logger.debug("Waiting on the next order id")
-            time.sleep(1)
-
-        logger.debug("Next Order Id Received.  Next Order Id is: %s",
-                     self.next_order_id)
-
-        logger.debug10("End Function")
+        self.next_valid_id_available.wait()
         return self.next_order_id
 
-    def start_thread(self, process_queue):
+    def start_thread(self, process_queue=None):
         logger.debug10("Begin Function")
-        self.process_queue = process_queue
-        self.api_thread = threading.Thread(target=self.run)
+
+        if process_queue:
+            self.process_queue = process_queue
+
+        self.api_thread = threading.Thread(target=self.run, daemon=True)
+
         logger.debug2("Start Broker Client Thread")
         self.api_thread.start()
         logger.debug2("Broker Client Thread Started")
+
         logger.debug10("End Function")
         return None
 
@@ -246,6 +246,51 @@ class IbkrClient(EWrapper, EClient):
     # All functions in alphabetical order.
     #
     # ==============================================================================================
+    def calculate_implied_volatility(self,
+                                     contract: Contract,
+                                     option_price,
+                                     under_price,
+                                     implied_option_volatility_options=[]):
+        """!
+        Calculate the volatility for an option.
+        Request the calculation of the implied volatility based on hypothetical option and its underlying prices.
+        The calculation will be return in EWrapper's tickOptionComputation callback.
+
+        @param contract - The option's contract for which the volatility is to be calculated.
+        @param option_price - Hypothetical Option Price
+        @param under_price - Hypothetical option's underlying price.
+
+        @return None
+        """
+        raise NotImplementedError
+
+    def calculate_option_price(self,
+                               contract: Contract,
+                               volatility,
+                               under_price,
+                               option_price_options=[]):
+        """!
+        Calculates an option's price based on the provided volatility and its underlying's price.
+        The calculation will be return in EWrapper's tickOptionComputation callback.
+
+        @param contract - The option's contract for which the price wants to be calculated.
+        @param volatility - Hypothetical volatility.
+        @param under_price - Hypothetical underlying's price.
+
+        @return None
+        """
+        raise NotImplementedError
+
+    def cancel_account_summary(self, req_id):
+        """!
+        Cancels the account's summary request. After requesting an account's summary, invoke this function to cancel it.
+
+        @param req_id - The identifier of the previously performed account request.
+
+        @return None
+        """
+        raise NotImplementedError
+
     def cancel_head_timestamp(self, req_id):
         self.cancelHeadTimeStamp(req_id)
 
@@ -261,6 +306,7 @@ class IbkrClient(EWrapper, EClient):
     def req_account_summary(self, account_types="ALL", tags=[]):
         self.req_id += 1
         tags_string = ", ".join([str(item) for item in tags])
+        self.data_available[self.req_id] = threading.Event()
         self.reqAccountSummary(self.req_id, account_types, tags_string)
         return self.req_id
 
@@ -291,9 +337,11 @@ class IbkrClient(EWrapper, EClient):
     def req_contract_details(self, contract):
         logger.debug10("Begin Function")
         self.req_id += 1
+        self._contract_details_data_wait()
         logger.debug("Requesting Contract Details for contract: %s", contract)
+        self.data_available[self.req_id] = threading.Event()
         self.reqContractDetails(self.req_id, contract)
-        time.sleep(sleep_time)
+        self.__contract_details_data_req_timestamp = datetime.datetime.now()
         logger.debug10("End Function")
         return self.req_id
 
@@ -319,6 +367,8 @@ class IbkrClient(EWrapper, EClient):
 
         # This request seems to trigger the historical data pacing restrictions.  So, we wait.
         self._historical_data_wait()
+
+        self.data_available[self.req_id] = threading.Event()
         self.reqHeadTimeStamp(self.req_id, contract, what_to_show,
                               use_regular_trading_hours, format_date)
 
@@ -688,6 +738,7 @@ class IbkrClient(EWrapper, EClient):
             "value": value,
             "currency": currency
         }
+        self.data_available[req_id].set()
 
         logger.debug(
             "Account Summary. ReqId: %s\nAccount: %s, Tag: %s, Value: %s, Currency: %s",
@@ -811,6 +862,14 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
+
+        # send_item = "ConnectionClosed"
+
+        # req_id_list = list(self.bar_queue.keys())
+        # logger.debug3("Sending Queue Item: %s", send_item)
+        # for item in req_id_list:
+        #     self.bar_queue[item].put(send_item)
+
         logger.debug10("End Function")
         return None
 
@@ -826,37 +885,42 @@ class IbkrClient(EWrapper, EClient):
 
         @return None
         """
-        logger.debug("Begin Function")
-        self.data[req_id] = details
+        logger.debug10("Begin Function")
 
-        # logger.debug("Contract Info")
-        # logger.debug("Contract ID: %s", details.contract.conId)
-        # logger.debug("Symbol: %s", details.contract.symbol)
-        # logger.debug("Security Type: %s", details.contract.secType)
-        # logger.debug("Exchange: %s", details.contract.exchange)
-        # logger.debug("Primary Exchange: %s", details.contract.primaryExchange)
-        # logger.debug("Currency: %s", details.contract.currency)
-        # logger.debug2("Local Symbol: %s", details.contract.localSymbol)
-        # logger.debug("Security ID Type: %s", details.contract.secIdType)
-        # logger.debug("Security ID: %s", details.contract.secId)
+        logger.debug("Contract Info")
+        logger.debug("Contract ID: %s", details.contract.conId)
+        logger.debug("Symbol: %s", details.contract.symbol)
+        logger.debug("Security Type: %s", details.contract.secType)
+        logger.debug("Exchange: %s", details.contract.exchange)
+        logger.debug("Currency: %s", details.contract.currency)
+        logger.debug("Local Symbol: %s", details.contract.localSymbol)
+        logger.debug("Primary Exchange: %s", details.contract.primaryExchange)
+        logger.debug("Trading Class: %s", details.contract.tradingClass)
+        logger.debug("Security ID Type: %s", details.contract.secIdType)
+        logger.debug("Security ID: %s", details.contract.secId)
+        #logger.debug("Description: %s", details.contract.description)
 
-        # logger.debug("Contract Detail Info")
-        # logger.debug2("Market name: %s", details.marketName)
-        # logger.debug2("OrderTypes: %s", details.orderTypes)
-        # logger.debug2("Valid Exchanges: %s", details.validExchanges)
-        # logger.debug2("Underlying Contract ID: %s", details.underConId)
-        # logger.debug("Long name: %s", details.longName)
-        # logger.debug("Industry: %s", details.industry)
-        # logger.debug("Category: %s", details.category)
-        # logger.debug("Subcategory: %s", details.subcategory)
-        # logger.debug2("Time Zone: %s", details.timeZoneId)
-        # logger.debug2("Trading Hours: %s", details.tradingHours)
-        # logger.debug2("Liquid Hours: %s", details.liquidHours)
-        # logger.debug2("SecIdList: %s", details.secIdList)
-        # logger.debug2("Underlying Symbol: %s", details.underSymbol)
-        # logger.debug("Stock Type: %s", details.stockType)
-        # logger.debug("Next Option Date: %s", details.nextOptionDate)
-        # logger.debug3("Details: %s", details)
+        logger.debug("Contract Detail Info")
+        logger.debug("Market name: %s", details.marketName)
+        logger.debug("Min Tick: %s", details.minTick)
+        logger.debug("OrderTypes: %s", details.orderTypes)
+        logger.debug("Valid Exchanges: %s", details.validExchanges)
+        logger.debug("Underlying Contract ID: %s", details.underConId)
+        logger.debug("Long name: %s", details.longName)
+        logger.debug("Industry: %s", details.industry)
+        logger.debug("Category: %s", details.category)
+        logger.debug("Subcategory: %s", details.subcategory)
+        logger.debug("Time Zone: %s", details.timeZoneId)
+        logger.debug("Trading Hours: %s", details.tradingHours)
+        logger.debug("Liquid Hours: %s", details.liquidHours)
+        logger.debug("SecIdList: %s", details.secIdList)
+        logger.debug("Underlying Symbol: %s", details.underSymbol)
+        logger.debug("Stock Type: %s", details.stockType)
+        logger.debug("Next Option Date: %s", details.nextOptionDate)
+        logger.debug3("Details: %s", details)
+
+        self.data[self.req_id] = details
+        self.data_available[req_id].set()
 
         # if details.contract.secType == "Bond":
         #     logger.debug("Description: %s", details.contract.description)
@@ -1110,6 +1174,7 @@ class IbkrClient(EWrapper, EClient):
         logger.debug10("Begin Function")
         logger.debug("ReqID: %s, IPO Date: %s", req_id, head_time_stamp)
         self.data[req_id] = head_time_stamp
+        self.data_available[req_id].set()
 
         logger.debug10("End Function")
         return None
@@ -1292,9 +1357,10 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
-        logger.debug("Accounts: %s", accounts)
+        logger.debug3("Accounts: %s", accounts)
         self.accounts = accounts.split(",")
-        logger.debug("Accounts: %s", self.accounts)
+        self.accounts_available.set()
+        logger.debug3("Accounts: %s", self.accounts)
         logger.debug10("End Function")
         return None
 
@@ -1391,10 +1457,9 @@ class IbkrClient(EWrapper, EClient):
         """
         super().nextValidId(order_id)
 
-        logger.debug("Setting next_valid_order: %s", order_id)
         self.next_order_id = order_id
-        logger.info("The next valid Order ID: %s", self.next_order_id)
-        logger.debug10("End Function")
+        self.next_valid_id_available.set()
+
         return None
 
     @iswrapper
@@ -2387,6 +2452,29 @@ class IbkrClient(EWrapper, EClient):
             ) - self.__historical_data_req_timestamp
         return None
 
+    def _contract_details_data_wait(self):
+        """!
+        Ensure that we wait 15 seconds between historical data requests.
+
+        @param self
+
+        @return None
+        """
+        time_diff = datetime.datetime.now(
+        ) - self.__contract_details_data_req_timestamp
+        while time_diff.total_seconds() < sleep_time:
+            logger.debug("Now: %s", datetime.datetime.now())
+            logger.debug("Last Request: %s",
+                         self.__historical_data_req_timestamp)
+            logger.debug("Time Difference: %s seconds",
+                         time_diff.total_seconds())
+            remaining_sleep_time = sleep_time - time_diff.total_seconds()
+            logger.debug("Sleep Time: %s", remaining_sleep_time)
+            time.sleep(sleep_time - time_diff.total_seconds())
+            time_diff = datetime.datetime.now(
+            ) - self.__contract_details_data_req_timestamp
+        return None
+
     def _calculate_deep_data_allotment(self):
         min_allotment = 3
         max_allotment = 60
@@ -2399,60 +2487,3 @@ class IbkrClient(EWrapper, EClient):
             self.__available_deep_data_allotment = max_allotment
         else:
             self.__available_deep_data_allotment = basic_allotment
-
-
-# class IbkrInit(IbkrClient):
-
-#     def __init__(self, address=None, port=None, client_id=0):
-#         conf = config.Config()
-#         conf.read_config()
-#         logger.debug("Client ID Initial: %s", client_id)
-
-#         if address:
-#             self.address = address
-#         else:
-#             self.address = conf.brokerclient_address
-
-#         if port:
-#             self.port = port
-#         else:
-#             self.port = conf.brokerclient_port
-
-#         logger.debug("Address: %s Port: %s", self.address, self.port)
-
-#         self.client_id = client_id
-
-#         if self.client_id < 1:
-#             logger.warning("Self.Client ID: %s", self.client_id)
-
-#     def run_loop(self):
-#         self.app.run()
-
-#     def begin_connect(self):
-#         self.app = IbkrClient(client_id=self.client_id)
-#         # Connect to TWS or IB Gateway
-#         try:
-#             self.app.connect(self.address, self.port, self.client_id)
-#         except Exception as msg:
-#             logger.error("Failed to connect")
-#             logger.error(msg)
-#             sys.exit(1)
-
-#         logger.debug("Start Threads")
-#         # Launch client thread
-#         thread = threading.Thread(target=self.run_loop)
-#         thread.start()
-#         logger.debug("Threads Started")
-
-#         time.sleep(1)
-
-#         # Check if API is connected
-#         # while True:
-#         #     if isinstance(self.nextValidOrderId, int):
-#         #         logger.debug("Connected")
-#         #     else:
-#         #         logger.info("Waiting on connection")
-#         #         time.sleep(1)
-
-#     def end_connect(self):
-#         self.app.disconnect()
