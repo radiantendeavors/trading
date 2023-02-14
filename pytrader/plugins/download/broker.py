@@ -68,13 +68,15 @@ def basic_info(investments, brokerclient, security=None):
     """
     logger.debug("Begin Function")
 
-    info = securities.Securities(brokerclient=brokerclient,
-                                 securities_type=investments)
-
     if security:
-        info.update_info(source="broker", securities_list=security)
+        info = securities.Securities(brokerclient=brokerclient,
+                                     securities_type=investments,
+                                     securities_list=security)
     else:
-        info.update_info(source="broker")
+        info = securities.Securities(brokerclient=brokerclient,
+                                     securities_type=investments)
+
+    info.update_info(source="broker")
 
     logger.debug("End Function")
 
@@ -99,7 +101,9 @@ def broker_download(args):
     else:
         port = conf.brokerclient_port
 
-    brokerclient = broker.broker_connect(address, port, client_id=client_id)
+    brokerclient = broker.brokerclient("ibkr")
+    brokerclient.connect(address, port, client_id)
+    brokerclient.start_thread()
 
     if args.type:
         investments = args.type
