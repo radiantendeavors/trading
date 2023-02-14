@@ -130,13 +130,20 @@ class Bars():
 
     def update_bars(self):
         logger.debug10("Begin Function")
+        bar_update = self.bar_queue.get()
+
         while True:
-            bar_update = self.bar_queue.get()
+            #while bar_update != "ConnectionClosed":
             logger.debug3("Got Queue Item: %s", bar_update)
 
             for i in bar_update:
                 logger.debug("Bar Update for bar size %s: %s", self.bar_size,
                              i)
+
+            bar_update = self.bar_queue.get()
+
+        logger.debug("Update Complete")
+        logger.debug("End Function")
 
     def calculate_ema(self, span):
         name = str(span) + "EMA"
