@@ -59,10 +59,11 @@ max_sleeptime = 121
 class SecuritiesBase():
 
     def __init__(self, *args, **kwargs):
+        self.securities_list = []
+
         if kwargs.get("securities_list"):
-            self.securities_list = kwargs["securities_list"]
-        else:
-            self.securities_list = {}
+            for item in kwargs["securities_list"]:
+                self.securities_list.append({"ticker": item})
 
         if kwargs.get("client_id"):
             self.client_id = kwargs["client_id"]
