@@ -57,7 +57,12 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 def initialize(args):
     logger.debug10("Begin Function")
-    database.init_sqlalchemy()
+    db = database.Database()
+
+    db.create_engine()
+    db_session = db.create_session()
+
+    db.create_tables()
     logger.debug10("End Funuction")
 
 
