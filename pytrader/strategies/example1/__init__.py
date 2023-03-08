@@ -60,7 +60,7 @@ logger = logging.getLogger(__name__)
 class Strategy(strategies.Strategy):
 
     def __init__(self, brokerclient):
-        self.security = "SPY"
+        self.security = "IWM"
         self.bar_sizes = "5 secs"
         self.short_period = 5
         self.long_period = 20

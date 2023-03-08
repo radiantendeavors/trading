@@ -27,7 +27,6 @@ Provides the Base Class for a Strategy.
 """
 # System libraries
 import datetime
-import time
 
 # 3rd Party libraries
 import pandas
@@ -171,10 +170,32 @@ class Strategy():
             logger.debug("Cross Up: %s", cross_up)
             logger.debug("Cross Down: %s", cross_down)
 
+            quantity = 100
+
             if cross_up:
                 logger.info("EMA Cross Up")
+
+                if self.position_status == -1:
+                    quantity = quantity * 2
+
+                buy_order = order.Order()
+                buy_order.action = "BUY"
+                buy_order.totalQuantity = quantity
+                buy_order.orderType = "MKT"
+                self.brokerclient.place_order(self.contract, buy_order)
+                self.position_status = 1
+
             if cross_down:
                 logger.info("EMA Cross Down")
+                if self.position_status == 1:
+                    quantity = quantity * 2
+
+                sell_order = order.Order()
+                sell_order.action = "SELL"
+                sell_order.totalQuantity = quantity
+                sell_order.orderType = "MKT"
+                self.brokerclient.place_order(self.contract, sell_order)
+                self.position_status = -1
 
         logger.debug10("End Function")
 
