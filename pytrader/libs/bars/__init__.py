@@ -25,7 +25,7 @@ Provides Bar Data
 @file pytrader/libs/bars/__init__.py
 """
 # System libraries
-import queue
+#import queue
 import pandas
 import sys
 
@@ -82,6 +82,9 @@ class Bars():
         ## Size of the bars
         self.bar_size = "1 day"
 
+        ## The oldest date available for download
+        self.begin_date = kwargs["begin_date"]
+
         ## Bar history length
         self.duration = None
 
@@ -89,15 +92,17 @@ class Bars():
         if kwargs.get("brokerclient"):
             self.brokerclient = kwargs["brokerclient"]
 
-        if kwargs["queue"]:
-            self.process_queue = kwargs["queue"]
+        # if kwargs["queue"]:
+        #     self.process_queue = kwargs["queue"]
 
         if kwargs.get("bar_size"):
-            self.bar_size = kwargs["bar_size"]
-            self._fix_bar_size_format()
+            if kwargs["bar_size"]:
+                self.bar_size = kwargs["bar_size"]
+                self._fix_bar_size_format()
 
         if kwargs.get("duration"):
-            self.duration = kwargs["duration"]
+            if kwargs["duration"]:
+                self.duration = kwargs["duration"]
 
         if kwargs.get("keep_up_to_date"):
             self.keep_up_to_date = kwargs["keep_up_to_date"]
@@ -107,7 +112,7 @@ class Bars():
         self.bar_size_long_duration = ["1 day", "1 week", "1 month"]
         logger.debug10("End Function")
 
-        self.bar_queue = queue.Queue()
+        #self.bar_queue = queue.Queue()
 
         return None
 
@@ -165,7 +170,7 @@ class Bars():
             self.bars = pandas.DataFrame(self.bar_list,
                                          columns=[
                                              "Date", "Open", "High", "Low",
-                                             "Close", "Volume", "WAP", "Count"
+                                             "Close", "Volume", "Count"
                                          ])
             self.bars["Date"] = pandas.to_datetime(self.bars["Date"],
                                                    format="%Y%m%d")
@@ -173,7 +178,7 @@ class Bars():
             self.bars = pandas.DataFrame(self.bar_list,
                                          columns=[
                                              "DateTime", "Open", "High", "Low",
-                                             "Close", "Volume", "WAP", "Count"
+                                             "Close", "Volume", "Count"
                                          ])
             self.bars["DateTime"] = pandas.to_datetime(
                 self.bars["DateTime"], format="%Y%m%d %H:%M:%S %Z")
@@ -216,29 +221,39 @@ class Bars():
         return None
 
     def _retreive_broker_bar_history(self):
-        req_id = self.brokerclient.req_historical_data(
-            self.contract,
-            self.bar_size,
-            duration_str=self.duration,
-            keep_up_to_date=self.keep_up_to_date)
+        logger.debug("Duration: %s", self.duration)
 
-        self.brokerclient.add_bar_queue(req_id, self.bar_queue)
+        if self.duration == "all":
+            logger.debug("Getting all history")
+            #if self.bar_size not in self.bar_size_long_duration:
+            #for
+
+        else:
+            req_id = self.brokerclient.req_historical_data(
+                self.contract,
+                self.bar_size,
+                duration_str=self.duration,
+                keep_up_to_date=self.keep_up_to_date)
+
+        #self.brokerclient.add_bar_queue(req_id, self.bar_queue)
         bar_list = self.brokerclient.get_data(req_id)
         logger.debug4("Bar List: %s", bar_list)
 
         for bar in bar_list:
             logger.debug3("Bar: %s", bar)
-            date = bar.date
-            open = bar.open
-            high = bar.high
-            low = bar.low
-            close = bar.close
-            volume = bar.volume
-            wap = bar.wap
-            count = bar.barCount
+            bar_date = bar.date
+            bar_open = bar.open
+            bar_high = bar.high
+            bar_low = bar.low
+            bar_close = bar.close
+            bar_volume = bar.volume
+            #bar_wap = bar.wap
+            bar_count = bar.barCount
 
-            self.bar_list.append(
-                [date, open, high, low, close, volume, wap, count])
+            self.bar_list.append([
+                bar_date, bar_open, bar_high, bar_low, bar_close, bar_volume,
+                bar_count
+            ])
 
         logger.debug4("Bar List: %s", self.bar_list[0])
         self._convert_bars_to_panda()
@@ -262,6 +277,8 @@ class Bars():
                 self.duration = "10 D"
             elif self.bar_size == "5 mins":
                 self.duration = "4 D"
+            elif self.bar_size == "1 min":
+                self.duration = "1 D"
             logger.debug("Duration Set to %s", self.duration)
         logger.debug10("End Function")
         return None
