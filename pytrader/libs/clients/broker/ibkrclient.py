@@ -31,6 +31,7 @@ Provides the client for Interactive Brokers
 from multiprocessing import current_process
 from threading import current_thread
 import datetime
+import queue
 import threading
 import time
 
@@ -155,6 +156,8 @@ class IbkrClient(EWrapper, EClient):
             "1 day", "1 week", "1 month"
         ]
 
+        self.realtime_bar_queue = {}
+
         self.bar_queue = {}
         self.__counter = 0
 
@@ -192,7 +195,7 @@ class IbkrClient(EWrapper, EClient):
         """!
         Returns the client id
 
-        @return client_id - The id of the connected client.
+        @return clientId - The id of the connected client.
         """
         return self.clientId
 
@@ -207,7 +210,7 @@ class IbkrClient(EWrapper, EClient):
         """
         if req_id:
             self.data_available[req_id].wait()
-            logger.debug("Data: %s", self.data[req_id])
+            logger.debug4("Data: %s", self.data[req_id])
             return self.data[req_id]
         else:
             return self.data
@@ -216,18 +219,12 @@ class IbkrClient(EWrapper, EClient):
         self.next_valid_id_available.wait()
         return self.next_order_id
 
-    def start_thread(self, process_queue=None):
+    def start_thread(self):
         logger.debug10("Begin Function")
-
-        if process_queue:
-            self.process_queue = process_queue
-
         self.api_thread = threading.Thread(target=self.run, daemon=True)
-
         logger.debug2("Start Broker Client Thread")
         self.api_thread.start()
         logger.debug2("Broker Client Thread Started")
-
         logger.debug10("End Function")
         return None
 
@@ -389,6 +386,65 @@ class IbkrClient(EWrapper, EClient):
                             format_date=1,
                             keep_up_to_date=False,
                             chart_options=[]):
+        """!
+        Requests contracts' historical data. When requesting historical data, a finishing time and
+        date is required along with a duration string. For example, having:
+
+        - endDateTime: 20130701 23:59:59 GMT
+        - durationStr: 3 D
+
+        will return three days of data counting backwards from July 1st 2013 at 23:59:59 GMT
+        resulting in all the available bars of the last three days until the date and time
+        specified. It is possible to specify a timezone optionally. The resulting bars will be
+        returned in EWrapper::historicalData
+
+        @param contract: The contract for which we want to retrieve the data.
+        @param bar_size_setting: The size of the bar:
+          - 1 sec   - (NOTE: While listed as a valid bar size, this size has NEVER worked for me)
+          - 5 secs  - (NOTE: While listed as a valid bar size, this size has NEVER worked for me)
+          - 15 secs - (NOTE: While listed as a valid bar size, this size has NEVER worked for me)
+          - 30 secs
+          - 1 min
+          - 2 mins
+          - 3 mins
+          - 5 mins
+          - 15 mins
+          - 30 mins
+          - 1 hr
+          - 1 day
+
+              NOTE: IB TWS-API documentation contradicts itself here.
+                - https://interactivebrokers.github.io/tws-api/historical_bars.html states that there are
+                  also two more bar sizes: 1 week, and 1 month
+                - https://interactivebrokers.github.io/tws-api/classIBApi_1_1EClient.html#aad87a15294377608e59aec1d87420594
+                  does not list those bar sizes
+        @param end_date_time: request's ending time with format yyyyMMdd HH:mm:ss {TMZ}
+        @param duration_str: the amount of time for which the data needs to be retrieved:
+          - "S (seconds) - " D (days)
+          - "W (weeks) - " M (months)
+          - " Y (years)
+        @param what_to_show: The kind of information being retreived
+          - TRADES
+          - MIDPOINT
+          - BID
+          - ASK
+          - BID_ASK
+          - HISTORICAL_VOLATILITY
+          - OPTION_IMPLIED_VOLATILITY
+          - FEE_RATE
+          - SCHEDULE
+        @param use_regular_trading_hours:
+          - set to 0 to obtain the data which was also generated outside of the Regular Trading Hours
+          - set to 1 to obtain only the RTH data
+        @param format_date:
+          - set to 1 to obtain the bars' time as yyyyMMdd HH:mm:ss
+          - set to 2 to obtain it like system time format in seconds
+        @param keep_up_to_date: set to True to received continuous updates on most recent bar data.
+        If True, and endDateTime cannot be specified.
+        @param chart_options: FIXME: TWS API does not document this parameter
+
+        @return req_id: The request identifier
+        """
         logger.debug10("Begin Function")
 
         # ==========================================================================================
@@ -424,6 +480,7 @@ class IbkrClient(EWrapper, EClient):
 
             logger.debug("Requesting Historical Bars: %s", bar_size_setting)
 
+            self.data_available[self.req_id] = threading.Event()
             self.reqHistoricalData(self.req_id, contract, end_date_time,
                                    duration_str, bar_size_setting,
                                    what_to_show, use_regular_trading_hours,
@@ -454,16 +511,16 @@ class IbkrClient(EWrapper, EClient):
         """!
         Requests historical Time&Sales data for an instrument.
 
-        @param contract - Contract object that is subject of query
-        @param start_date_time,i.e. - "20170701 12:01:00". Uses TWS timezone specified at login.
-        @param end_date_time,i.e. - "20170701 13:01:00". In TWS timezone. Exactly one of start time and end time has to be defined.
-        @param number_of_ticks - Number of distinct data points. Max currently 1000 per request.
-        @param what_to_show - (Bid_Ask, Midpoint, Trades) Type of data requested.
-        @param use_regular_trading_hours - Data from regular trading hours (1), or all available hours (0)
-        @param ignore_size - A filter only used when the source price is Bid_Ask
-        @param misc_options - should be defined as null, reserved for internal use
+        @param contract: Contract object that is subject of query
+        @param start_date_time,i.e.: "20170701 12:01:00". Uses TWS timezone specified at login.
+        @param end_date_time,i.e.: "20170701 13:01:00". In TWS timezone. Exactly one of start time and end time has to be defined.
+        @param number_of_ticks: Number of distinct data points. Max currently 1000 per request.
+        @param what_to_show: (Bid_Ask, Midpoint, Trades) Type of data requested.
+        @param use_regular_trading_hours: Data from regular trading hours (1), or all available hours (0)
+        @param ignore_size: A filter only used when the source price is Bid_Ask
+        @param misc_options: should be defined as null, reserved for internal use
 
-        @return req_id - The request's identifier
+        @return req_id: The request's identifier
         """
         logger.debug10("Begin Function")
         self.req_id += 1
@@ -501,8 +558,8 @@ class IbkrClient(EWrapper, EClient):
         10-15 minutes delayed (depending on the market data type specified)
 
         IB API's description of the parameters is incomplete.
-        @param contract - The contract for which the data is being requested.
-        @param generic_tick_list - Comma Separated ids of the available generic ticks:
+        @param contract: The contract for which the data is being requested.
+        @param generic_tick_list: Comma Separated ids of the available generic ticks:
             - 100 Option Volume (currently for stocks)
             - 101 Option Open Interest (currently for stocks)
             - 104 Historical Volatility (currently for stocks)
@@ -519,16 +576,16 @@ class IbkrClient(EWrapper, EClient):
             - 258 Fundamental Ratios
             - 411 Realtime Historical Volatility
             - 456 IBDividends
-        @param snapshot - for users with corresponding real time market data subscriptions:
+        @param snapshot: for users with corresponding real time market data subscriptions:
             - True will return a one-time snapshot
             - False will provide streaming data
-        @param regulatory_snapshot - snapshot for US stocks requests NBBO snapshots for users which
+        @param regulatory_snapshot: snapshot for US stocks requests NBBO snapshots for users which
             have "US Securities Snapshot Bundle" subscription but not corresponding Network A, B, or
             C subscription necessary for streaming * market data. One-time snapshot of current
             market price that will incur a fee of 1 cent to the account per snapshot
         @param market_data_options -
 
-        @return req_id - The rquest's identifier
+        @return req_id: The rquest's identifier
         """
         logger.debug10("Begin Function")
         self.req_id += 1
@@ -539,7 +596,7 @@ class IbkrClient(EWrapper, EClient):
 
     def req_real_time_bars(self,
                            contract,
-                           bar_size_setting,
+                           bar_size_setting=5,
                            what_to_show="TRADES",
                            use_regular_trading_hours=True,
                            real_time_bar_options=[]):
@@ -551,9 +608,9 @@ class IbkrClient(EWrapper, EClient):
         market data subscriptions allowed in an account.
 
         IB API's parameter description is incomplete.
-        @param contract - The Contract Being Requested
-        @param bar_size_setting - Currently being ignored (https://interactivebrokers.github.io/tws-api/classIBApi_1_1EClient.html#a644a8d918f3108a3817e8672b9782e67)
-        @param what_to_show - The nature of the data being retreived:
+        @param contract: The Contract Being Requested
+        @param bar_size_setting: Currently being ignored (https://interactivebrokers.github.io/tws-api/classIBApi_1_1EClient.html#a644a8d918f3108a3817e8672b9782e67)
+        @param what_to_show: The nature of the data being retreived:
             - TRADES
             - MIDPOINT
             - BID
@@ -563,7 +620,7 @@ class IbkrClient(EWrapper, EClient):
             - 1 to obtain only the RTH data
         @param real_time_bar_options -
 
-        @return req_id - The request's identifier
+        @return req_id: The request's identifier
         """
         logger.debug10("Begin Function")
 
@@ -579,7 +636,9 @@ class IbkrClient(EWrapper, EClient):
 
         logger.debug("Requesting Historical Bars: %s", bar_size_setting)
 
-        self.reqRealTimeData(self.req_id, contract, bar_size_setting,
+        self.realtime_bar_queue[self.req_id] = queue.Queue()
+
+        self.reqRealTimeBars(self.req_id, contract, bar_size_setting,
                              what_to_show, use_regular_trading_hours,
                              real_time_bar_options)
 
@@ -598,9 +657,9 @@ class IbkrClient(EWrapper, EClient):
         """!
         Requests security definition option parameters for viewing a contract's option chain
 
-        @param contract - The Contract for the request
+        @param contract: The Contract for the request
 
-        @return req_id - The Request's identifier
+        @return req_id: The Request's identifier
         """
         logger.debug10("Begin Function")
         self.req_id += 1
@@ -624,13 +683,12 @@ class IbkrClient(EWrapper, EClient):
         """!
         Requests tick-by-tick data.
 
-        @param req_id -  unique identifier of the request.
-        @param contract - the contract for which tick-by-tick data is requested.
-        @param tick_type - tick-by-tick data type: "Last", "AllLast", "BidAsk" or "MidPoint".
-        @param numberOfTicks - number of ticks.
-        @param ignoreSize - ignore size flag.
+        @param contract: the contract for which tick-by-tick data is requested.
+        @param tick_type: tick-by-tick data type: "Last", "AllLast", "BidAsk" or "MidPoint".
+        @param numberOfTicks: number of ticks.
+        @param ignoreSize: ignore size flag.
 
-        @return req_id - The request's identifier
+        @return req_id: The request's identifier
         """
         logger.debug("Begin Function")
 
@@ -652,7 +710,7 @@ class IbkrClient(EWrapper, EClient):
         Changes the TWS/GW log level. The default is 2 = ERROR
         5 = DETAIL is required for capturing all API messages and troubleshooting API programs
 
-        @param log level - Valid values are:
+        @param log level: Valid values are:
             - 1 = SYSTEM
             - 2 = ERROR
             - 3 = WARNING
@@ -1218,6 +1276,7 @@ class IbkrClient(EWrapper, EClient):
         logger.debug10("Begin Function")
         logger.debug("Data Complete for ReqID: %s from: %s to: %s", req_id,
                      start, end)
+        self.data_available[req_id].set()
         logger.debug10("End Function")
 
     @iswrapper
@@ -1669,25 +1728,31 @@ class IbkrClient(EWrapper, EClient):
         return None
 
     @iswrapper
-    def realtimeBar(self, req_id: int, date, open_, high, low, close, volume,
-                    wap, count: int):
+    def realtimeBar(self, req_id: int, datetime, bar_open, bar_high, bar_low,
+                    bar_close, bar_volume, bar_wap, bar_count: int):
         """!
         Updates the real time 5 seconds bars
 
-        @param req_id - the request's identifier
-        @param date - the bar's date and time (Epoch/Unix time)
-        @param open_ - the bar's open point
-        @param high - the bar's high point
-        @param low - the bar's low point
-        @param close - the bar's closing point
-        @param volume - the bar's traded volume (only returned for TRADES data)
-        @param WAP - the bar's Weighted Average Price rounded to minimum increment (only available
+        @param req_id: the request's identifier
+        @param datetime: the bar's date and time (Epoch/Unix time)
+        @param bar_open: the bar's open point
+        @param bar_high: the bar's high point
+        @param bar_low: the bar's low point
+        @param bar_close: the bar's closing point
+        @param bar_volume: the bar's traded volume (only returned for TRADES data)
+        @param bar_wap: the bar's Weighted Average Price rounded to minimum increment (only available
             for TRADES).
-        @param count - the number of trades during the bar's timespan (only available for TRADES).
+        @param bar_count: the number of trades during the bar's timespan (only available for TRADES).
 
         @return None
         """
         logger.debug10("Begin Function")
+
+        bar = [
+            datetime, bar_open, bar_high, bar_low, bar_close, bar_volume,
+            bar_wap, bar_count
+        ]
+        self.realtime_bar_queue[req_id].put(bar)
         logger.debug10("End Function")
         return None
 
@@ -2476,6 +2541,9 @@ class IbkrClient(EWrapper, EClient):
         return None
 
     def _calculate_deep_data_allotment(self):
+        """!
+        Caclulates the allowed dep data requests available.
+        """
         min_allotment = 3
         max_allotment = 60
 
