@@ -297,8 +297,11 @@ class IbkrClient(EWrapper, EClient):
 
     def place_order(self, contract, order):
         logger.debug("Order: %s", order)
+        self.next_valid_id_available.wait()
         self.placeOrder(self.next_order_id, contract, order)
-        return self.next_order_id
+        order_id = self.next_order_id
+        self.req_ids()
+        return order_id
 
     def req_account_summary(self, account_types="ALL", tags=[]):
         self.req_id += 1
@@ -534,6 +537,18 @@ class IbkrClient(EWrapper, EClient):
                                 misc_options)
         logger.debug10("End Function")
         return self.req_id
+
+    def req_ids(self):
+        """!
+        Requests the next valid order ID at the current moment.
+
+        @return None
+        """
+
+        # NOTE: TWS API reqIds has a required parameter 'numIds'.  The API Docs say it is
+        # depreciated, however, an error message will occur if one is not set.
+        self.next_valid_id_available.clear()
+        self.reqIds(1)
 
     def req_managed_accounts(self):
         """!
