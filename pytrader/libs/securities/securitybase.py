@@ -61,6 +61,7 @@ class SecurityBase():
     def __init__(self, *args, **kwargs):
         logger.debug10("Begin Function")
         logger.debug("Kwargs: %s", kwargs)
+
         if kwargs.get("ticker_symbol"):
             self.ticker_symbol = kwargs["ticker_symbol"]
         if kwargs.get("brokerclient"):
@@ -73,15 +74,35 @@ class SecurityBase():
         else:
             self.bar_sizes = ["1 day"]
 
-        ## Used to hold the contract information
+        ## Used to hold the contract
         self.contract = None
 
         ## Used to hold the bar information
         self.bars = {}
 
+        ## Duration for contract history
+        self.duration = None
+
+        ## Used to store the exchange
+        self.exchange = "SMART"
+
+        ## Used to store the primary exchange
+        self.primary_exchange = None
+
+        ## Used to store the currency
+        self.currency = "USD"
+
+        ## Used for the database session
+        self.db_session = self.__create_database_session()
+
+        self.ibkr_etf = None
+
+        if kwargs.get("duration"):
+            self.duration = kwargs["duration"]
+
         logger.debug10("End Function")
 
-    def set_contract(self, primary_exchange=None, exchange="SMART"):
+    def set_contract(self):
         """!@fn set_contract
 
         @param exchange
@@ -90,11 +111,10 @@ class SecurityBase():
         contract = Contract()
         contract.symbol = self.ticker_symbol
         contract.secType = self.security_type
-        contract.exchange = exchange
-        contract.currency = "USD"
-        logger.debug("Primary Exchange: %s", primary_exchange)
-        if primary_exchange:
-            contract.primaryExchange = primary_exchange
+        contract.exchange = self.exchange
+        contract.currency = self.currency
+        if self.primary_exchange:
+            contract.primaryExchange = self.primary_exchange
 
         logger.debug("Contract: %s", contract)
         self.contract = contract
@@ -103,62 +123,36 @@ class SecurityBase():
 
         return contract
 
+    def set_contract_info(self):
+        contract = self.__query_broker_database()
+        self.ibkr_etf = contract
+
+        if contract is not None:
+            self.contract_id = contract.contract_id
+            self.ticker_symbol = contract.ticker_symbol
+            self.security_type = contract.security_type
+            self.exchange = contract.exchange
+            self.currency = contract.currency
+            self.primary_exchange = contract.primary_exchange
+        else:
+            self.update_broker_info()
+
+    def set_bar_begin_date(self):
+        logger.debug10("Begin Function")
+        begin_date = self.__query_begin_date()
+        logger.debug("Begin Date: %s", begin_date)
+        self.begin_date = begin_date
+        logger.debug10("End Function")
+
     def get_bars(self):
         return self.bars
-
-    def update_broker_bar_begin_date(self):
-        logger.debug10("Begin Function")
-        database = ibkr.IbkrEtfBarHistoryBeginDate()
-        logger.debug10("End Function")
-
-    def update_broker_info(self):
-        self.set_contract()
-        logger.debug("Get Security Data")
-
-        db = database.Database()
-        db.create_engine()
-        db_session = db.create_session()
-
-        req_id = self.brokerclient.req_contract_details(self.contract)
-        logger.debug("Request ID: %s", req_id)
-        data = self.brokerclient.get_data(req_id)
-
-        contract = ibkr.IbkrEtfContracts()
-        contract.insert(db_session, data.contract.conId, data.contract.symbol,
-                        data.contract.secType, data.contract.exchange,
-                        data.contract.currency, data.contract.localSymbol,
-                        data.contract.primaryExchange,
-                        data.contract.tradingClass)
-
-        req_id = self.brokerclient.req_head_timestamp(
-            self.contract, use_regular_trading_hours=0)
-        data = self.brokerclient.get_data(req_id)
-
-        locale_ = locale.getlocale()
-        logger.debug("Locale: %s", locale_)
-        data = data + " GMT"
-        datetime_utc = datetime.datetime.strptime(data, '%Y%m%d-%H:%M:%S %Z')
-
-        datetime_est = datetime_utc.replace(
-            tzinfo=datetime.timezone.utc).astimezone(tz=None)
-
-        logger.debug("DateTime: %s",
-                     datetime_est.strftime('%Y-%m-%d %H:%M:%S %Z%z'))
-
-        begin_history_datetime = ibkr.IbkrEtfBarHistoryBeginDate(
-            ibkr_etf=contract)
-        begin_history_datetime.insert(db_session, datetime_est)
-
-        # self.update_ipo_date()
-        logger.debug10("End Function")
-        return None
 
     def update_info(self, source=None):
         logger.debug10("Begin Function")
 
         if source == "broker" or source == "ibkr":
-            self.update_broker_info()
-            self.update_broker_bar_begin_date()
+            self.__update_broker_info()
+            self.__update_broker_bar_begin_date()
         elif source == "yahoo":
             self.update_yahoo_info()
         else:
@@ -190,14 +184,21 @@ class SecurityBase():
 
         logger.debug10("End Function")
 
-    def retrieve_bar_history(self, keep_up_to_date=False):
+    def update_history(self, keep_up_to_date=False):
+        logger.debug10("Begin Function")
+        self.set_contract_info()
+        self.set_contract()
+        self.set_bar_begin_date()
+
         for size in self.bar_sizes:
             self.bars[size] = bars.Bars(brokerclient=self.brokerclient,
-                                        queue=self.process_queue,
                                         contract=self.contract,
                                         keep_up_to_date=keep_up_to_date,
-                                        bar_size=size)
+                                        bar_size=size,
+                                        duration=self.duration,
+                                        begin_date=self.begin_date)
             self.bars[size].retrieve_bar_history()
+        logger.debug("End Function")
 
     def update_bars(self):
         bar_process = {}
@@ -210,35 +211,80 @@ class SecurityBase():
         logger.debug("End Function")
         return None
 
-    # def update_ipo_date(self):
-    #     logger.debug10("Begin Function")
-    #     result = self.__get_info_from_database()
-
-    #     if result[0]["ibkr_exchange"] == "SMART" and result[0][
-    #             "ibkr_primary_exchange"]:
-    #         self.primary_exchange = result[0]["ibkr_primary_exchange"]
-    #         self.set_contract(self.ticker_symbol,
-    #                           self.security_type,
-    #                           primary_exchange=self.primary_exchange)
-    #     else:
-    #         self.set_contract(self.ticker_symbol, self.security_type)
-
-    #     logger.debug("Get Security Data")
-    #     req_id = self.brokerclient.get_ipo_date(self.contract)
-    #     logger.debug("Request ID: %s", req_id)
-    #     data = self.brokerclient.get_data(req_id)
-    #     self.brokerclient.cancel_head_timestamp(req_id)
-    #     ipo_date = datetime.datetime.strptime(data, "%Y%m%d-%H:%M:%S")
-    #     logger.debug("Data: %s", ipo_date)
-
-    #     db = etf_info.EtfInfo()
-    #     db.update_ibkr_ipo_date(self.ticker_symbol, ipo_date)
-
-    #     logger.debug10("End Function")
-    #     return None
-
     def calculate_ema(self, bar_size, span):
         self.bars[bar_size].calculate_ema(span)
 
     def calculate_sma(self, bar_size, span):
         self.bars[bar_size].calculate_sma(span)
+
+    def __create_database_session(self):
+        db = database.Database()
+        db.create_engine()
+        db_session = db.create_session()
+
+        return db_session
+
+    def __query_broker_database(self):
+        logger.debug10("Begin Function")
+        db = ibkr.IbkrEtfContracts()
+        contract = db.query_contract(self.db_session, self.ticker_symbol)
+
+        if len(contract) > 0:
+            return contract[0]
+        else:
+            return None
+
+        logger.debug10("End Function")
+
+    def __query_begin_date(self):
+        contract = self.__query_broker_database()
+
+        db = ibkr.IbkrEtfBarHistoryBeginDate()
+        begin_date = db.query_begin_date(self.db_session, self.ibkr_etf)
+        logger.debug("Begin Date: %s", begin_date)
+        return begin_date
+
+    def __update_broker_bar_begin_date(self):
+        logger.debug10("Begin Function")
+        database = ibkr.IbkrEtfBarHistoryBeginDate()
+        logger.debug10("End Function")
+
+    def __update_broker_info(self):
+        contract = self.__query_broker_database()
+
+        # self.set_contract()
+        # logger.debug("Get Security Data")
+
+        # req_id = self.brokerclient.req_contract_details(self.contract)
+        # logger.debug("Request ID: %s", req_id)
+        # data = self.brokerclient.get_data(req_id)
+
+        # contract = ibkr.IbkrEtfContracts()
+        # contract.insert(db_session, data.contract.conId, data.contract.symbol,
+        #                 data.contract.secType, data.contract.exchange,
+        #                 data.contract.currency, data.contract.localSymbol,
+        #                 data.contract.primaryExchange,
+        #                 data.contract.tradingClass)
+
+        # req_id = self.brokerclient.req_head_timestamp(
+        #     self.contract, use_regular_trading_hours=0)
+        # data = self.brokerclient.get_data(req_id)
+
+        # locale_ = locale.getlocale()
+        # logger.debug("Locale: %s", locale_)
+        # data = data + " UTC"
+        # datetime_utc = datetime.datetime.strptime(data, '%Y%m%d %H:%M:%S %Z')
+
+        # datetime_est = datetime_utc.replace(
+        #     tzinfo=datetime.timezone.utc).astimezone(tz=None)
+
+        # logger.debug("DateTime: %s",
+        #              datetime_est.strftime('%Y-%m-%d %H:%M:%S %Z%z'))
+
+        # begin_history_datetime = ibkr.IbkrEtfBarHistoryBeginDate(
+        #     ibkr_etf=contract)
+        # begin_history_datetime.insert(db_session, datetime_est)
+
+        # # self.update_ipo_date()
+        # logger.debug10("End Function")
+        # return None
