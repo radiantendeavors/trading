@@ -35,7 +35,7 @@ import time
 from pytrader.libs.system import logging
 
 # Application Libraries
-from pytrader.libs.securities import security
+#from pytrader.libs.securities import security
 from pytrader import strategies
 # ==================================================================================================
 #
@@ -59,20 +59,13 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 class Strategy(strategies.Strategy):
 
-    def __init__(self,
-                 brokerclient,
-                 queue,
-                 securities_list=None,
-                 bar_sizes=[]):
-        if bar_sizes is None:
-            bar_sizes = ["1 day"]
-        if not securities_list:
-            securities_list = ["SPY"]
-        logger.debug("Bar Sizes: %s", bar_sizes)
-        super().__init__(brokerclient,
-                         queue,
-                         securities_list=securities_list,
-                         bar_sizes=bar_sizes)
+    def __init__(self, brokerclient):
+        self.security = "SPY"
+        self.bar_sizes = "5 secs"
+        self.short_period = 5
+        self.long_period = 20
+
+        super().__init__(brokerclient)
 
 
 # ==================================================================================================
@@ -80,14 +73,9 @@ class Strategy(strategies.Strategy):
 # Functions
 #
 # ==================================================================================================
-def run(brokerclient, queue, securities_list=None, bar_sizes=None):
+def run(brokerclient):
     logger.debug10("Begin Function")
-    logger.debug9("Running Example Strategy")
+    strategy = Strategy(brokerclient)
 
-    strategy = Strategy(brokerclient,
-                        queue,
-                        securities_list=securities_list,
-                        bar_sizes=bar_sizes)
     strategy.run()
-
-    logger.debug10("End Function")
+    logger.debug("End Function")
