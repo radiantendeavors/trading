@@ -69,36 +69,6 @@ def broker_address(args, conf):
         return conf.brokerclient_address
 
 
-def broker_port(args, conf):
-    """!
-    Returns the port to be used by the broker.
-
-    @param args - Provides the arguments from the command line
-    @param conf - Provides the configuration information from config files.
-
-    @return port - The brokeclient's port
-    """
-    if args.port:
-        return args.port
-    else:
-        return conf.brokerclient_port
-
-
-def set_bar_sizes(args):
-    """!
-    Returns the port to be used by the broker.
-
-    @param args - Provides the arguments from the command line
-    @param conf - Provides the configuration information from config files.
-
-    @return port - The brokeclient's port
-    """
-    if args.bar_sizes:
-        return args.bar_sizes
-    else:
-        return None
-
-
 def process_arguments(args, conf):
     """!
     Processes the arguments received from the command line.
@@ -112,18 +82,9 @@ def process_arguments(args, conf):
     logger.debug10("Begin Function")
 
     address = broker_address(args, conf)
-    port = broker_port(args, conf)
     strategy_list = args.strategies
-    bar_sizes = set_bar_sizes(args)
 
-    logger.debug("Bar Sizes: %s", bar_sizes)
-
-    if args.securities:
-        securities = args.securities
-    else:
-        securities = None
-
-    processed_args = (address, port, strategy_list, bar_sizes, securities)
+    processed_args = (address, strategy_list)
     logger.debug10("End Function")
     return processed_args
 
@@ -151,29 +112,11 @@ def init(args):
     parser.add_ibapi_connection_options()
     parser.add_logging_option()
 
-    parser.add_argument("-b",
-                        "--bar-sizes",
-                        choices=[
-                            "1secs", "5secs", "10secs", "15secs", "30secs",
-                            "1min", "2mins", "3mins", "5mins", "10mins",
-                            "15mins", "20mins", "30mins", "1hour", "2hours",
-                            "3hours", "4hours", "8hours", "1day", "1week",
-                            "1month"
-                        ],
-                        nargs="+",
-                        help="Bar Size")
     parser.add_argument("-s",
                         "--strategies",
                         nargs="+",
                         required=True,
                         help="One or more strategies to run.")
-    parser.add_argument("-S",
-                        "--securities",
-                        nargs="*",
-                        help="""
-        Optionally one or more securities to use for strategy.  If not
-        set, the strategies default securities list will be used.
-        """)
 
     parser.set_defaults(debug=False, verbosity=0, loglevel='INFO')
 
