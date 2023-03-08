@@ -34,6 +34,7 @@ from pytrader.libs.system import logging
 
 # Other Application Libraries
 from pytrader.libs import securities
+from pytrader.libs.applications import downloader
 from pytrader.libs.clients import broker
 from pytrader.libs.utilities import config
 from pytrader.ui.pytrdownload import client_id
@@ -52,33 +53,11 @@ The base logger.
 """
 logger = logging.getLogger(__name__)
 
-
 # ==================================================================================================
 #
 # Functions
 #
 # ==================================================================================================
-def basic_info(investments, brokerclient, security=None):
-    """
-    basic_info
-
-    @param investments
-    @param brokerclient
-    @param security
-    """
-    logger.debug("Begin Function")
-
-    if security:
-        info = securities.Securities(brokerclient=brokerclient,
-                                     securities_type=investments,
-                                     securities_list=security)
-    else:
-        info = securities.Securities(brokerclient=brokerclient,
-                                     securities_type=investments)
-
-    info.update_info(source="broker")
-
-    logger.debug("End Function")
 
 
 def broker_download(args):
@@ -110,12 +89,21 @@ def broker_download(args):
     else:
         investments = ["indexes", "etfs", "stocks"]
 
+    dl = downloader.DownloadProcess()
+
     if args.info:
         if args.security:
-            basic_info(investments[0], brokerclient, security=args.security)
+            dl.download_info(investments[0],
+                             brokerclient,
+                             securities_list=args.security)
         else:
             for investment in investments:
-                basic_info(investment, brokerclient)
+                dl.download_info(investment, brokerclient)
+
+    if args.bar_size:
+        if args.security:
+            dl.download_bars(investments[0], brokerclient, args.bar_size,
+                             args.security, args.duration)
 
     brokerclient.disconnect()
     logger.debug10("End Function")
@@ -132,19 +120,18 @@ def parser(*args, **kwargs):
     cmd.add_argument("-b",
                      "--bar-size",
                      choices=[
-                         "1 secs", "5 secs", "10 secs", "15 secs", "30 secs",
-                         "1 min", "2 mins", "3 mins", "5 mins", "10 mins",
-                         "15 mins", "20 mins", "30 mins", "1 hour", "2 hours",
-                         "3 hours", "4 hours", "8 hours", "1 day", "1 week",
-                         "1 month"
+                         "1secs", "5secs", "10secs", "15secs", "30secs",
+                         "1min", "2mins", "3mins", "5mins", "10mins", "15mins",
+                         "20mins", "30mins", "1hour", "2hours", "3hours",
+                         "4hours", "8hours", "1day", "1week", "1month"
                      ],
-                     default="1 day",
+                     nargs="+",
                      help="Bar Size")
     cmd.add_argument("-i",
                      "--info",
                      action="store_true",
                      help="Get Basic Security information.")
-    cmd.add_argument("-d", "--duration")
+    cmd.add_argument("-d", "--duration", help="How far back to get data")
     cmd.add_argument("-s",
                      "--security",
                      nargs="+",
