@@ -1,4 +1,4 @@
-"""!@package pytrader.libs.applications.pytrader
+"""!@package pytrader.libs.applications.trader
 
 The main user interface for the trading program.
 
@@ -24,8 +24,8 @@ The main user interface for the trading program.
 """
 
 # System libraries
-import multiprocessing
-import queue
+#import multiprocessing
+import threading
 
 # 3rd Party libraries
 
@@ -33,6 +33,7 @@ import queue
 from pytrader.libs.system import logging
 
 # Application Libraries
+#from pytrader.libs.applications import broker
 from pytrader.libs.clients import broker
 from pytrader.libs import utilities
 
@@ -45,7 +46,7 @@ from pytrader.libs import utilities
 logger = logging.getLogger(__name__)
 
 ## Client ID Used for the Interactive Brokers API
-client_id = 1001
+client_id = 1350
 
 ## The python formatted location of the strategies
 import_path = "pytrader.strategies."
@@ -62,75 +63,26 @@ class ProcessManager():
     """
 
     def __init__(self):
-        ## Used for tracking the broker process.
-        self.broker_process = None
-
         ## Used far tracking the strategy processes.
         self.strategy_processes = []
 
-    def brokerclient_process(self, brokerclient, process_queue):
-        # brokerclient.connect(address, port, client_id)
-        brokerclient.start_thread(process_queue)
-
-        next_order_id = brokerclient.get_next_order_id()
-        logger.debug("Received next order id: %s", next_order_id)
-        return None
-
-    def start_brokerclient_process(self, brokerclient, process_queue):
-        # self.broker_process = multiprocessing.Process(
-        #     target=self.brokerclient_process,
-        #     args=(brokerclient, process_queue))
-        # self.broker_process.start()
-        self.brokerclient_process(brokerclient, process_queue)
-        return None
-
-    def stop_brokerclient_process(self, brokerclient):
-        # self.broker_process.join()
-        # brokerclient.stop_thread()
-        brokerclient.disconnect()
-
-    def start_strategy_process(self, strategy, brokerclient, process_queue,
-                               securities_list, bar_sizes):
-        logger.debug10("Begin Function")
-        # strategy_process = multiprocessing.Process(
-        #     target=strategy,
-        #     args=(brokerclient, process_queue, securities_list, bar_sizes))
-        # strategy_process.start()
-        strategy(brokerclient, process_queue, securities_list, bar_sizes)
-        logger.debug10("End Function")
-        #return strategy_process
-        return None
-
     def run_processes(self, processed_args):
+        logger.debug10("Begin Function")
         address = processed_args[0]
-        port = processed_args[1]
-        strategy_list = processed_args[2]
-        bar_sizes = processed_args[3]
-        securities = processed_args[4]
+        strategy_list = processed_args[1]
 
-        process_queue = multiprocessing.Queue()
-        brokerclient = broker.brokerclient("ibkr")
-        brokerclient.connect(address, port, client_id)
+        brokerclient = broker.BrokerClient("ibkr")
+        brokerclient.connect(address, 7497, client_id)
+        logger.debug("Broker Connected")
 
-        logger.debug("Starting Processes")
+        brokerclient.start_thread()
 
-        self.start_brokerclient_process(brokerclient, process_queue)
-
-        self.strategy_processes = {}
         for i in strategy_list:
             strategy = utilities.get_plugin_function(program=i,
                                                      cmd='run',
                                                      import_path=import_path)
-            self.start_strategy_process(strategy, brokerclient, process_queue,
-                                        securities, bar_sizes)
-
-        logger.debug("Processes Started")
-
-        logger.debug("Stopping Processes")
-        self.stop_brokerclient_process(brokerclient)
-
-        # for i in self.strategy_processes:
-        #     i.join()
+            logger.debug("Starting Strategy: %s", i)
+            strategy(brokerclient)
 
         logger.debug("Processes Stopped")
 
