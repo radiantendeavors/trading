@@ -97,118 +97,39 @@ class IbkrEtfContracts(Base):
     trading_class: Mapped[str] = mapped_column(String(6))
     last_updated: Mapped[date] = mapped_column(
         server_default=func.current_timestamp())
-    history_begin_date: Mapped["IbkrEtfBarHistoryBeginDate"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_1min_trades: Mapped["IbkrEtfBar1MinTrades"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_1min_bids: Mapped["IbkrEtfBar1MinBids"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_1min_asks: Mapped["IbkrEtfBar1MinAsks"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_1min_adjusted: Mapped["IbkrEtfBar1MinAdjusted"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_1min_historical_volatility: Mapped[
-        "IbkrEtfBar1MinHistoricalVolatility"] = relationship(
-            back_populates="ibkr_etf")
-    etf_bar_1min_option_implied_volatility: Mapped[
-        "IbkrEtfBar1MinOptionImpliedVolatility"] = relationship(
-            back_populates="ibkr_etf")
-    etf_bar_5min_trades: Mapped["IbkrEtfBar1MinTrades"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_5min_bids: Mapped["IbkrEtfBar1MinBids"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_5min_asks: Mapped["IbkrEtfBar1MinAsks"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_5min_adjusted: Mapped["IbkrEtfBar1MinAdjusted"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_5min_historical_volatility: Mapped[
-        "IbkrEtfBar1MinHistoricalVolatility"] = relationship(
-            back_populates="ibkr_etf")
-    etf_bar_5min_option_implied_volatility: Mapped[
-        "IbkrEtfBar1MinOptionImpliedVolatility"] = relationship(
-            back_populates="ibkr_etf")
-    etf_bar_15min_trades: Mapped["IbkrEtfBar1MinTrades"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_15min_bids: Mapped["IbkrEtfBar1MinBids"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_15min_asks: Mapped["IbkrEtfBar1MinAsks"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_15min_adjusted: Mapped["IbkrEtfBar1MinAdjusted"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_15min_historical_volatility: Mapped[
-        "IbkrEtfBar1MinHistoricalVolatility"] = relationship(
-            back_populates="ibkr_etf")
-    etf_bar_15min_option_implied_volatility: Mapped[
-        "IbkrEtfBar1MinOptionImpliedVolatility"] = relationship(
-            back_populates="ibkr_etf")
-    etf_bar_30min_trades: Mapped["IbkrEtfBar1MinTrades"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_30min_bids: Mapped["IbkrEtfBar1MinBids"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_30min_asks: Mapped["IbkrEtfBar1MinAsks"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_30min_adjusted: Mapped["IbkrEtfBar1MinAdjusted"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_3min_historical_volatility: Mapped[
-        "IbkrEtfBar1MinHistoricalVolatility"] = relationship(
-            back_populates="ibkr_etf")
-    etf_bar_30min_option_implied_volatility: Mapped[
-        "IbkrEtfBar1MinOptionImpliedVolatility"] = relationship(
-            back_populates="ibkr_etf")
-    etf_bar_1hr_trades: Mapped["IbkrEtfBar1MinTrades"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_1hr_bids: Mapped["IbkrEtfBar1MinBids"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_1hr_asks: Mapped["IbkrEtfBar1MinAsks"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_1hr_adjusted: Mapped["IbkrEtfBar1MinAdjusted"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_1hr_historical_volatility: Mapped[
-        "IbkrEtfBar1MinHistoricalVolatility"] = relationship(
-            back_populates="ibkr_etf")
-    etf_bar_1hr_option_implied_volatility: Mapped[
-        "IbkrEtfBar1MinOptionImpliedVolatility"] = relationship(
-            back_populates="ibkr_etf")
-    etf_bar_daily_trades: Mapped["IbkrEtfBar1MinTrades"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_daily_bids: Mapped["IbkrEtfBar1MinBids"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_daily_asks: Mapped["IbkrEtfBar1MinAsks"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_daily_adjusted: Mapped["IbkrEtfBar1MinAdjusted"] = relationship(
-        back_populates="ibkr_etf")
-    etf_bar_daily_historical_volatility: Mapped[
-        "IbkrEtfBar1MinHistoricalVolatility"] = relationship(
-            back_populates="ibkr_etf")
-    etf_bar_daily_option_implied_volatility: Mapped[
-        "IbkrEtfBar1MinOptionImpliedVolatility"] = relationship(
-            back_populates="ibkr_etf")
 
     def __repr__(self) -> str:
-        return f"Contract(id={self.id!r}, ticker_symbol={self.ticker_symbol!r})"
+        repr_str = f"""
+        IbkrEtfContracts(
+            id={self.id!r},
+            contract_id={self.contract_id!r},
+            ticker_symbol={self.ticker_symbol!r}
+        )
+        """
+        return repr_str
 
-    def select(self, db_session, ticker_symbol):
-        ticker_list = []
+    def query_contract(self, db_session, ticker_symbol):
+        logger.debug10("Begin Funtion")
+        query = select(IbkrEtfContracts).where(
+            IbkrEtfContracts.ticker_symbol == ticker_symbol)
 
-        if filter:
-            logger.debug("Filtered By: %s", ticker_symbol)
+        results = db_session.execute(query).one()
 
-            query = select(IbkrEtfContracts).where(
-                IbkrEtfContracts.ticker_symbol == ticker_symbol)
+        logger.debug("Results: %s", results)
+        logger.debug10("End Function")
+        return results
 
-            results = db_session.execute(query)
-        else:
-            query = select(IbkrEtfContracts)
-            results = db_session.executy(query)
+    def query_contracts(self, db_session):
+        logger.debug10("Begin Funtion")
+        query = select(IbkrEtfContracts)
+        results = db_session.execute(query).all()
 
-        for item in results:
-            logger.debug("Result: %s", item)
-            ticker_list.append(item.ticker_symbol)
-
-        return ticker_list
+        logger.debug("Results: %s", results)
+        logger.debug10("End Function")
+        return results
 
     def row_exists(self, db_session, ticker_symbol):
-        ticker_list = self.select(db_session, ticker_symbol)
+        ticker_list = self.query_contract(db_session, ticker_symbol)
 
         if len(ticker_list) == 0:
             return False
@@ -250,26 +171,31 @@ class IbkrEtfBarHistoryBeginDate(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     ibkr_etf_id: Mapped[int] = mapped_column(
         ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="history_begin_date")
+    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship()
     oldest_datetime: Mapped[datetime]
     last_updated: Mapped[date] = mapped_column(
         server_default=func.current_timestamp())
 
-    def select(self, db_session, ibkr_etf):
-        date_list = []
+    def __repr__(self) -> str:
+        repr_str = f"""
+        IbkrEtfBarHistoryBeginDate(
+            id={self.id!r},
+            ibkr_etf_id={self.ibkr_etf_id!r},
+            oldest_datetime={self.oldest_datetime!r},
+            last_updated={self.last_updated!r}
+        )
+        """
+        return repr_str
 
-        if filter:
-            date_object = db_session.query(IbkrEtfContracts).filter(
-                IbkrEtfBarHistoryBeginDate.ibkr_etf == ibkr_etf).all()
-        else:
-            date_object = db_session.query(IbkrEtfContracts).all()
+    def query_begin_date(self, db_session, ibkr_etf):
+        logger.debug10("Begin Function")
+        query = select(IbkrEtfBarHistoryBeginDate).where(
+            IbkrEtfBarHistoryBeginDate.ibkr_etf == ibkr_etf)
 
-        for item in date_object:
-            logger.debug("Result: %s", item)
-            date_list.append(item.oldest_datetime)
-
-        return date_list
+        results = db_session.execute(query).one()
+        logger.debug("Results: %s", results)
+        logger.debug10("End Function")
+        return results[0].oldest_datetime
 
     def row_exists(self, db_session):
         date_list = []
@@ -283,7 +209,8 @@ class IbkrEtfBarHistoryBeginDate(Base):
     def insert(self, db_session, oldest_datetime):
         self.oldest_datetime = oldest_datetime
 
-        row_exists = self.row_exists(db_session)
+        #row_exists = self.row_exists(db_session)
+        row_exists = False
 
         if not row_exists:
             try:
@@ -304,8 +231,7 @@ class IbkrEtfBar1MinTrades(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     ibkr_etf_id: Mapped[int] = mapped_column(
         ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_1min_trades")
+    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship()
     date_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     bar_open: Mapped[float]
     bar_high: Mapped[float]
@@ -318,615 +244,510 @@ class IbkrEtfBar1MinTrades(Base):
         server_default=func.current_timestamp())
 
 
-class IbkrEtfBar1MinBids(Base):
-    __tablename__ = "z_ibkr_etf_bar_1min_bids"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_1min_bids")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar1MinAsks(Base):
-    __tablename__ = "z_ibkr_etf_bar_1min_asks"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_1min_asks")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar1MinAdjusted(Base):
-    __tablename__ = "z_ibkr_etf_bar_1min_adjusted"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_1min_adjusted")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    volume: Mapped[int]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar1MinHistoricalVolatility(Base):
-    __tablename__ = "z_ibkr_etf_bar_1min_historical_volatility"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_1min_historical_volatility")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar1MinOptionImpliedVolatility(Base):
-    __tablename__ = "z_ibkr_etf_bar_1min_option_implied_volatility"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_1min_option_implied_volatility")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar5minTrades(Base):
-    __tablename__ = "z_ibkr_etf_bar_5min_trades"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_5min_trades")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    volume: Mapped[float]
-    count: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar5minBids(Base):
-    __tablename__ = "z_ibkr_etf_bar_5min_bids"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_5min_bids")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar5minAsks(Base):
-    __tablename__ = "z_ibkr_etf_bar_5min_asks"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_5min_asks")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar5minAdjusted(Base):
-    __tablename__ = "z_ibkr_etf_bar_5min_adjusted"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_5min_adjusted")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    volume: Mapped[int]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar5minHistoricalVolatility(Base):
-    __tablename__ = "z_ibkr_etf_bar_5min_historical_volatility"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_5min_historical_volatility")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar5minOptionImpliedVolatility(Base):
-    __tablename__ = "z_ibkr_etf_bar_5min_option_implied_volatility"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_5min_option_implied_volatility")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar15minTrades(Base):
-    __tablename__ = "z_ibkr_etf_bar_15min_trades"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_15min_trades")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    volume: Mapped[int]
-    count: Mapped[int]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar15minBids(Base):
-    __tablename__ = "z_ibkr_etf_bar_15min_bids"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_15min_bids")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar15minAsks(Base):
-    __tablename__ = "z_ibkr_etf_bar_15min_asks"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_15min_asks")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar15minAdjusted(Base):
-    __tablename__ = "z_ibkr_etf_bar_15min_adjusted"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_15min_adjusted")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    volume: Mapped[int] = mapped_column(Integer)
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar15minHistoricalVolatility(Base):
-    __tablename__ = "z_ibkr_etf_bar_15min_historical_volatility"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_15min_historical_volatility")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar15minOptionImpliedVolatility(Base):
-    __tablename__ = "z_ibkr_etf_bar_15min_option_implied_volatility"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_15min_option_implied_volatility")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar30minTrades(Base):
-    __tablename__ = "z_ibkr_etf_bar_30min_trades"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_30min_trades")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    volume: Mapped[int]
-    count: Mapped[int]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar30minBids(Base):
-    __tablename__ = "z_ibkr_etf_bar_30min_bids"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_30min_bids")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar30minAsks(Base):
-    __tablename__ = "z_ibkr_etf_bar_30min_asks"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_30min_asks")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar30minAdjusted(Base):
-    __tablename__ = "z_ibkr_etf_bar_30min_adjusted"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_30min_adjusted")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    volume: Mapped[int]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar30minHistoricalVolatility(Base):
-    __tablename__ = "z_ibkr_etf_bar_30min_historical_volatility"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_30min_historical_volatility")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar30minOptionImpliedVolatility(Base):
-    __tablename__ = "z_ibkr_etf_bar_30miny_option_implied_volatility"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_30min_option_implied_volatility")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar1hrTrades(Base):
-    __tablename__ = "z_ibkr_etf_bar_1hr_trades"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_1hr_trades")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    volume: Mapped[int]
-    count: Mapped[int]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar1hrBids(Base):
-    __tablename__ = "z_ibkr_etf_bar_1hr_bids"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_1hr_bids")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar1hrAsks(Base):
-    __tablename__ = "z_ibkr_etf_bar_1hr_asks"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_1hr_asks")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar1hrAdjusted(Base):
-    __tablename__ = "z_ibkr_etf_bar_1hr_adjusted"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_1hr_adjusted")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    volume: Mapped[int]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar1hrHistoricalVolatility(Base):
-    __tablename__ = "z_ibkr_etf_bar_1hr_historical_volatility"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_1hr_historical_volatility")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBar1hrOptionImpliedVolatility(Base):
-    __tablename__ = "z_ibkr_etf_bar_1hr_option_implied_volatility"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_1hr_option_implied_volatility")
-    date_time: Mapped[datetime]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBarDailyTrades(Base):
-    __tablename__ = "z_ibkr_etf_bar_daily_trades"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_daily_trades")
-    date: Mapped[date]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    volume: Mapped[int]
-    count: Mapped[int]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBarDailyBids(Base):
-    __tablename__ = "z_ibkr_etf_bar_daily_bids"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_daily_bids")
-    date: Mapped[date]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool] = mapped_column(Boolean)
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBarDailyAsks(Base):
-    __tablename__ = "z_ibkr_etf_bar_daily_asks"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_daily_asks")
-    date: Mapped[date]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBarDailyAdjusted(Base):
-    __tablename__ = "z_ibkr_etf_bar_daily_adjusted"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_daily_adjusted")
-    date: Mapped[date]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    volume: Mapped[int]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBarDailyHistoricalVolatility(Base):
-    __tablename__ = "z_ibkr_etf_bar_daily_historical_volatility"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_daily_historical_volatility")
-    date: Mapped[date]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
-
-class IbkrEtfBarDailyOptionImpliedVolatility(Base):
-    __tablename__ = "z_ibkr_etf_bar_daily_option_implied_volatility"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrEtfContracts"] = relationship(
-        back_populates="etf_bar_daily_option_implied_volatility")
-    date: Mapped[date]
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
-
+# class IbkrEtfBar1MinBids(Base):
+#     __tablename__ = "z_ibkr_etf_bar_1min_bids"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar1MinAsks(Base):
+#     __tablename__ = "z_ibkr_etf_bar_1min_asks"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar1MinAdjusted(Base):
+#     __tablename__ = "z_ibkr_etf_bar_1min_adjusted"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     volume: Mapped[int]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar1MinHistoricalVolatility(Base):
+#     __tablename__ = "z_ibkr_etf_bar_1min_historical_volatility"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar1MinOptionImpliedVolatility(Base):
+#     __tablename__ = "z_ibkr_etf_bar_1min_option_implied_volatility"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar5minTrades(Base):
+#     __tablename__ = "z_ibkr_etf_bar_5min_trades"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     volume: Mapped[float]
+#     count: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar5minBids(Base):
+#     __tablename__ = "z_ibkr_etf_bar_5min_bids"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar5minAsks(Base):
+#     __tablename__ = "z_ibkr_etf_bar_5min_asks"
+#     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar5minAdjusted(Base):
+#     __tablename__ = "z_ibkr_etf_bar_5min_adjusted"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     volume: Mapped[int]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar5minHistoricalVolatility(Base):
+#     __tablename__ = "z_ibkr_etf_bar_5min_historical_volatility"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar5minOptionImpliedVolatility(Base):
+#     __tablename__ = "z_ibkr_etf_bar_5min_option_implied_volatility"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar15minTrades(Base):
+#     __tablename__ = "z_ibkr_etf_bar_15min_trades"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     volume: Mapped[int]
+#     count: Mapped[int]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar15minBids(Base):
+#     __tablename__ = "z_ibkr_etf_bar_15min_bids"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar15minAsks(Base):
+#     __tablename__ = "z_ibkr_etf_bar_15min_asks"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar15minAdjusted(Base):
+#     __tablename__ = "z_ibkr_etf_bar_15min_adjusted"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     volume: Mapped[int] = mapped_column(Integer)
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar15minHistoricalVolatility(Base):
+#     __tablename__ = "z_ibkr_etf_bar_15min_historical_volatility"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar15minOptionImpliedVolatility(Base):
+#     __tablename__ = "z_ibkr_etf_bar_15min_option_implied_volatility"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar30minTrades(Base):
+#     __tablename__ = "z_ibkr_etf_bar_30min_trades"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     volume: Mapped[int]
+#     count: Mapped[int]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar30minBids(Base):
+#     __tablename__ = "z_ibkr_etf_bar_30min_bids"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar30minAsks(Base):
+#     __tablename__ = "z_ibkr_etf_bar_30min_asks"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar30minAdjusted(Base):
+#     __tablename__ = "z_ibkr_etf_bar_30min_adjusted"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     volume: Mapped[int]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar30minHistoricalVolatility(Base):
+#     __tablename__ = "z_ibkr_etf_bar_30min_historical_volatility"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar30minOptionImpliedVolatility(Base):
+#     __tablename__ = "z_ibkr_etf_bar_30miny_option_implied_volatility"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar1hrTrades(Base):
+#     __tablename__ = "z_ibkr_etf_bar_1hr_trades"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     volume: Mapped[int]
+#     count: Mapped[int]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar1hrBids(Base):
+#     __tablename__ = "z_ibkr_etf_bar_1hr_bids"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar1hrAsks(Base):
+#     __tablename__ = "z_ibkr_etf_bar_1hr_asks"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar1hrAdjusted(Base):
+#     __tablename__ = "z_ibkr_etf_bar_1hr_adjusted"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     volume: Mapped[int]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar1hrHistoricalVolatility(Base):
+#     __tablename__ = "z_ibkr_etf_bar_1hr_historical_volatility"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBar1hrOptionImpliedVolatility(Base):
+#     __tablename__ = "z_ibkr_etf_bar_1hr_option_implied_volatility"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date_time: Mapped[datetime]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBarDailyTrades(Base):
+#     __tablename__ = "z_ibkr_etf_bar_daily_trades"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date: Mapped[date]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     volume: Mapped[int]
+#     count: Mapped[int]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBarDailyBids(Base):
+#     __tablename__ = "z_ibkr_etf_bar_daily_bids"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date: Mapped[date]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool] = mapped_column(Boolean)
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBarDailyAsks(Base):
+#     __tablename__ = "z_ibkr_etf_bar_daily_asks"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date: Mapped[date]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBarDailyAdjusted(Base):
+#     __tablename__ = "z_ibkr_etf_bar_daily_adjusted"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date: Mapped[date]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     volume: Mapped[int]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBarDailyHistoricalVolatility(Base):
+#     __tablename__ = "z_ibkr_etf_bar_daily_historical_volatility"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date: Mapped[date]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
+
+# class IbkrEtfBarDailyOptionImpliedVolatility(Base):
+#     __tablename__ = "z_ibkr_etf_bar_daily_option_implied_volatility"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     ibkr_etf_id: Mapped[int] = mapped_column(
+#         ForeignKey("z_ibkr_etf_contracts.id"))
+#     date: Mapped[date]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(
+#         server_default=func.current_timestamp())
 
 # class IbkrIndexContract(Base):
 #     __tablename__ = "z_ibkr_index_contracts"
