@@ -345,6 +345,9 @@ class IbkrClient(EWrapper, EClient):
         logger.debug10("End Function")
         return self.req_id
 
+    def req_global_cancel(self):
+        self.reqGlobalCancel()
+
     def req_head_timestamp(self,
                            contract,
                            what_to_show="TRADES",
