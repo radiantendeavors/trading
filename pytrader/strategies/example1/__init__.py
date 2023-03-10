@@ -66,6 +66,10 @@ class Strategy(strategies.Strategy):
         self.bar_sizes = "1 min"
         self.short_period = 3
         self.long_period = 8
+        self.quantity = 100
+
+        self.endtime = datetime.datetime.combine(
+            datetime.date.today(), datetime.time(hour=15, minute=45))
 
         super().__init__(brokerclient)
 
@@ -94,32 +98,30 @@ class Strategy(strategies.Strategy):
         logger.debug("Cross Up: %s", cross_up)
         logger.debug("Cross Down: %s", cross_down)
 
-        quantity = 100
+        self.next_option_contract = self.contract
 
         if cross_up:
             logger.info("EMA Cross Up")
 
-            if self.position_status == -1:
-                quantity = quantity * 2
+            if len(self.short_position) > 0:
+                self.close_short_position()
 
-            buy_order = order.Order()
-            buy_order.action = "BUY"
-            buy_order.totalQuantity = quantity
-            buy_order.orderType = "MKT"
-            self.brokerclient.place_order(self.contract, buy_order)
-            self.position_status = 1
+            self.open_long_position()
 
         if cross_down:
             logger.info("EMA Cross Down")
-            if self.position_status == 1:
-                quantity = quantity * 2
 
-            sell_order = order.Order()
-            sell_order.action = "SELL"
-            sell_order.totalQuantity = quantity
-            sell_order.orderType = "MKT"
-            self.brokerclient.place_order(self.contract, sell_order)
-            self.position_status = -1
+            if len(self.long_position) > 0:
+                self.close_long_position()
+
+            self.open_short_position()
+
+    def on_end(self):
+        self.brokerclient.req_global_cancel()
+        if len(self.long_position) > 0:
+            self.close_long_position()
+        if len(self.short_position) > 0:
+            self.close_short_position()
 
 
 # ==================================================================================================
