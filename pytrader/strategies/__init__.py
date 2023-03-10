@@ -33,6 +33,7 @@ from abc import ABCMeta, abstractmethod
 # 3rd Party libraries
 import pandas
 from ibapi import contract
+from ibapi import order
 
 # System Library Overrides
 from pytrader.libs.system import logging
@@ -67,12 +68,17 @@ class Strategy():
     def __init__(self, brokerclient):
         self.brokerclient = brokerclient
 
-        self.endtime = datetime.datetime.combine(
-            datetime.date.today(), datetime.time(hour=16, minute=16))
         self.time_now = datetime.datetime.now()
         self.bars = []
         ## Position Status: -1 = short, 0 = Empty, 1 = long
         self.position_status = 0
+
+        self.long_position = []
+        self.short_position = []
+
+    @abstractmethod
+    def on_start(self):
+        pass
 
     @abstractmethod
     def on_5sec_rtb(self, real_time_bar):
@@ -80,6 +86,10 @@ class Strategy():
 
     @abstractmethod
     def on_bar(self):
+        pass
+
+    @abstractmethod
+    def on_end(self):
         pass
 
     def run(self):
@@ -161,12 +171,46 @@ class Strategy():
                 self.on_bar()
                 real_time_bars = []
             else:
+                # This feels like a crappy way to check if the real_time bar exists
                 try:
                     self.on_5sec_rtb(real_time_bar)
                 except Exception as msg:
-                    logger.error("Exception: %s", msg)
+                    logger.debug5("Exception: %s", msg)
 
         logger.debug10("End Function")
+
+    def close_long_position(self):
+        contract = self.long_position.pop(0)
+        sell_order = order.Order()
+        sell_order.action = "SELL"
+        sell_order.totalQuantity = self.quantity
+        sell_order.orderType = "MKT"
+        self.brokerclient.place_order(contract, sell_order)
+
+    def open_long_position(self):
+        buy_order = order.Order()
+        buy_order.action = "BUY"
+        buy_order.totalQuantity = self.quantity
+        buy_order.orderType = "MKT"
+        self.brokerclient.place_order(self.next_option_contract, buy_order)
+        self.long_position.append(self.next_option_contract)
+
+    def open_short_position(self):
+        sell_order = order.Order()
+        sell_order.action = "SELL"
+        sell_order.totalQuantity = self.quantity
+        sell_order.orderType = "MKT"
+        self.brokerclient.place_order(self.next_option_contract, sell_order)
+        self.short_position.append(self.next_option_contract)
+
+    def close_short_position(self):
+        contract = self.short_position.pop(0)
+        buy_order = order.Order()
+        buy_order.action = "BUY"
+        buy_order.totalQuantity = self.quantity
+        buy_order.orderType = "MKT"
+        self.brokerclient.place_order(self.next_option_contract, buy_order)
+        self.short_position.append(self.next_option_contract)
 
     def _bar_conversion(self):
         bar_conversion = {"5 secs": 1, "30 secs": 6, "1 min": 12, "5 mins": 60}
