@@ -177,6 +177,8 @@ class Strategy():
                 except Exception as msg:
                     logger.debug5("Exception: %s", msg)
 
+        self.on_end()
+
         logger.debug10("End Function")
 
     def close_long_position(self):
