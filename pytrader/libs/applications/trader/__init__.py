@@ -46,7 +46,7 @@ from pytrader.libs import utilities
 logger = logging.getLogger(__name__)
 
 ## Client ID Used for the Interactive Brokers API
-client_id = 1350
+client_id = 1003
 
 ## The python formatted location of the strategies
 import_path = "pytrader.strategies."
