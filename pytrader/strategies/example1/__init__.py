@@ -64,8 +64,8 @@ class Strategy(strategies.Strategy):
     def __init__(self, brokerclient):
         self.security = "IWM"
         self.bar_sizes = "1 min"
-        self.short_period = 3
-        self.long_period = 8
+        self.short_period = 5
+        self.long_period = 20
         self.quantity = 100
 
         self.endtime = datetime.datetime.combine(
