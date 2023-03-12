@@ -28,9 +28,12 @@ Provides the client for Interactive Brokers
 Provides the client for Interactive Brokers
 """
 # System Libraries
-import sys
-import time
+from multiprocessing import current_process
+from threading import current_thread
 import datetime
+import queue
+import threading
+import time
 
 # IB API
 from ibapi.client import EClient
@@ -43,7 +46,6 @@ from ibapi.utils import iswrapper
 from ibapi.wrapper import EWrapper
 
 # System Library Overrides
-from pytrader.libs.clients.mysql import etf_info, index_info, stock_info
 from pytrader.libs.system import logging
 
 # Other Libraries
@@ -95,7 +97,12 @@ class IbkrClient(EWrapper, EClient):
         EWrapper.__init__(self)
         EClient.__init__(self, self)
 
-        ## Used as a way to track when the last historical data request was made
+        logger.debug("Broker: %s", args[0])
+
+        ## Multiprocessing Queue
+        self.process_queue = None
+
+        ## Used to track when the last historical data request was made
         self.__historical_data_req_timestamp = datetime.datetime(year=1980,
                                                                  month=1,
                                                                  day=1,
@@ -103,20 +110,59 @@ class IbkrClient(EWrapper, EClient):
                                                                  minute=0,
                                                                  second=0)
 
+        ## Used to track when the contract deitals data request was made
+        self.__contract_details_data_req_timestamp = datetime.datetime(
+            year=1980, month=1, day=1, hour=0, minute=0, second=0)
+
+        ## Used to track the number of active historical data requests.
+        self.__active_historical_data_requests = 0
+
+        ## Used to track the number of available market data lines
+        self.__available_market_data_lines = 100
+
+        ## Used to track available streams of level 2 data
+        self.__available_deep_data_allotment = 3
+
         ## Used to track the latest request_id
         self.req_id = 0
 
         ## Used to track the next order id
         self.next_order_id = None
 
+        ## Used to track if the next valid id is available
+        self.next_valid_id_available = threading.Event()
+
         ## Used to track available accounts
         self.accounts = []
+
+        ## Used to track if account list is available
+        self.accounts_available = threading.Event()
 
         ## Used to store any data requested using a request ID.
         self.data = {}
 
-    def cancel_head_timestamp(self, req_id):
-        self.cancelHeadTimeStamp(req_id)
+        ## Used to track if requested data is available
+        self.data_available = {}
+
+        ## Used to store allowed intraday bar sizes
+        self.intraday_bar_sizes = [
+            "1 secs", "5 secs", "10 secs", "15 secs", "30 secs", "1 min",
+            "2 mins", "3 mins", "5 mins", "10 mins", "15 mins", "20 mins",
+            "30 mins", "1 hour", "2 hours", "3 hours", "4 hours", "8 hours"
+        ]
+
+        ## Used to store allowed bar sizes
+        self.bar_sizes = self.intraday_bar_sizes + [
+            "1 day", "1 week", "1 month"
+        ]
+
+        self.realtime_bar_queue = {}
+
+        self.bar_queue = {}
+        self.__counter = 0
+
+    def add_bar_queue(self, req_id, bar_queue):
+        self.bar_queue[req_id] = bar_queue
 
     def check_server(self):
         """check_server
@@ -136,7 +182,21 @@ class IbkrClient(EWrapper, EClient):
             logger.error(
                 "Failed to connect to the server: Connection Time Unknown")
 
+    def get_account_list(self):
+        """!
+        Returns the list of accounts
+
+        @return accounts - List of accounts
+        """
+        self.accounts_available.wait()
+        return self.accounts
+
     def get_client_id(self):
+        """!
+        Returns the client id
+
+        @return clientId - The id of the connected client.
+        """
         return self.clientId
 
     def get_data(self, req_id=None):
@@ -148,72 +208,151 @@ class IbkrClient(EWrapper, EClient):
         @return self.data[req_id] - The data from the specific request.
         @return self.data - If no req_id is provided, returns all data from all requests.
         """
-        logger.debug10("Begin Function")
-
         if req_id:
-            logger.debug("Data: %s", self.data)
-
-            # We want to ensure that the data has been received.
-            if isinstance(self.data[req_id], list):
-                while len(self.data[req_id]) == 0:
-                    logger.debug("Waiting on response for Request ID: %s",
-                                 req_id)
-                    time.sleep(1)
-            else:
-                while req_id not in self.data:
-                    logger.debug("Waiting on response for Request ID: %s",
-                                 req_id)
-                    time.sleep(1)
-
-            logger.debug3("Data After Waiting: %s", self.data)
-            logger.debug3("Returning: %s", self.data[req_id])
+            self.data_available[req_id].wait()
+            logger.debug4("Data: %s", self.data[req_id])
             return self.data[req_id]
         else:
             return self.data
 
-    def get_historical_bars(self,
-                            contract,
-                            bar_size_setting,
-                            end_date_time="",
-                            duration_str=None,
-                            what_to_show="TRADES",
-                            use_regular_trading_hours=1,
-                            format_date=1,
-                            keep_up_to_date=False,
-                            chart_options=[]):
+    def get_next_order_id(self):
+        self.next_valid_id_available.wait()
+        return self.next_order_id
+
+    def start_thread(self):
         logger.debug10("Begin Function")
+        self.api_thread = threading.Thread(target=self.run, daemon=True)
+        logger.debug2("Start Broker Client Thread")
+        self.api_thread.start()
+        logger.debug2("Broker Client Thread Started")
+        logger.debug10("End Function")
+        return None
+
+    def stop_thread(self):
+        logger.debug("Begin Function")
+        self.api_thread.join()
+        logger.debug("End Function")
+        return None
+
+    # ==============================================================================================
+    #
+    # The following functions are wrappers around the eClient functions.  All are lowercased, and
+    # update the request id prior to calling the API function.  In addition, they provide any
+    # formatting and error checking to ensure the API function receives the correct inputs.
+    #
+    # All functions in alphabetical order.
+    #
+    # ==============================================================================================
+    def calculate_implied_volatility(self,
+                                     contract: Contract,
+                                     option_price,
+                                     under_price,
+                                     implied_option_volatility_options=[]):
+        """!
+        Calculate the volatility for an option.
+        Request the calculation of the implied volatility based on hypothetical option and its underlying prices.
+        The calculation will be return in EWrapper's tickOptionComputation callback.
+
+        @param contract - The option's contract for which the volatility is to be calculated.
+        @param option_price - Hypothetical Option Price
+        @param under_price - Hypothetical option's underlying price.
+
+        @return None
+        """
+        raise NotImplementedError
+
+    def calculate_option_price(self,
+                               contract: Contract,
+                               volatility,
+                               under_price,
+                               option_price_options=[]):
+        """!
+        Calculates an option's price based on the provided volatility and its underlying's price.
+        The calculation will be return in EWrapper's tickOptionComputation callback.
+
+        @param contract - The option's contract for which the price wants to be calculated.
+        @param volatility - Hypothetical volatility.
+        @param under_price - Hypothetical underlying's price.
+
+        @return None
+        """
+        raise NotImplementedError
+
+    def cancel_account_summary(self, req_id):
+        """!
+        Cancels the account's summary request. After requesting an account's summary, invoke this function to cancel it.
+
+        @param req_id - The identifier of the previously performed account request.
+
+        @return None
+        """
+        raise NotImplementedError
+
+    def cancel_head_timestamp(self, req_id):
+        self.cancelHeadTimeStamp(req_id)
+
+    def cancel_historical_data(self, req_id):
+        self.__active_historical_data_requests -= 1
+        self.cancelHistoricalData(req_id)
+
+    def place_order(self, contract, order):
+        logger.debug("Order: %s", order)
+        self.next_valid_id_available.wait()
+        self.placeOrder(self.next_order_id, contract, order)
+        order_id = self.next_order_id
+        self.req_ids()
+        return order_id
+
+    def req_account_summary(self, account_types="ALL", tags=[]):
         self.req_id += 1
-
-        # if keep_up_to_date is true, end_date_time must be blank.
-        # https://interactivebrokers.github.io/tws-api/historical_bars.html
-        if keep_up_to_date:
-            end_date_time = ""
-
-        self._historical_data_wait()
-
-        logger.debug("Requesting Historical Bars: %s", bar_size_setting)
-
-        self.reqHistoricalData(self.req_id, contract, end_date_time,
-                               duration_str, bar_size_setting, what_to_show,
-                               use_regular_trading_hours, format_date,
-                               keep_up_to_date, chart_options)
-
-        # This is updated here, rather than in the _historical_data_wait function because we want
-        # to actually make the request before setting a new timer.
-        self.__historical_data_req_timestamp = datetime.datetime.now()
-
-        logger.debug("Request Timestamp: %s",
-                     self.__historical_data_req_timestamp)
-        self.data[self.req_id] = []
-        logger.debug4("Data: %s", self.data)
-        logger.debug10("End Funuction")
+        tags_string = ", ".join([str(item) for item in tags])
+        self.data_available[self.req_id] = threading.Event()
+        self.reqAccountSummary(self.req_id, account_types, tags_string)
         return self.req_id
 
-    def get_ipo_date(self,
-                     contract,
-                     what_to_show="TRADES",
-                     use_regular_trading_hours=1,
-                     format_date=1):
+    def req_account_updates(self, subscribe: bool, account_code: str):
+        """!
+        Subscribes to a specific account's information and portfolio. Through this method, a single
+        account's subscription can be started/stopped. As a result from the subscription, the
+        account's information, portfolio and last update time will be received at
+        EWrapper::updateAccountValue, EWrapper::updateAccountPortfolio, EWrapper::updateAccountTime
+        respectively. All account values and positions will be returned initially, and then there
+        will only be updates when there is a change in a position, or to an account value every 3
+        minutes if it has changed. Only one account can be subscribed at a time. A second
+        subscription request for another account when the previous one is still active will cause
+        the first one to be canceled in favour of the second one. Consider user reqPositions if you
+        want to retrieve all your accounts' portfolios directly.
+
+        @param subscribe - Set to true to start the subscription, and false to stop it
+        @param account_code - 	the account id (i.e. U123456) for which the information is
+            requested.
+
+        @return None
+        """
+        logger.debug10("Begin Function")
+        self.reqAccountUpdates(subscribe, account_code)
+        logger.debug10("End Function")
+        return None
+
+    def req_contract_details(self, contract):
+        logger.debug10("Begin Function")
+        self.req_id += 1
+        self._contract_details_data_wait()
+        logger.debug("Requesting Contract Details for contract: %s", contract)
+        self.data_available[self.req_id] = threading.Event()
+        self.reqContractDetails(self.req_id, contract)
+        self.__contract_details_data_req_timestamp = datetime.datetime.now()
+        logger.debug10("End Function")
+        return self.req_id
+
+    def req_global_cancel(self):
+        self.reqGlobalCancel()
+
+    def req_head_timestamp(self,
+                           contract,
+                           what_to_show="TRADES",
+                           use_regular_trading_hours=1,
+                           format_date=1):
         """!
         Requests the earliest available bar data for a contract.
 
@@ -231,6 +370,8 @@ class IbkrClient(EWrapper, EClient):
 
         # This request seems to trigger the historical data pacing restrictions.  So, we wait.
         self._historical_data_wait()
+
+        self.data_available[self.req_id] = threading.Event()
         self.reqHeadTimeStamp(self.req_id, contract, what_to_show,
                               use_regular_trading_hours, format_date)
 
@@ -241,41 +382,303 @@ class IbkrClient(EWrapper, EClient):
         logger.debug10("End Function")
         return self.req_id
 
-    def get_account_summary(self, account_types="ALL", tags=[]):
+    def req_historical_data(self,
+                            contract,
+                            bar_size_setting,
+                            end_date_time="",
+                            duration_str="",
+                            what_to_show="TRADES",
+                            use_regular_trading_hours=0,
+                            format_date=1,
+                            keep_up_to_date=False,
+                            chart_options=[]):
+        """!
+        Requests contracts' historical data. When requesting historical data, a finishing time and
+        date is required along with a duration string. For example, having:
+
+        - endDateTime: 20130701 23:59:59 GMT
+        - durationStr: 3 D
+
+        will return three days of data counting backwards from July 1st 2013 at 23:59:59 GMT
+        resulting in all the available bars of the last three days until the date and time
+        specified. It is possible to specify a timezone optionally. The resulting bars will be
+        returned in EWrapper::historicalData
+
+        @param contract: The contract for which we want to retrieve the data.
+        @param bar_size_setting: The size of the bar:
+          - 1 sec   - (NOTE: While listed as a valid bar size, this size has NEVER worked for me)
+          - 5 secs  - (NOTE: While listed as a valid bar size, this size has NEVER worked for me)
+          - 15 secs - (NOTE: While listed as a valid bar size, this size has NEVER worked for me)
+          - 30 secs
+          - 1 min
+          - 2 mins
+          - 3 mins
+          - 5 mins
+          - 15 mins
+          - 30 mins
+          - 1 hr
+          - 1 day
+
+              NOTE: IB TWS-API documentation contradicts itself here.
+                - https://interactivebrokers.github.io/tws-api/historical_bars.html states that there are
+                  also two more bar sizes: 1 week, and 1 month
+                - https://interactivebrokers.github.io/tws-api/classIBApi_1_1EClient.html#aad87a15294377608e59aec1d87420594
+                  does not list those bar sizes
+        @param end_date_time: request's ending time with format yyyyMMdd HH:mm:ss {TMZ}
+        @param duration_str: the amount of time for which the data needs to be retrieved:
+          - "S (seconds) - " D (days)
+          - "W (weeks) - " M (months)
+          - " Y (years)
+        @param what_to_show: The kind of information being retreived
+          - TRADES
+          - MIDPOINT
+          - BID
+          - ASK
+          - BID_ASK
+          - HISTORICAL_VOLATILITY
+          - OPTION_IMPLIED_VOLATILITY
+          - FEE_RATE
+          - SCHEDULE
+        @param use_regular_trading_hours:
+          - set to 0 to obtain the data which was also generated outside of the Regular Trading Hours
+          - set to 1 to obtain only the RTH data
+        @param format_date:
+          - set to 1 to obtain the bars' time as yyyyMMdd HH:mm:ss
+          - set to 2 to obtain it like system time format in seconds
+        @param keep_up_to_date: set to True to received continuous updates on most recent bar data.
+        If True, and endDateTime cannot be specified.
+        @param chart_options: FIXME: TWS API does not document this parameter
+
+        @return req_id: The request identifier
+        """
+        logger.debug10("Begin Function")
+
+        # ==========================================================================================
+        #
+        # The maximum number of simultaneous open historical data requests from the API is 50. In
+        # practice, it will probably be more efficient to have a much smaller number of requests
+        # pending at a time.
+        #
+        # https://interactivebrokers.github.io/tws-api/historical_limitations.html
+        #
+        # ==========================================================================================
+        if self.__active_historical_data_requests <= 50:
+            self.__active_historical_data_requests += 1
+
+            logger.debug4("Contract: %s", contract)
+            logger.debug4("Bar Size: %s", bar_size_setting)
+            logger.debug4("End Date Time: %s", end_date_time)
+            logger.debug4("Duration: %s", duration_str)
+            logger.debug4("What to show: %s", what_to_show)
+            logger.debug4("Use Regular Trading Hours: %s",
+                          use_regular_trading_hours)
+            logger.debug4("Format date: %s", format_date)
+            logger.debug4("Keep Up to Date: %s", keep_up_to_date)
+            logger.debug4("Chart Options: %s", chart_options)
+            self.req_id += 1
+
+            # if keep_up_to_date is true, end_date_time must be blank.
+            # https://interactivebrokers.github.io/tws-api/historical_bars.html
+            if keep_up_to_date:
+                end_date_time = ""
+
+            self._historical_data_wait()
+
+            logger.debug("Requesting Historical Bars: %s", bar_size_setting)
+
+            self.data_available[self.req_id] = threading.Event()
+            self.reqHistoricalData(self.req_id, contract, end_date_time,
+                                   duration_str, bar_size_setting,
+                                   what_to_show, use_regular_trading_hours,
+                                   format_date, keep_up_to_date, chart_options)
+
+            # This is updated here, rather than in the _historical_data_wait function because we
+            # want to actually make the request before setting a new timer.
+            self.__historical_data_req_timestamp = datetime.datetime.now()
+
+            logger.debug("Request Timestamp: %s",
+                         self.__historical_data_req_timestamp)
+            self.data[self.req_id] = []
+            logger.debug4("Data: %s", self.data)
+            logger.debug10("End Funuction")
+            return self.req_id
+        else:
+            raise Exception("Too many open historical data requests")
+
+    def req_historical_ticks(self,
+                             contract: Contract,
+                             start_date_time: str,
+                             end_date_time: str,
+                             number_of_ticks: int,
+                             what_to_show: str,
+                             use_regular_trading_hours: int,
+                             ignore_size: bool,
+                             misc_options=[]):
+        """!
+        Requests historical Time&Sales data for an instrument.
+
+        @param contract: Contract object that is subject of query
+        @param start_date_time,i.e.: "20170701 12:01:00". Uses TWS timezone specified at login.
+        @param end_date_time,i.e.: "20170701 13:01:00". In TWS timezone. Exactly one of start time and end time has to be defined.
+        @param number_of_ticks: Number of distinct data points. Max currently 1000 per request.
+        @param what_to_show: (Bid_Ask, Midpoint, Trades) Type of data requested.
+        @param use_regular_trading_hours: Data from regular trading hours (1), or all available hours (0)
+        @param ignore_size: A filter only used when the source price is Bid_Ask
+        @param misc_options: should be defined as null, reserved for internal use
+
+        @return req_id: The request's identifier
+        """
+        logger.debug10("Begin Function")
         self.req_id += 1
-        tags_string = ", ".join([str(item) for item in tags])
-        self.reqAccountSummary(self.req_id, account_types, tags_string)
+
+        if number_of_ticks > 1000:
+            number_of_ticks = 1000
+
+        self.reqHistoricalTicks(self.req_id, contract, start_date_time,
+                                end_date_time, number_of_ticks, what_to_show,
+                                use_regular_trading_hours, ignore_size,
+                                misc_options)
+        logger.debug10("End Function")
         return self.req_id
 
-    def get_next_order_id(self):
-        logger.debug10("Begin Function")
-        while self.next_order_id is None:
-            logger.debug("Waiting on the next order id")
-            time.sleep(1)
+    def req_ids(self):
+        """!
+        Requests the next valid order ID at the current moment.
 
-        logger.debug("Next Order Id Received.  Next Order Id is: %s",
-                     self.next_order_id)
+        @return None
+        """
 
-        logger.debug10("End Function")
-        return self.next_order_id
+        # NOTE: TWS API reqIds has a required parameter 'numIds'.  The API Docs say it is
+        # depreciated, however, an error message will occur if one is not set.
+        self.next_valid_id_available.clear()
+        self.reqIds(1)
 
-    def get_security_data(self, contract):
+    def req_managed_accounts(self):
+        """!
+        Requests the accounts to which the logged user has access to.
+
+        NOTE: This data is already provided during the initial connection, and stored in
+        self.accounts.
+        """
+        self.reqManagedAccounts()
+        return None
+
+    def req_market_data(
+            self,
+            contract,
+            generic_tick_list:
+        str = "100,101,104,105,106,165,221,233,236,256,258,411,456",
+            snapshot: bool = False,
+            regulatory_snapshot: bool = False,
+            market_data_options=[]):
+        """!
+        Requests real time market data. Returns market data for an instrument either in real time or
+        10-15 minutes delayed (depending on the market data type specified)
+
+        IB API's description of the parameters is incomplete.
+        @param contract: The contract for which the data is being requested.
+        @param generic_tick_list: Comma Separated ids of the available generic ticks:
+            - 100 Option Volume (currently for stocks)
+            - 101 Option Open Interest (currently for stocks)
+            - 104 Historical Volatility (currently for stocks)
+            - 105 Average Option Volume (currently for stocks)
+            - 106 Option Implied Volatility (currently for stocks)
+            - 162 Index Future Premium
+            - 165 Miscellaneous Stats
+            - 221 Mark Price (used in TWS P&L computations)
+            - 225 Auction values (volume, price and imbalance)
+            - 233 RTVolume - contains the last trade price, last trade size, last trade time, total
+              volume, VWAP, and single trade flag.
+            - 236 Shortable
+            - 256 Inventory
+            - 258 Fundamental Ratios
+            - 411 Realtime Historical Volatility
+            - 456 IBDividends
+        @param snapshot: for users with corresponding real time market data subscriptions:
+            - True will return a one-time snapshot
+            - False will provide streaming data
+        @param regulatory_snapshot: snapshot for US stocks requests NBBO snapshots for users which
+            have "US Securities Snapshot Bundle" subscription but not corresponding Network A, B, or
+            C subscription necessary for streaming * market data. One-time snapshot of current
+            market price that will incur a fee of 1 cent to the account per snapshot
+        @param market_data_options -
+
+        @return req_id: The rquest's identifier
+        """
         logger.debug10("Begin Function")
         self.req_id += 1
-        logger.debug("Requesting Contract Details for contract: %s", contract)
-        self.reqContractDetails(self.req_id, contract)
-        time.sleep(sleep_time)
+        self.reqMktData(self.req_id, contract, generic_tick_list, snapshot,
+                        regulatory_snapshot, market_data_options)
         logger.debug10("End Function")
         return self.req_id
 
-    def get_security_pricing_data(self, contract):
+    def req_real_time_bars(self,
+                           contract,
+                           bar_size_setting=5,
+                           what_to_show="TRADES",
+                           use_regular_trading_hours=True,
+                           real_time_bar_options=[]):
+        """!
+        Requests real time bars
+        Currently, only 5 seconds bars are provided. This request is subject to the same pacing as
+        any historical data request: no more than 60 API queries in more than 600 seconds.
+        Real time bars subscriptions are also included in the calculation of the number of Level 1
+        market data subscriptions allowed in an account.
+
+        IB API's parameter description is incomplete.
+        @param contract: The Contract Being Requested
+        @param bar_size_setting: Currently being ignored (https://interactivebrokers.github.io/tws-api/classIBApi_1_1EClient.html#a644a8d918f3108a3817e8672b9782e67)
+        @param what_to_show: The nature of the data being retreived:
+            - TRADES
+            - MIDPOINT
+            - BID
+            - ASK
+        @param use_regular_trading_hours:
+            - 0 to obtain the data which was also generated ourside of the Regular Trading Hours
+            - 1 to obtain only the RTH data
+        @param real_time_bar_options -
+
+        @return req_id: The request's identifier
+        """
         logger.debug10("Begin Function")
+
+        logger.debug4("Contract: %s", contract)
+        logger.debug4("Bar Size: %s", bar_size_setting)
+        logger.debug4("What to show: %s", what_to_show)
+        logger.debug4("Use Regular Trading Hours: %s",
+                      use_regular_trading_hours)
+        logger.debug4("Real time bar options: %s", real_time_bar_options)
         self.req_id += 1
-        self.reqMktData(self.req_id, contract, "233", False, False, [])
-        logger.debug10("End Function")
+
+        self._historical_data_wait()
+
+        logger.debug("Requesting Historical Bars: %s", bar_size_setting)
+
+        self.realtime_bar_queue[self.req_id] = queue.Queue()
+
+        self.reqRealTimeBars(self.req_id, contract, bar_size_setting,
+                             what_to_show, use_regular_trading_hours,
+                             real_time_bar_options)
+
+        # This is updated here, rather than in the _historical_data_wait function because we
+        # want to actually make the request before setting a new timer.
+        self.__historical_data_req_timestamp = datetime.datetime.now()
+
+        logger.debug("Request Timestamp: %s",
+                     self.__historical_data_req_timestamp)
+        self.data[self.req_id] = []
+        logger.debug4("Data: %s", self.data)
+        logger.debug10("End Funuction")
         return self.req_id
 
-    def get_option_chain(self, contract):
+    def req_sec_def_opt_params(self, contract):
+        """!
+        Requests security definition option parameters for viewing a contract's option chain
+
+        @param contract: The Contract for the request
+
+        @return req_id: The Request's identifier
+        """
         logger.debug10("Begin Function")
         self.req_id += 1
         security = contract.symbol
@@ -290,14 +693,52 @@ class IbkrClient(EWrapper, EClient):
         logger.debug("Contract ID: %s", contract_id)
         self.reqSecDefOptParams(self.req_id, security, "", security_type,
                                 contract_id)
-        time.sleep(60)
         logger.debug10("End Function")
         return self.req_id
 
-    def place_order(self, contract, order):
-        logger.debug("Order: %s", order)
-        self.placeOrder(self.next_order_id, contract, order)
-        return self.next_order_id
+    def req_tick_by_tick_data(self, contract: Contract, tick_type: str,
+                              number_of_ticks: int, ignore_size: bool):
+        """!
+        Requests tick-by-tick data.
+
+        @param contract: the contract for which tick-by-tick data is requested.
+        @param tick_type: tick-by-tick data type: "Last", "AllLast", "BidAsk" or "MidPoint".
+        @param numberOfTicks: number of ticks.
+        @param ignoreSize: ignore size flag.
+
+        @return req_id: The request's identifier
+        """
+        logger.debug("Begin Function")
+
+        allowed_tick_types = ["Last", "AllLast", "BidAsk", "MidPoint"]
+
+        if tick_type in allowed_tick_types:
+            self.req_id += 1
+
+            self.reqTickByTickData(self.req_id, contract, tick_type,
+                                   number_of_ticks, ignore_size)
+
+            logger.debug("End Function")
+            return self.req_id
+        else:
+            raise Exception("Invalid Tick Type")
+
+    def set_server_loglevel(self, log_level=2):
+        """!
+        Changes the TWS/GW log level. The default is 2 = ERROR
+        5 = DETAIL is required for capturing all API messages and troubleshooting API programs
+
+        @param log level: Valid values are:
+            - 1 = SYSTEM
+            - 2 = ERROR
+            - 3 = WARNING
+            - 4 = INFORMATION
+            - 5 = DETAIL
+
+        @return None
+        """
+        self.setServerLogLevel(log_level)
+        return None
 
     # ==============================================================================================
     #
@@ -373,6 +814,7 @@ class IbkrClient(EWrapper, EClient):
             "value": value,
             "currency": currency
         }
+        self.data_available[req_id].set()
 
         logger.debug(
             "Account Summary. ReqId: %s\nAccount: %s, Tag: %s, Value: %s, Currency: %s",
@@ -406,6 +848,8 @@ class IbkrClient(EWrapper, EClient):
         @param key - The name of the parameter
         @param value - The value of the parameter
         @param currency -The currency of the parameter
+
+        @return None
         """
         logger.debug10("Begin Function")
         logger.debug("Account Update for %s:", account)
@@ -453,6 +897,7 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
+        logger.debug("Commission Report: %s", commission_report)
         logger.debug10("End Function")
         return None
 
@@ -493,6 +938,14 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
+
+        # send_item = "ConnectionClosed"
+
+        # req_id_list = list(self.bar_queue.keys())
+        # logger.debug3("Sending Queue Item: %s", send_item)
+        # for item in req_id_list:
+        #     self.bar_queue[item].put(send_item)
+
         logger.debug10("End Function")
         return None
 
@@ -508,37 +961,42 @@ class IbkrClient(EWrapper, EClient):
 
         @return None
         """
-        logger.debug("Begin Function")
-        self.data[req_id] = details
+        logger.debug10("Begin Function")
 
-        # logger.debug("Contract Info")
-        # logger.debug("Contract ID: %s", details.contract.conId)
-        # logger.debug("Symbol: %s", details.contract.symbol)
-        # logger.debug("Security Type: %s", details.contract.secType)
-        # logger.debug("Exchange: %s", details.contract.exchange)
-        # logger.debug("Primary Exchange: %s", details.contract.primaryExchange)
-        # logger.debug("Currency: %s", details.contract.currency)
-        # logger.debug2("Local Symbol: %s", details.contract.localSymbol)
-        # logger.debug("Security ID Type: %s", details.contract.secIdType)
-        # logger.debug("Security ID: %s", details.contract.secId)
+        logger.debug("Contract Info")
+        logger.debug("Contract ID: %s", details.contract.conId)
+        logger.debug("Symbol: %s", details.contract.symbol)
+        logger.debug("Security Type: %s", details.contract.secType)
+        logger.debug("Exchange: %s", details.contract.exchange)
+        logger.debug("Currency: %s", details.contract.currency)
+        logger.debug("Local Symbol: %s", details.contract.localSymbol)
+        logger.debug("Primary Exchange: %s", details.contract.primaryExchange)
+        logger.debug("Trading Class: %s", details.contract.tradingClass)
+        logger.debug("Security ID Type: %s", details.contract.secIdType)
+        logger.debug("Security ID: %s", details.contract.secId)
+        #logger.debug("Description: %s", details.contract.description)
 
-        # logger.debug("Contract Detail Info")
-        # logger.debug2("Market name: %s", details.marketName)
-        # logger.debug2("OrderTypes: %s", details.orderTypes)
-        # logger.debug2("Valid Exchanges: %s", details.validExchanges)
-        # logger.debug2("Underlying Contract ID: %s", details.underConId)
-        # logger.debug("Long name: %s", details.longName)
-        # logger.debug("Industry: %s", details.industry)
-        # logger.debug("Category: %s", details.category)
-        # logger.debug("Subcategory: %s", details.subcategory)
-        # logger.debug2("Time Zone: %s", details.timeZoneId)
-        # logger.debug2("Trading Hours: %s", details.tradingHours)
-        # logger.debug2("Liquid Hours: %s", details.liquidHours)
-        # logger.debug2("SecIdList: %s", details.secIdList)
-        # logger.debug2("Underlying Symbol: %s", details.underSymbol)
-        # logger.debug("Stock Type: %s", details.stockType)
-        # logger.debug("Next Option Date: %s", details.nextOptionDate)
-        # logger.debug3("Details: %s", details)
+        logger.debug("Contract Detail Info")
+        logger.debug("Market name: %s", details.marketName)
+        logger.debug("Min Tick: %s", details.minTick)
+        logger.debug("OrderTypes: %s", details.orderTypes)
+        logger.debug("Valid Exchanges: %s", details.validExchanges)
+        logger.debug("Underlying Contract ID: %s", details.underConId)
+        logger.debug("Long name: %s", details.longName)
+        logger.debug("Industry: %s", details.industry)
+        logger.debug("Category: %s", details.category)
+        logger.debug("Subcategory: %s", details.subcategory)
+        logger.debug("Time Zone: %s", details.timeZoneId)
+        logger.debug("Trading Hours: %s", details.tradingHours)
+        logger.debug("Liquid Hours: %s", details.liquidHours)
+        logger.debug("SecIdList: %s", details.secIdList)
+        logger.debug("Underlying Symbol: %s", details.underSymbol)
+        logger.debug("Stock Type: %s", details.stockType)
+        logger.debug("Next Option Date: %s", details.nextOptionDate)
+        logger.debug3("Details: %s", details)
+
+        self.data[self.req_id] = details
+        self.data_available[req_id].set()
 
         # if details.contract.secType == "Bond":
         #     logger.debug("Description: %s", details.contract.description)
@@ -656,8 +1114,8 @@ class IbkrClient(EWrapper, EClient):
         Error Code Descriptions can be found at:
         https://interactivebrokers.github.io/tws-api/message_codes.html
 
-      	@param req_id - The request identifier which generated the error. Note: -1 will indicate a
-        notification and not true error condition.
+        @param req_id - The request identifier which generated the error. Note: -1 will indicate a
+            notification and not true error condition.
         @param code - The Code identifying the error
         @param msg - The error's description
         @param advanced_order_rejection - Advanced Order Reject Description in JSON format.
@@ -792,6 +1250,7 @@ class IbkrClient(EWrapper, EClient):
         logger.debug10("Begin Function")
         logger.debug("ReqID: %s, IPO Date: %s", req_id, head_time_stamp)
         self.data[req_id] = head_time_stamp
+        self.data_available[req_id].set()
 
         logger.debug10("End Function")
         return None
@@ -835,6 +1294,7 @@ class IbkrClient(EWrapper, EClient):
         logger.debug10("Begin Function")
         logger.debug("Data Complete for ReqID: %s from: %s to: %s", req_id,
                      start, end)
+        self.data_available[req_id].set()
         logger.debug10("End Function")
 
     @iswrapper
@@ -852,10 +1312,15 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
-        logger.debug3("ReqID: %s", req_id)
-        logger.debug2("Bar: %s", bar)
+        logger.debug5("ReqID: %s", req_id)
+        logger.debug4("Bar: %s", bar)
+        self.__counter += 1
+        date_time = datetime.datetime.now()
 
-        #self.data[req_id].
+        send_item = [req_id, self.__counter, date_time, bar]
+        logger.debug3("Sending Queue Item: %s", send_item)
+        self.bar_queue[req_id].put(send_item)
+
         logger.debug10("End Function")
 
     @iswrapper
@@ -969,9 +1434,10 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
-        logger.debug("Accounts: %s", accounts)
+        logger.debug3("Accounts: %s", accounts)
         self.accounts = accounts.split(",")
-        logger.debug("Accounts: %s", self.accounts)
+        self.accounts_available.set()
+        logger.debug3("Accounts: %s", self.accounts)
         logger.debug10("End Function")
         return None
 
@@ -1068,10 +1534,9 @@ class IbkrClient(EWrapper, EClient):
         """
         super().nextValidId(order_id)
 
-        logger.debug("Setting next_valid_order: %s", order_id)
         self.next_order_id = order_id
-        logger.info("The next valid Order ID: %s", self.next_order_id)
-        logger.debug10("End Function")
+        self.next_valid_id_available.set()
+
         return None
 
     @iswrapper
@@ -1281,25 +1746,31 @@ class IbkrClient(EWrapper, EClient):
         return None
 
     @iswrapper
-    def realtimeBar(self, req_id: int, date, open_, high, low, close, volume,
-                    wap, count: int):
+    def realtimeBar(self, req_id: int, datetime, bar_open, bar_high, bar_low,
+                    bar_close, bar_volume, bar_wap, bar_count: int):
         """!
         Updates the real time 5 seconds bars
 
-        @param req_id - the request's identifier
-        @param date - the bar's date and time (Epoch/Unix time)
-        @param open_ - the bar's open point
-        @param high - the bar's high point
-        @param low - the bar's low point
-        @param close - the bar's closing point
-        @param volume - the bar's traded volume (only returned for TRADES data)
-        @param WAP - the bar's Weighted Average Price rounded to minimum increment (only available
+        @param req_id: the request's identifier
+        @param datetime: the bar's date and time (Epoch/Unix time)
+        @param bar_open: the bar's open point
+        @param bar_high: the bar's high point
+        @param bar_low: the bar's low point
+        @param bar_close: the bar's closing point
+        @param bar_volume: the bar's traded volume (only returned for TRADES data)
+        @param bar_wap: the bar's Weighted Average Price rounded to minimum increment (only available
             for TRADES).
-        @param count - the number of trades during the bar's timespan (only available for TRADES).
+        @param bar_count: the number of trades during the bar's timespan (only available for TRADES).
 
         @return None
         """
         logger.debug10("Begin Function")
+
+        bar = [
+            datetime, bar_open, bar_high, bar_low, bar_close, bar_volume,
+            bar_wap, bar_count
+        ]
+        self.realtime_bar_queue[req_id].put(bar)
         logger.debug10("End Function")
         return None
 
@@ -2064,59 +2535,41 @@ class IbkrClient(EWrapper, EClient):
             ) - self.__historical_data_req_timestamp
         return None
 
+    def _contract_details_data_wait(self):
+        """!
+        Ensure that we wait 15 seconds between historical data requests.
 
-# class IbkrInit(IbkrClient):
+        @param self
 
-#     def __init__(self, address=None, port=None, client_id=0):
-#         conf = config.Config()
-#         conf.read_config()
-#         logger.debug("Client ID Initial: %s", client_id)
+        @return None
+        """
+        time_diff = datetime.datetime.now(
+        ) - self.__contract_details_data_req_timestamp
+        while time_diff.total_seconds() < sleep_time:
+            logger.debug("Now: %s", datetime.datetime.now())
+            logger.debug("Last Request: %s",
+                         self.__historical_data_req_timestamp)
+            logger.debug("Time Difference: %s seconds",
+                         time_diff.total_seconds())
+            remaining_sleep_time = sleep_time - time_diff.total_seconds()
+            logger.debug("Sleep Time: %s", remaining_sleep_time)
+            time.sleep(sleep_time - time_diff.total_seconds())
+            time_diff = datetime.datetime.now(
+            ) - self.__contract_details_data_req_timestamp
+        return None
 
-#         if address:
-#             self.address = address
-#         else:
-#             self.address = conf.brokerclient_address
+    def _calculate_deep_data_allotment(self):
+        """!
+        Caclulates the allowed dep data requests available.
+        """
+        min_allotment = 3
+        max_allotment = 60
 
-#         if port:
-#             self.port = port
-#         else:
-#             self.port = conf.brokerclient_port
+        basic_allotment = self.__available_market_data_lines % 100
 
-#         logger.debug("Address: %s Port: %s", self.address, self.port)
-
-#         self.client_id = client_id
-
-#         if self.client_id < 1:
-#             logger.warning("Self.Client ID: %s", self.client_id)
-
-#     def run_loop(self):
-#         self.app.run()
-
-#     def begin_connect(self):
-#         self.app = IbkrClient(client_id=self.client_id)
-#         # Connect to TWS or IB Gateway
-#         try:
-#             self.app.connect(self.address, self.port, self.client_id)
-#         except Exception as msg:
-#             logger.error("Failed to connect")
-#             logger.error(msg)
-#             sys.exit(1)
-
-#         logger.debug("Start Threads")
-#         # Launch client thread
-#         thread = threading.Thread(target=self.run_loop)
-#         thread.start()
-#         logger.debug("Threads Started")
-
-#         time.sleep(1)
-
-#         # Check if API is connected
-#         # while True:
-#         #     if isinstance(self.nextValidOrderId, int):
-#         #         logger.debug("Connected")
-#         #     else:
-#         #         logger.info("Waiting on connection")
-#         #         time.sleep(1)
-
-#     def end_connect(self):
-#         self.app.disconnect()
+        if basic_allotment < min_allotment:
+            self.__available_deep_data_allotment = min_allotment
+        elif basic_allotment > max_allotment:
+            self.__available_deep_data_allotment = max_allotment
+        else:
+            self.__available_deep_data_allotment = basic_allotment

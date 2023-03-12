@@ -59,10 +59,14 @@ max_sleeptime = 121
 class SecuritiesBase():
 
     def __init__(self, *args, **kwargs):
+        logger.debug10("Begin Function")
+        self.securities_list = []
+
         if kwargs.get("securities_list"):
-            self.securities_list = kwargs["securities_list"]
+            for item in kwargs["securities_list"]:
+                self.securities_list.append({"ticker": item})
         else:
-            self.securities_list = {}
+            self.securities_list = self.get_list()
 
         if kwargs.get("client_id"):
             self.client_id = kwargs["client_id"]
@@ -72,48 +76,42 @@ class SecuritiesBase():
         if kwargs.get("brokerclient"):
             self.brokerclient = kwargs["brokerclient"]
             logger.debug("BrokerClient: %s", self.brokerclient)
+        logger.debug10("End Function")
 
-    def __update_info_broker(self):
+    def update_history(self, source, bar_size, duration):
         logger.debug10("Begin Function")
-        if self.securities_list:
-            logger.debug("Securities List: %s", self.securities_list)
+        logger.debug("Securities List: %s", self.securities_list)
+
+        if source == "broker":
+            self.__update_history_broker(bar_size, duration)
+        elif source == "yahoo":
+            self.__update_history_yahoo(bar_size, duration)
         else:
-            self.get_list()
-
-        for item in self.securities_list:
-            logger.debug2("Item: %s", item)
-            logger.debug3("Investment Type: %s", self.securities_type)
-            investment = security.Security(security_type=self.securities_type,
-                                           ticker_symbol=item["ticker"],
-                                           brokerclient=self.brokerclient)
-
-            logger.debug("Security: %s", investment)
-            investment.update_info(source="ibkr")
+            self.__update_history_broker(bar_size, duration)
+            self.__update_history_yahoo(bar_size, duration)
 
         logger.debug10("End Function")
         return None
 
-    def __update_info_nasdaq(self):
+    def update_info(self, source=None, securities_list=None):
         logger.debug10("Begin Function")
-        client = nasdaq.NasdaqClient(investments=self.securities_type)
-        client.download_list()
-        logger.debug10("End Function")
-        return None
+        logger.debug("Source: %s", source)
 
-    def __get_polygon_ticker_type(self):
-        logger.debug10("Begin Function")
-        polygon_ticker_types = {
-            "etfs": "ETF",
-            "etns": "ETN",
-            "indexes": "INDEX",
-            "stocks": "CS"
-        }
-
-        if self.securities_type in polygon_ticker_types:
-            return polygon_ticker_types[self.securities_type]
+        if source == "broker":
+            self.__update_info_broker()
+        elif source == "nasdaq":
+            self.__update_info_nasdaq()
+        elif source == "polygon":
+            self.__update_info_polygon()
+        elif source == "yahoo":
+            self.__update_info_yahoo()
         else:
-            raise Exception("Invalid Securities Type")
-        logger.debug10("End Function")
+            self.__update_info_broker
+            self.__update_info_nasdaq()
+            self.__update_info_yahoo()
+
+        logger.debug("End Function")
+        return None
 
     def __get_polygon_ticker_list(self, ticker_type):
         logger.debug10("Begin Function")
@@ -144,6 +142,77 @@ class SecuritiesBase():
 
         logger.debug10("End Function")
         return tickers
+
+    def __get_polygon_ticker_type(self):
+        logger.debug10("Begin Function")
+        polygon_ticker_types = {
+            "etfs": "ETF",
+            "etns": "ETN",
+            "indexes": "INDEX",
+            "stocks": "CS"
+        }
+
+        if self.securities_type in polygon_ticker_types:
+            return polygon_ticker_types[self.securities_type]
+        else:
+            raise Exception("Invalid Securities Type")
+        logger.debug10("End Function")
+
+    def __update_history_broker(self, bar_size=None, duration=None):
+        logger.debug10("Begin Function")
+        logger.debug("Type: %s", self.securities_type)
+        for ticker in self.securities_list:
+            investment = security.Security(security_type=self.securities_type,
+                                           ticker_symbol=ticker["ticker"],
+                                           bar_sizes=bar_size,
+                                           duration=duration,
+                                           brokerclient=self.brokerclient)
+            investment.update_history()
+        logger.debug10("End Function")
+
+    def __update_history_yahoo(self, bar_size, duration):
+        logger.debug10("Begin Function")
+        for ticker in self.securities_list:
+            logger.debug("Ticker: %s", ticker["yahoo_symbol"])
+            if ticker["yahoo_symbol"]:
+                yc = yahoo.YahooClient()
+                yc.get_bar_history(self.securities_type,
+                                   ticker["ticker"],
+                                   ticker["yahoo_symbol"],
+                                   interval=bar_size,
+                                   duration=duration)
+            if ticker != self.securities_list[-1]:
+                time.sleep(random.randint(min_sleeptime, max_sleeptime))
+
+        logger.debug10("End Function")
+        return None
+
+    def __update_info_broker(self):
+        logger.debug10("Begin Function")
+        if self.securities_list:
+            logger.debug("Securities List: %s", self.securities_list)
+        else:
+            self.get_list()
+
+        for item in self.securities_list:
+            logger.debug2("Item: %s", item)
+            logger.debug3("Investment Type: %s", self.securities_type)
+            investment = security.Security(security_type=self.securities_type,
+                                           ticker_symbol=item["ticker"],
+                                           brokerclient=self.brokerclient)
+
+            logger.debug("Security: %s", investment)
+            investment.update_info(source="ibkr")
+
+        logger.debug10("End Function")
+        return None
+
+    def __update_info_nasdaq(self):
+        logger.debug10("Begin Function")
+        client = nasdaq.NasdaqClient(investments=self.securities_type)
+        client.download_list()
+        logger.debug10("End Function")
+        return None
 
     def __update_info_polygon(self):
         logger.debug10("Begin Function")
@@ -179,61 +248,4 @@ class SecuritiesBase():
 
             investment.update_info("yahoo")
         logger.debug10("End Function")
-        return None
-
-    def __update_history_yahoo(self, bar_size, period):
-        logger.debug10("Begin Function")
-        for ticker in self.securities_list:
-            logger.debug("Ticker: %s", ticker["yahoo_symbol"])
-            if ticker["yahoo_symbol"]:
-                yc = yahoo.YahooClient()
-                yc.get_bar_history(self.securities_type,
-                                   ticker["ticker"],
-                                   ticker["yahoo_symbol"],
-                                   interval=bar_size,
-                                   period=period)
-            if ticker != self.securities_list[-1]:
-                time.sleep(random.randint(min_sleeptime, max_sleeptime))
-
-        logger.debug10("End Function")
-        return None
-
-    def update_history(self, source, bar_size, period, securities_list=None):
-        logger.debug10("Begin Function")
-        if self.securities_list:
-            logger.debug("Securities List: %s", self.securities_list)
-        else:
-            self.get_list(securities_list)
-
-        logger.debug("Securities List: %s", self.securities_list)
-
-        if source == "broker":
-            self.__update_history_broker(bar_size, period)
-        elif source == "yahoo":
-            self.__update_history_yahoo(bar_size, period)
-        else:
-            self.__update_history_broker(bar_size, period)
-            self.__update_history_yahoo(bar_size, period)
-
-        logger.debug("End Function")
-        return None
-
-    def update_info(self, source=None, securities_list=None):
-        logger.debug10("Begin Function")
-        logger.debug("Source: %s", source)
-
-        if source == "broker":
-            self.__update_info_broker()
-        elif source == "nasdaq":
-            self.__update_info_nasdaq()
-        elif source == "polygon":
-            self.__update_info_polygon()
-        elif source == "yahoo":
-            self.__update_info_yahoo()
-        else:
-            self.__update_info_broker
-            self.__update_info_nasdaq()
-            self.__update_info_yahoo()
-
-        logger.debug("End Function")
         return None

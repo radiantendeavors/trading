@@ -1,5 +1,5 @@
 """!
-@package pytrader.libs.orders.limit
+@package pytrader.libs.orders.marketonopen
 
 Provides the broker client
 
@@ -22,7 +22,7 @@ Provides the broker client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file security.py
+@file pytrader/libs/orders/marketonopen.py
 """
 # System libraries
 
@@ -32,7 +32,7 @@ Provides the broker client
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs.orders import orderbase
+from pytrader.libs.orders import market
 
 # ==================================================================================================
 #
@@ -47,11 +47,10 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class MarketOnOpenOrder(orderbase.OrderBase):
+class MarketOnOpenOrder(market.MarketOrder):
 
     def __init__(self, *args, **kwargs):
         logger.debug10("Begin Function")
         super().__init__(*args, **kwargs)
-        self.order.orderType = "MKT"
         self.order.tif = "OPG"
         logger.debug10("End Function")

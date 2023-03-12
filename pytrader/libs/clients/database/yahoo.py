@@ -41,7 +41,6 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs.clients.database import (EtfInfo)
 from pytrader.libs.utilities import config
 
 # ==================================================================================================
@@ -180,12 +179,9 @@ class YahooStockSplits(Base):
 # Functions
 #
 # ==================================================================================================
-def init_sqlalchemy():
+def init_sqlalchemy(database_url):
     logger.debug("Begin Function")
     global engine
-    conf = config.Config()
-    conf.read_config()
-    database_url = conf.set_database_url()
     engine = create_engine(database_url)
     DBSession.configure(bind=engine, autoflush=False, expire_on_commit=False)
     Base.metadata.create_all(engine)

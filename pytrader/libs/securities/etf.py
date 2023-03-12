@@ -26,12 +26,14 @@ Provides the base class for an ETF
 """
 # System libraries
 import datetime
+
 # 3rd Party libraries
 
 # System Library Overrides
 from pytrader.libs.system import logging
 
 # Other Application Libraries
+from pytrader.libs.clients.database import ibkr
 from pytrader.libs.clients.mysql import ibkr_etf_info
 from pytrader.libs.securities import securitybase
 
@@ -57,13 +59,20 @@ class Etf(securitybase.SecurityBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.req_id = 10000
+
+        ## Used to store the security type
         self.security_type = "STK"
 
     def __get_info_from_database(self):
         info = ibkr_etf_info.EtfInfo()
         where_clause = "`ticker`='" + self.ticker_symbol + "'"
         return info.select(where_clause=where_clause)
+
+    def __query_broker_database(self):
+        logger.debug10("Begin Function")
+        db = ibkr.IbkrEtfContracts()
+        contract = db.query_contracts(self.db_session)
+        logger.debug10("End Function")
 
     # def update_info(self):
     #     logger.debug10("Begin Function")

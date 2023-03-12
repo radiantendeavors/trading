@@ -26,8 +26,8 @@ Creates a basic interface for interacting with a broker
 
 """
 # System libraries
+import sys
 import threading
-import time
 
 # 3rd Party libraries
 
@@ -66,12 +66,17 @@ class BrokerClient():
 
         @returun subclass - An instance of one of the potential broker clients.
         """
-        broker = kwargs["broker"]
         subclass_map = {"ibkr": ibkrclient.IbkrClient}
+
+        if args[0] in subclass_map:
+            broker = args[0]
+        else:
+            raise Exception("Invalid Broker Selected")
+            sys.exit(1)
 
         logger.debug3("Subclass Map: %s", subclass_map)
         logger.debug2("Broker: %s", broker)
-        logger.debug2("Securities Subclass: %s", subclass_map.get(broker))
+        logger.debug2("Broker Subclass: %s", subclass_map.get(broker))
 
         subclass = subclass_map.get(broker)
         return subclass(*args, **kwargs)
@@ -82,7 +87,7 @@ class BrokerClient():
 # Functions
 #
 # ==================================================================================================
-def broker_connect(address, port, client_id=0):
+def brokerclient(broker):
     """!
     Used to initialize the broker connection.
 
@@ -93,25 +98,18 @@ def broker_connect(address, port, client_id=0):
     @return brokerclient - An instance of the broker client.
     """
     logger.debug10("Begin Function")
-    logger.debug("Address: %s Port: %s", address, port)
-    if client_id < 1:
-        logger.warning("Self.Client ID: %s", client_id)
-    else:
-        logger.debug("Client ID: %s", client_id)
 
-    # Connect to TWS or IB Gateway
-    brokerclient = BrokerClient(broker="ibkr")
-    brokerclient.connect(address, port, client_id)
-
-    logger.debug2("Start Broker Client Thread")
-    broker_thread = threading.Thread(target=brokerclient.run)
-    broker_thread.start()
-    logger.debug2("Broker Client Thread Started")
-    next_order_id = brokerclient.get_next_order_id()
-    logger.debug("Received next order id: %s", next_order_id)
-    time.sleep(1)
-
-    brokerclient.check_server()
-
+    brokerclient = BrokerClient(broker)
     logger.debug10("End Function")
     return brokerclient
+
+
+def run_loop(client):
+    logger.debug10("Begin Function")
+    api_thread = threading.Thread(target=client.run, daemon=True)
+
+    logger.debug2("Start Broker Client Thread")
+    api_thread.start()
+    logger.debug2("Broker Client Thread Started")
+    logger.debug10("End Function")
+    return api_thread

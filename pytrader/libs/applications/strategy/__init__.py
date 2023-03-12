@@ -1,7 +1,6 @@
-"""!
-@package pytrader.strategies.example_strategy
+"""!@package pytrader.libs.applications.strategy
 
-Provides an Example Strategy
+The main user interface for the trading program.
 
 @author Geoff S. Derber
 @version HEAD
@@ -21,20 +20,19 @@ Provides an Example Strategy
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file pytrader/strategies/example_strategy/__init__.py
-
-Provides an Example Strategy
-
+@file pytrader/libs/applications/trader/__init__.py
 """
-# System libraries
+# System Libraries
 
-# 3rd Party libraries
+# 3rd Party Libraries
 
+# Application Libraries
 # System Library Overrides
 from pytrader.libs.system import logging
 
-# Application Libraries
-from pytrader.libs.securities import security
+# Other Application Libraries
+
+# Conditional Libraries
 
 # ==================================================================================================
 #
@@ -45,37 +43,25 @@ from pytrader.libs.securities import security
 @var logger
 The base logger.
 
-@var colortext
-Allows Color text on the console
 """
 logger = logging.getLogger(__name__)
+
 
 # ==================================================================================================
 #
 # Classes
 #
 # ==================================================================================================
+class StrategyProcess():
 
-
-# ==================================================================================================
-#
-# Functions
-#
-# ==================================================================================================
-def run(brokerclient, securities):
-    logger.debug10("Begin Function")
-    logger.debug9("Running Example Strategy")
-
-    x = 0
-    investment = []
-    for item in securities:
-        investment.append(
-            security.Security(security_type="etfs",
-                              ticker_symbol=item,
-                              brokerclient=brokerclient))
-        investment[x].set_contract()
-        investment[x].get_historical_bars()
-        #investment.place_order()
-        x += 1
-
-    logger.debug10("End Function")
+    def start_strategy_process(self, strategy, brokerclient, process_queue,
+                               securities_list, bar_sizes):
+        logger.debug10("Begin Function")
+        # strategy_process = multiprocessing.Process(
+        #     target=strategy,
+        #     args=(brokerclient, process_queue, securities_list, bar_sizes))
+        # strategy_process.start()
+        strategy(brokerclient, process_queue, securities_list, bar_sizes)
+        logger.debug10("End Function")
+        #return strategy_process
+        return None
