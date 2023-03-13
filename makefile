@@ -2,13 +2,13 @@
 #
 # Makefile for trader
 #
-# By Geoff S Derber
+# By G S Derber
 #
 #
 #
 # ---------------------------------------------------------------------
 NAME=trader
-VERSION=0.0.3
+VERSION=0.1.1
 
 
 # -------
