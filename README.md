@@ -1,6 +1,9 @@
 Trader
 ========
 
+[![Python-Lint](https://github.com/radiantendeavors/trading/workflows/Pylint/badge.svg?event=push)](https://github.com/radiantendeavors/trading/actions?query=workflow%3A%22Pylint%22)
+
+
 - [Description](#description)
 - [Installation](#installation-and-usage)
 - [Features and Advantages](#features-and-advantages)

@@ -16,7 +16,13 @@ VERSION=0.0.3
 # Global Variables
 #
 # -------
-VENV_DIR := $(HOME)/.local/lib/pytrader
+BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+ifeq (Branch, main)
+	VENV_DIR := $(HOME)/.local/lib/pytrader_stable
+else
+	VENV_DIR := $(HOME)/.local/lib/pytrader_development
+endif
+
 PYTHON := /usr/bin/python3
 VENV := $(PYTHON) -m venv $(VENV_DIR)
 PIP := $(VENV_DIR)/bin/pip
@@ -59,7 +65,7 @@ venv: ##@Python Creates Python VENV
 	@$(VENV)
 
 setup: venv ##@Python Installs required packages
-	$(PIP) install requirements.txt
+	$(PIP) install -r requirements.txt
 
 requirements: ##@Python Creates requirements.txt
 	@$(PIP) freeze > requirements.txt
