@@ -26,13 +26,13 @@ Creates a client interface for downloading NASDAQ data.
 
 """
 
-# System Libraries
+# Standard Libraries
 # import os
-import requests
 import sys
 import hashlib
 
 # 3rd Party Libraries
+import requests
 
 # Application Libraries
 # System Library Overrides

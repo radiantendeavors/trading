@@ -22,15 +22,20 @@ The main user interface for the trading program.
 
 @file pytrader/libs/applications/trader/__init__.py
 """
-# System Libraries
+# Standard Libraries
+import random
+
+import sys
+import time
 
 # 3rd Party Libraries
 
 # Application Libraries
-# System Library Overrides
+# Standard Library Overrides
 from pytrader.libs.system import logging
 
 # Other Application Libraries
+from pytrader.libs import utilities
 
 # Conditional Libraries
 
@@ -46,6 +51,9 @@ The base logger.
 """
 logger = logging.getLogger(__name__)
 
+## The python formatted location of the strategies
+IMPORT_PATH = "pytrader.strategies."
+
 
 # ==================================================================================================
 #
@@ -54,14 +62,10 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 class StrategyProcess():
 
-    def start_strategy_process(self, strategy, brokerclient, process_queue,
-                               securities_list, bar_sizes):
-        logger.debug10("Begin Function")
-        # strategy_process = multiprocessing.Process(
-        #     target=strategy,
-        #     args=(brokerclient, process_queue, securities_list, bar_sizes))
-        # strategy_process.start()
-        strategy(brokerclient, process_queue, securities_list, bar_sizes)
-        logger.debug10("End Function")
-        #return strategy_process
-        return None
+    def run(self, strategy_list):
+        for i in strategy_list:
+            strategy = utilities.get_plugin_function(program=i,
+                                                     cmd='run',
+                                                     import_path=IMPORT_PATH)
+            logger.debug("Starting Strategy: %s", i)
+            strategy()

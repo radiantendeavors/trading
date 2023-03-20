@@ -24,8 +24,7 @@ The main user interface for the trading program.
 """
 
 # System libraries
-#import multiprocessing
-import threading
+import multiprocessing
 
 # 3rd Party libraries
 
@@ -34,7 +33,8 @@ from pytrader.libs.system import logging
 
 # Application Libraries
 #from pytrader.libs.applications import broker
-from pytrader.libs.clients import broker
+from pytrader.libs.applications import broker
+from pytrader.libs.applications import strategy
 from pytrader.libs import utilities
 
 # ==================================================================================================
@@ -46,7 +46,7 @@ from pytrader.libs import utilities
 logger = logging.getLogger(__name__)
 
 ## Client ID Used for the Interactive Brokers API
-client_id = 1003
+client_id = 2003
 
 ## The python formatted location of the strategies
 import_path = "pytrader.strategies."
@@ -71,20 +71,21 @@ class ProcessManager():
         address = processed_args[0]
         strategy_list = processed_args[1]
 
-        brokerclient = broker.BrokerClient("ibkr")
-        brokerclient.connect(address, 7497, client_id)
-        logger.debug("Broker Connected")
+        queue = multiprocessing.Queue()
 
-        brokerclient.start_thread()
+        broker_client = broker.BrokerProcess(address)
 
-        for i in strategy_list:
-            strategy = utilities.get_plugin_function(program=i,
-                                                     cmd='run',
-                                                     import_path=import_path)
-            logger.debug("Starting Strategy: %s", i)
-            strategy(brokerclient)
+        broker_process = multiprocessing.Process(target=broker_client.run,
+                                                 args=(client_id, queue))
+        broker_process.start()
 
-        logger.debug("Processes Stopped")
+        strat = strategy.StrategyProcess()
+
+        strategy_process = multiprocessing.Process(target=strat.run, args=())
+        strategy_process.start()
+
+        strategy_process.join()
+        broker_process.join()
 
         logger.debug10("End Function")
         return None

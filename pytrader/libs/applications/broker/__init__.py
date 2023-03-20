@@ -23,10 +23,13 @@ The main user interface for the trading program.
 @file pytrader/libs/applications/broker/__init__.py
 """
 # System Libraries
-import threading
+import queue
+import json
 import socket
+import os
 
 # 3rd Party Libraries
+from ibapi import contract
 
 # Application Libraries
 # System Library Overrides
@@ -34,6 +37,7 @@ from pytrader.libs.system import logging
 
 # Other Application Libraries
 from pytrader.libs.clients import broker
+from pytrader.libs.utilities import ipc
 
 # Conditional Libraries
 
@@ -49,6 +53,9 @@ The base logger.
 """
 logger = logging.getLogger(__name__)
 
+## List of potential ports TWS/IB Gateway could listen on.
+ALLOWED_PORTS = [7496, 7497, 4001, 4002]
+
 
 # ==================================================================================================
 #
@@ -57,31 +64,53 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 class BrokerProcess():
 
-    def __init__(self, address):
+    def __init__(self, address: str = "127.0.0.1"):
         self.address = address
-        self.allowed_ports = [7496, 7497, 4001, 4002]
         self.available_ports = []
         self.brokerclient = broker.BrokerClient("ibkr")
-
-    def check_if_ports_available(self, port):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        return s.connect_ex((self.address, port)) == 0
-
-    def set_broker_ports(self):
-        logger.debug("Begin Function")
-        for port in self.allowed_ports:
-            if self.check_if_ports_available(int(port)):
-                self.available_ports.append(int(port))
-        logger.debug("Available ports: %s", self.available_ports)
-        logger.debug10("End Function")
+        self.contracts = {}
+        self.socket_server = ipc.IpcServer()
 
     def run(self, client_id):
-        self.set_broker_ports()
-        self.start_threads(client_id)
+        thread_queue = queue.Queue()
+
+        #self._set_broker_ports()
+        #self._start_threads(client_id)
+
+        broker_connection = True
+        self.socket_server.start_thread(thread_queue)
+
+        #while broker_connection:
+
+        #broker_connection = self.brokerclient.is_connected()
 
         return None
 
-    def start_threads(self, client_id):
+    def _check_if_ports_available(self, port):
+        logger.debug("Begin Function")
+        tws_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        logger.debug("End Function")
+        return tws_socket.connect_ex((self.address, port)) == 0
+
+    def _create_contracts(self, tickers):
+        for item in tickers:
+            contract_ = contract.Contract()
+            contract_.symbol = item
+            contract_.secType = "STK"
+            contract_.exchange = "SMART"
+            contract_.currency = "USD"
+            self.contracts[item] = contract_
+
+    def _set_broker_ports(self):
+        logger.debug10("Begin Function")
+        # for port in ALLOWED_PORTS:
+        #     if self._check_if_ports_available(int(port)):
+        #         self.available_ports.append(int(port))
+        self.available_ports.append(int(7497))
+        logger.debug("Available ports: %s", self.available_ports)
+        logger.debug10("End Function")
+
+    def _start_threads(self, client_id):
         """!
 
         @param client_id: The id of the client to be used.
@@ -94,18 +123,18 @@ class BrokerProcess():
         # FIXME: This only connects to the first fucking client available.
         self.brokerclient.connect(self.address, self.available_ports[0],
                                   client_id)
-        logger.debug("Connected")
-        self.app_thread = threading.Thread(target=self.brokerclient.run(),
-                                           daemon=True)
 
-        self.app_thread.start()
+        logger.debug("BrokerClient connected")
+
+        self.brokerclient.start_thread()
+
         logger.debug("End Function")
 
-    def stop(self):
+    def _stop(self):
         self.stop_thread()
 
-    def stop_thread(self):
+    def _stop_thread(self):
         logger.debug("Begin Function")
-        self.app_thread.join()
+        self.brokerclient.stop_thread()
         logger.debug("End Function")
         return None

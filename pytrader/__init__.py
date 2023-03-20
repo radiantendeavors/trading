@@ -43,7 +43,7 @@ __version__ = '0.1.1'
 # Libraries
 #
 # ==================================================================================================
-# System Libraries
+# Standard Libraries
 
 # 3rd Party Libraries
 

@@ -28,16 +28,15 @@ Provides an Example Strategy
 """
 # System libraries
 import datetime
+
 import time
 
 # 3rd Party libraries
-from ibapi import order
 
 # System Library Overrides
 from pytrader.libs.system import logging
 
 # Application Libraries
-#from pytrader.libs.securities import security
 from pytrader import strategies
 # ==================================================================================================
 #
@@ -61,9 +60,10 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 class Strategy(strategies.Strategy):
 
-    def __init__(self, brokerclient):
-        self.security = "IWM"
-        self.bar_sizes = "1 min"
+    def __init__(self):
+
+        self.security = ["SPY", "QQQ", "IWM"]
+        self.bar_sizes = ["5 mins", "1 hour"]
         self.short_period = 5
         self.long_period = 20
         self.quantity = 100
@@ -71,7 +71,7 @@ class Strategy(strategies.Strategy):
         self.endtime = datetime.datetime.combine(
             datetime.date.today(), datetime.time(hour=15, minute=45))
 
-        super().__init__(brokerclient)
+        super().__init__()
 
     def on_bar(self):
         short_name = str(self.short_period) + "EMA"
@@ -129,9 +129,9 @@ class Strategy(strategies.Strategy):
 # Functions
 #
 # ==================================================================================================
-def run(brokerclient):
+def run():
     logger.debug10("Begin Function")
-    strategy = Strategy(brokerclient)
+    strategy = Strategy()
 
     strategy.run()
     logger.debug("End Function")

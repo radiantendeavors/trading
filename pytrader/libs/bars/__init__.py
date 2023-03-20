@@ -24,12 +24,12 @@ Provides Bar Data
 
 @file pytrader/libs/bars/__init__.py
 """
-# System libraries
+# Standard libraries
 #import queue
-import pandas
 import sys
 
 # 3rd Party libraries
+import pandas
 
 # System Library Overrides
 from pytrader.libs.system import logging

@@ -66,7 +66,6 @@ class Accounts():
         self.brokerclient = brokerclient
 
         logger.debug10("End Function")
-        return None
 
     def get_accounts(self):
         """!
@@ -81,4 +80,4 @@ class Accounts():
 
         logger.debug("Accounts: %s", accounts)
         logger.debug10("End Function")
-        return None
+        return accounts
