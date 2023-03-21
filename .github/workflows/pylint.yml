@@ -17,7 +17,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install ibapi pandas polygon-api-client pylint pymsql requests requests-cache sqlalchemy yfinance
+        pip install ibapi pandas pylint requests requests-cache sqlalchemy yfinance PyYAML
     - name: Analysing the code with pylint
       run: |
         pylint -d C0302 $(git ls-files '*.py')
