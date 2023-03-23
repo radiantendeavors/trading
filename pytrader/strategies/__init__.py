@@ -72,7 +72,16 @@ class Strategy():
         self.long_position = []
         self.short_position = []
 
-        self.use_options = False
+    @abstractmethod
+    def continue_strategy(self):
+        """!
+        Checks various conditions for continuing to run the strategy.
+
+        This function is Mandatory to define in each strategy.
+        """
+        # TODO: Experiment with Return False, and Raise if for if the strategy does not have this
+        # defined.
+        pass
 
     @abstractmethod
     def on_5sec_rtb(self, real_time_bar):
@@ -101,15 +110,19 @@ class Strategy():
             self.socket_client.connect()
             self._send_tickers()
 
+            logger.debug("Use Options: %s", self.use_options)
             if self.use_options:
-                self._req_option_chains()
-            self._send_bar_sizes()
+                self._req_option_details()
 
-            x = 0
-            while x < 2:
+            self._send_bar_sizes()
+            self._req_bar_history()
+            self._req_real_time_bars()
+            #self._req_tick_by_tick_data()
+            #self._req_market_data()
+
+            while self.continue_strategy():
                 data = self.socket_client.recv()
-                logger.debug("Data: %s", data)
-                x += 1
+                self._process_data(data)
         finally:
             #self.on_end()
             self.socket_client.disconnect()
@@ -230,6 +243,11 @@ class Strategy():
         buy_order.orderType = "MKT"
         self.brokerclient.place_order(contract, buy_order)
 
+    # ==============================================================================================
+    #
+    # Private Functions
+    #
+    # ==============================================================================================
     def _bar_conversion(self):
         bar_conversion = {
             "5 secs": 1,
@@ -242,18 +260,43 @@ class Strategy():
         }
         return bar_conversion[self.bar_sizes]
 
-    def _req_option_chains(self):
-        message = {"req": "option_chains"}
-        msg = ipc.Message(message)
-        self.socket_client.send(msg.to_json())
+    def _process_data(self, data):
+        logger.debug("Processing Data: %s", data)
+        logger.debug("Data Type: %s", type(data))
+        # if data.get("real_time_bars"):
+        #     self.on_5sec_rtb(data["real_time_bars"])
+        # if data.get("bars"):
+        #     pass
+
+    def _req_bar_history(self):
+        message = {"req": "bar_history"}
+        self._send_msg(message)
+
+    def _req_market_data(self):
+        message = {"req": "real_market_data"}
+        self._send_msg(message)
+
+    def _req_option_details(self):
+        message = {"req": "option_details"}
+        self._send_msg(message)
+
+    def _req_real_time_bars(self):
+        message = {"req": "real_time_bars"}
+        self._send_msg(message)
+
+    def _req_tick_by_tick_data(self):
+        message = {"req": "tick_by_tick_data"}
+        self._send_msg(message)
 
     def _send_bar_sizes(self):
-        message = {"bar_sizes": self.bar_sizes}
-        msg = ipc.Message(message)
-        self.socket_client.send(msg.to_json())
+        message = {"set": {"bar_sizes": self.bar_sizes}}
+        self._send_msg(message)
 
     def _send_tickers(self):
-        message = {"tickers": self.security}
+        message = {"set": {"tickers": self.security}}
+        self._send_msg(message)
+
+    def _send_msg(self, message):
         msg = ipc.Message(message)
         self.socket_client.send(msg.to_json())
 

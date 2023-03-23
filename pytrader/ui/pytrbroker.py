@@ -45,8 +45,6 @@ from pytrader.libs.utilities import config
 ## The Base logger
 logger = logging.getLogger(__name__)
 
-CLIENT_ID = 2001
-
 
 # ==================================================================================================
 #
@@ -128,7 +126,7 @@ def init(args):
         try:
             processed_args = process_arguments(args, conf)
             process_manager = broker.BrokerProcess()
-            process_manager.run(CLIENT_ID)
+            process_manager.run()
         except Exception as msg:
             parser.print_help()
             logger.error('No command was given')
@@ -137,7 +135,7 @@ def init(args):
         logger.debug("Starting Client")
         processed_args = process_arguments(args, conf)
         process_manager = broker.BrokerProcess(processed_args[0])
-        process_manager.run(CLIENT_ID)
+        process_manager.run()
 
     logger.debug("End real main")
     return 0

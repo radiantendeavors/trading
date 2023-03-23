@@ -23,10 +23,6 @@ The main user interface for the trading program.
 @file pytrader/libs/applications/trader/__init__.py
 """
 # Standard Libraries
-import random
-
-import sys
-import time
 
 # 3rd Party Libraries
 
@@ -44,11 +40,7 @@ from pytrader.libs import utilities
 # Global Variables
 #
 # ==================================================================================================
-"""!
-@var logger
-The base logger.
-
-"""
+## The base logger.
 logger = logging.getLogger(__name__)
 
 ## The python formatted location of the strategies
@@ -61,8 +53,14 @@ IMPORT_PATH = "pytrader.strategies."
 #
 # ==================================================================================================
 class StrategyProcess():
+    """!
+    This prosess manages the various strategies that are running.
+    """
 
     def run(self, strategy_list):
+        """!
+        Runs the various strategies.
+        """
         for i in strategy_list:
             strategy = utilities.get_plugin_function(program=i,
                                                      cmd='run',

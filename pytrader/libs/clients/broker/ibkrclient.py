@@ -29,12 +29,9 @@ Provides the client for Interactive Brokers
 """
 # Standard Libraries
 import datetime
-import queue
 import threading
 import time
 from decimal import Decimal
-from multiprocessing import current_process
-from threading import current_thread
 
 # 3rd Party Libraries
 from ibapi.client import EClient
@@ -112,9 +109,6 @@ class IbkrClient(EWrapper, EClient):
 
         logger.debug("Broker: %s", args[0])
 
-        ## Multiprocessing Queue
-        self.process_queue = None
-
         ## Used to track when the last historical data request was made
         self.__historical_data_req_timestamp = datetime.datetime(year=1980,
                                                                  month=1,
@@ -157,13 +151,13 @@ class IbkrClient(EWrapper, EClient):
         ## Used to track if requested data is available
         self.data_available = {}
 
-        self.realtime_bar_queue = {}
-
-        self.bar_queue = {}
+        ##
         self.__counter = 0
 
-    def add_bar_queue(self, req_id: int, bar_queue: dict):
-        self.bar_queue[req_id] = bar_queue
+        ##
+        self.queue = None
+
+        self.rtb_queue = {}
 
     def get_account_list(self):
         """!
@@ -194,7 +188,9 @@ class IbkrClient(EWrapper, EClient):
         if req_id > 0:
             self.data_available[req_id].wait()
             logger.debug4("Data: %s", self.data[req_id])
-            return self.data[req_id]
+
+            # We pop this data to prevent the amount of data from constantly growing.
+            return self.data.pop(req_id)
         else:
             return self.data
 
@@ -202,7 +198,8 @@ class IbkrClient(EWrapper, EClient):
         self.next_valid_id_available.wait()
         return self.next_order_id
 
-    def start_thread(self):
+    def start_thread(self, queue):
+        self.queue = queue
         self.api_thread = threading.Thread(target=self.run, daemon=True)
         self.api_thread.start()
 
@@ -392,7 +389,7 @@ class IbkrClient(EWrapper, EClient):
                             contract: Contract,
                             bar_size_setting: str,
                             end_date_time: str = "",
-                            duration: str = "",
+                            duration_str: str = "",
                             what_to_show: str = "TRADES",
                             use_regular_trading_hours: bool = True,
                             format_date: bool = True,
@@ -540,6 +537,7 @@ class IbkrClient(EWrapper, EClient):
         logger.debug10("Begin Function")
         self.req_id += 1
 
+        # The maximum allowed is 1000 per request
         if number_of_ticks > 1000:
             number_of_ticks = 1000
 
@@ -664,8 +662,6 @@ class IbkrClient(EWrapper, EClient):
 
         logger.debug("Requesting Historical Bars: %s", bar_size_setting)
 
-        self.realtime_bar_queue[self.req_id] = queue.Queue()
-
         self.reqRealTimeBars(self.req_id, contract, bar_size_setting,
                              what_to_show, use_regular_trading_hours,
                              real_time_bar_options)
@@ -676,7 +672,8 @@ class IbkrClient(EWrapper, EClient):
 
         logger.debug("Request Timestamp: %s",
                      self.__historical_data_req_timestamp)
-        self.data[self.req_id] = []
+
+        self.rtb_queue[self.req_id] = self.queue
         logger.debug4("Data: %s", self.data)
         logger.debug10("End Funuction")
         return self.req_id
@@ -691,18 +688,12 @@ class IbkrClient(EWrapper, EClient):
         """
         logger.debug10("Begin Function")
         self.req_id += 1
-        security = contract.symbol
-        security_type = contract.secType
-        logger.debug("Contract ID: %s", contract.contract_id)
-        contract_id = contract.contract_id
+        self.data_available[self.req_id] = threading.Event()
 
-        logger.debug10("Get the Option Chain")
-        logger.debug2("Request ID: %s", self.req_id)
-        logger.debug("Security:%s", security)
-        logger.debug("Security Type: %s", security_type)
-        logger.debug("Contract ID: %s", contract_id)
-        self.reqSecDefOptParams(self.req_id, security, "", security_type,
-                                contract_id)
+        # The 3rd parameter, futFopExchange, is set to "" which the API uses to select
+        # ALL exchanges.
+        self.reqSecDefOptParams(self.req_id, contract.symbol, "",
+                                contract.secType, contract.conId)
         logger.debug10("End Function")
         return self.req_id
 
@@ -1352,7 +1343,7 @@ class IbkrClient(EWrapper, EClient):
 
         send_item = [req_id, self.__counter, date_time, bar]
         logger.debug3("Sending Queue Item: %s", send_item)
-        self.bar_queue[req_id].put(send_item)
+        self.queue[req_id].put(send_item)
 
         logger.debug10("End Function")
 
@@ -1750,7 +1741,6 @@ class IbkrClient(EWrapper, EClient):
         """
         logger.debug10("Begin Function")
         logger.debug10("End Function")
-        return None
 
     @iswrapper
     def positionMulti(self, req_id: int, account: str, model_code: str,
@@ -1769,7 +1759,6 @@ class IbkrClient(EWrapper, EClient):
         """
         logger.debug10("Begin Function")
         logger.debug10("End Function")
-        return None
 
     @iswrapper
     def positionMultiEnd(self, req_id: int):
@@ -1782,7 +1771,6 @@ class IbkrClient(EWrapper, EClient):
         """
         logger.debug10("Begin Function")
         logger.debug10("End Function")
-        return None
 
     @iswrapper
     def realtimeBar(self, req_id: int, datetime: int, bar_open: float,
@@ -1810,9 +1798,8 @@ class IbkrClient(EWrapper, EClient):
             datetime, bar_open, bar_high, bar_low, bar_close, bar_volume,
             bar_wap, bar_count
         ]
-        self.realtime_bar_queue[req_id].put(bar)
+        self.rtb_queue[req_id].put(bar)
         logger.debug10("End Function")
-        return None
 
     @iswrapper
     def receiveFA(self, fa_data_type: int, fa_xml_data: str):
@@ -1928,7 +1915,6 @@ class IbkrClient(EWrapper, EClient):
         """
         logger.debug10("Begin Function")
         logger.debug10("End Function")
-        return None
 
     @iswrapper
     def securityDefinitionOptionParameter(self, req_id: int, exchange: str,
@@ -1952,12 +1938,22 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
-        print("SecurityDefinitionOptionParameter.", "ReqId:", req_id,
-              "Exchange:", exchange, "Underlying conId:", underlying_con_id,
-              "TradingClass:", tradingClass, "Multiplier:", multiplier,
-              "Expirations:", expirations, "Strikes:", str(strikes))
+        logger.debug4("SecurityDefinitionOptionParameter.", "ReqId:", req_id,
+                      "Exchange:", exchange, "Underlying conId:",
+                      underlying_con_id, "TradingClass:", tradingClass,
+                      "Multiplier:", multiplier, "Expirations:", expirations,
+                      "Strikes:", str(strikes))
         logger.debug10("End Function")
-        return None
+
+        opt_params = {
+            "exchange": exchange,
+            "underlying_contract_id": underlying_con_id,
+            "trading_class": tradingClass,
+            "mulitplier": multiplier,
+            "expirations": expirations,
+            "strikes": strikes
+        }
+        self.data[req_id] = opt_params
 
     @iswrapper
     def securityDefinitionOptionParameterEnd(self, req_id: int):
@@ -1970,8 +1966,8 @@ class IbkrClient(EWrapper, EClient):
         """
         logger.debug10("Begin Function")
         logger.debug("SecurityDefinitionOptionParameterEnd. ReqId: %s", req_id)
+        self.data_available[req_id].set()
         logger.debug10("End Function")
-        return None
 
     @iswrapper
     def smartComponents(self, req_id: int, the_map: dict):
@@ -2643,15 +2639,15 @@ class IbkrClient(EWrapper, EClient):
         """
         time_diff = datetime.datetime.now(
         ) - self.__historical_data_req_timestamp
-        while time_diff.total_seconds() < sleep_time:
+        while time_diff.total_seconds() < SLEEP_TIME:
             logger.debug("Now: %s", datetime.datetime.now())
             logger.debug("Last Request: %s",
                          self.__historical_data_req_timestamp)
             logger.debug("Time Difference: %s seconds",
                          time_diff.total_seconds())
-            remaining_sleep_time = sleep_time - time_diff.total_seconds()
+            remaining_sleep_time = SLEEP_TIME - time_diff.total_seconds()
             logger.debug("Sleep Time: %s", remaining_sleep_time)
-            time.sleep(sleep_time - time_diff.total_seconds())
+            time.sleep(SLEEP_TIME - time_diff.total_seconds())
             time_diff = datetime.datetime.now(
             ) - self.__historical_data_req_timestamp
         return None
@@ -2666,15 +2662,15 @@ class IbkrClient(EWrapper, EClient):
         """
         time_diff = datetime.datetime.now(
         ) - self.__contract_details_data_req_timestamp
-        while time_diff.total_seconds() < sleep_time:
+        while time_diff.total_seconds() < SLEEP_TIME:
             logger.debug("Now: %s", datetime.datetime.now())
             logger.debug("Last Request: %s",
                          self.__historical_data_req_timestamp)
             logger.debug("Time Difference: %s seconds",
                          time_diff.total_seconds())
-            remaining_sleep_time = sleep_time - time_diff.total_seconds()
+            remaining_sleep_time = SLEEP_TIME - time_diff.total_seconds()
             logger.debug("Sleep Time: %s", remaining_sleep_time)
-            time.sleep(sleep_time - time_diff.total_seconds())
+            time.sleep(SLEEP_TIME - time_diff.total_seconds())
             time_diff = datetime.datetime.now(
             ) - self.__contract_details_data_req_timestamp
         return None

@@ -35,7 +35,6 @@ from pytrader.libs.system import logging
 #from pytrader.libs.applications import broker
 from pytrader.libs.applications import broker
 from pytrader.libs.applications import strategy
-from pytrader.libs import utilities
 
 # ==================================================================================================
 #
@@ -44,12 +43,6 @@ from pytrader.libs import utilities
 # ==================================================================================================
 ## The Base logger
 logger = logging.getLogger(__name__)
-
-## Client ID Used for the Interactive Brokers API
-client_id = 2003
-
-## The python formatted location of the strategies
-import_path = "pytrader.strategies."
 
 
 # ==================================================================================================
@@ -62,33 +55,31 @@ class ProcessManager():
     This class is responsible for managing the various processes that are running.
     """
 
-    def __init__(self):
-        ## Used far tracking the strategy processes.
-        self.strategy_processes = []
-
     def run_processes(self, processed_args):
+        """!
+        Runs the various subprocesses.
+
+        @param processed_args: A list of arguments.
+
+        @return None
+        """
         logger.debug10("Begin Function")
         address = processed_args[0]
         strategy_list = processed_args[1]
 
-        queue = multiprocessing.Queue()
-
         broker_client = broker.BrokerProcess(address)
-
-        broker_process = multiprocessing.Process(target=broker_client.run,
-                                                 args=(client_id, queue))
+        broker_process = multiprocessing.Process(target=broker_client.run)
         broker_process.start()
 
         strat = strategy.StrategyProcess()
-
-        strategy_process = multiprocessing.Process(target=strat.run, args=())
+        strategy_process = multiprocessing.Process(target=strat.run,
+                                                   args=(strategy_list, ))
         strategy_process.start()
 
         strategy_process.join()
         broker_process.join()
 
         logger.debug10("End Function")
-        return None
 
 
 # ==================================================================================================

@@ -67,11 +67,30 @@ class Strategy(strategies.Strategy):
         self.short_period = 5
         self.long_period = 20
         self.quantity = 100
+        self.use_options = False
 
         self.endtime = datetime.datetime.combine(
-            datetime.date.today(), datetime.time(hour=15, minute=45))
+            datetime.date.today(), datetime.time(hour=15, minute=55))
 
         super().__init__()
+
+    def continue_strategy(self):
+        """!
+        Checks various conditions for continuing to run the strategy
+
+        @return True - if all conditions are True
+        @return False - if any condition is False
+        """
+        logger.debug10("Begin Function")
+
+        condition1 = (datetime.datetime.now() < self.endtime)
+
+        logger.debug("Condition 1: %s", condition1)
+
+        if condition1:
+            return True
+        else:
+            return False
 
     def on_bar(self):
         short_name = str(self.short_period) + "EMA"
