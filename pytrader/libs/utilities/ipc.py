@@ -89,19 +89,15 @@ class Ipc():
         connection = self._get_connection()
 
         message = Message(msg)
-        encoded_msg = message.encode()
+        message.encode()
         msg_length = message.get_length()
-        length_msg = Message(str(msg_length))
-        encoded_len_msg = length_msg.encode()
-        logger.debug("Encoded Length Message: %s", encoded_len_msg)
-        encoded_len_msg += b' ' * (HEADER - len(encoded_len_msg))
-        logger.debug("Encoded Length Message: %s", encoded_len_msg)
-        logger.debug("Message Length: %s", encoded_len_msg)
-        logger.debug("Message: %s", message)
-        connection.sendall(encoded_len_msg)
-        connection.sendall(encoded_msg)
+        header_message = HeaderMessage(msg_length)
+        header_message.encode()
+        header_message.set_header()
 
-    @abstractmethod
+        header_message.send(connection)
+        message.send(connection)
+
     def recv(self):
         connection = self._get_connection()
         message_str = None
@@ -112,12 +108,16 @@ class Ipc():
         header_msg = header_msg.decode(FORMAT)
         logger.debug("Header Message: %s", header_msg)
 
-        if header_msg:
+        if len(header_msg) == HEADER:
             msg_length = int(header_msg)
             msg = connection.recv(msg_length)
             logger.debug("Message: %s", msg)
             message_str = msg.decode(FORMAT)
             logger.debug("Message String: %s", message_str)
+
+        else:
+            logger.error("Invalid Header")
+            logger.error("Header Msg: %s", header_msg)
 
         logger.debug("End Function")
 
@@ -136,7 +136,9 @@ class IpcServer(Ipc):
 
     def __init__(self):
         super().__init__()
-        self.queue = None
+        self.recv_queue = None
+        self.send_queue = None
+        self.client_connected = False
 
         try:
             os.unlink(SOCKET_FILE)
@@ -148,20 +150,28 @@ class IpcServer(Ipc):
         self.sock.bind(SOCKET_FILE)
         self.sock.listen(5)
 
-    def run(self, client_address):
+    def send_loop(self):
+        while self.client_connected:
+            message = self.send_queue.get()
+            self.send(message)
+
+    def recv_loop(self, client_address):
         logger.debug("Waiting for a connection")
 
         try:
             logger.debug("Client Address: %s", client_address)
 
-            client_connected = True
-            while client_connected:
+            self.client_connected = True
+            send_thread = threading.Thread(target=self.send_loop, daemon=True)
+            send_thread.start()
+
+            while self.client_connected:
                 data_str = self.recv()
                 logger.debug("Received: %s", data_str)
 
                 if data_str == DISCONNECT_MESSAGE:
                     logger.debug("Client Disconnected")
-                    client_connected = False
+                    self.client_connected = False
                 else:
                     logger.debug("Sending Data to Broker")
 
@@ -169,20 +179,21 @@ class IpcServer(Ipc):
 
                     if data_obj:
                         logger.debug("Data Obj: %s", data_obj)
-                        self.queue.put(data_obj)
+                        self.recv_queue.put(data_obj)
 
         finally:
             logger.debug("Closing Socket")
             self.connection.close()
 
-    def start_thread(self, queue):
-        self.queue = queue
+    def start_thread(self, recv_queue, send_queue):
+        self.recv_queue = recv_queue
+        self.send_queue = send_queue
 
         self.connection, client_address = self.sock.accept()
-        thread = threading.Thread(target=self.run,
-                                  args=(client_address, ),
-                                  daemon=True)
-        thread.start()
+        recv_thread = threading.Thread(target=self.recv_loop,
+                                       args=(client_address, ),
+                                       daemon=True)
+        recv_thread.start()
 
 
 class IpcClient(Ipc):
@@ -223,8 +234,8 @@ class Message():
         return message
 
     def encode(self):
-        if self.message is dict:
-            self.to_json()
+        # Ensure we have a string to encode
+        self._to_str()
 
         self.encoded_message = self.message.encode(self.format)
         return self.encoded_message
@@ -236,8 +247,24 @@ class Message():
         self.msg_length = len(self.encoded_message)
         return self.msg_length
 
+    def send(self, connection):
+        logger.debug("Message to send: %s", self.message)
+        logger.debug("Sending Encoded Message: %s", self.encoded_message)
+        connection.sendall(self.encoded_message)
 
-# class HeaderMessage():
-#     def __init__(self):
-#         self.header = 32
-#         super().__init__()
+    def _to_str(self):
+        if isinstance(self.message, dict):
+            self.to_json()
+
+        if isinstance(self.message, int):
+            self.message = str(self.message)
+
+
+class HeaderMessage(Message):
+
+    def __init__(self, message):
+        self.header = HEADER
+        super().__init__(message)
+
+    def set_header(self):
+        self.encoded_message += b' ' * (HEADER - len(self.encoded_message))

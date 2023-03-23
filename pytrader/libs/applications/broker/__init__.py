@@ -76,6 +76,9 @@ class BrokerProcess():
         self.client_id = 2003
         self.bars = {}
         self.rtb_thread = {}
+        self.broker_queue = queue.Queue()
+        self.socket_recv_queue = queue.Queue()
+        self.socket_send_queue = queue.Queue()
 
     def run(self):
         """!
@@ -83,18 +86,15 @@ class BrokerProcess():
 
         @param client_id: The ID number to use for the broker connection.
         """
-        broker_queue = queue.Queue()
-        socket_queue = queue.Queue()
-
         self._set_broker_ports()
-        self._start_threads(broker_queue, socket_queue)
+        self._start_threads()
 
         logger.debug3("Socket Thread Started")
 
         broker_connection = True
         while broker_connection:
             logger.debug4("Loop while connected")
-            cmd = socket_queue.get()
+            cmd = self.socket_recv_queue.get()
             logger.debug("Command: %s", cmd)
             logger.debug("Command Data Type: %s", type(cmd))
 
@@ -193,7 +193,7 @@ class BrokerProcess():
                 contract=self.contracts[key],
                 bar_size="rtb",
                 brokerclient=self.brokerclient,
-                socket_server=self.socket_server)
+                socket_queue=self.socket_send_queue)
 
             self.bars[key]["rtb"].request_real_time_bars()
 
@@ -225,10 +225,10 @@ class BrokerProcess():
         logger.debug("Begin Function")
         if subcommand.get("tickers"):
             self._create_contracts(subcommand["tickers"])
-            self.socket_server.send("Contracts Created")
+            self.socket_send_queue.put("Contracts Created")
         if subcommand.get("bar_sizes"):
             self._set_bar_sizes(subcommand["bar_sizes"])
-            self.socket_server.send("Bar Sizes Set")
+            self.socket_send_queue.put("Bar Sizes Set")
         logger.debug("End Function")
 
     def _set_bar_sizes(self, bar_sizes):
@@ -239,9 +239,9 @@ class BrokerProcess():
                     contract=self.contracts[key],
                     bar_size=item,
                     brokerclient=self.brokerclient,
-                    socket_server=self.socket_server)
+                    socket_queue=self.socket_send_queue)
 
-    def _start_threads(self, broker_queue, socket_queue):
+    def _start_threads(self):
         """!
 
         @param client_id: The id of the client to be used.
@@ -257,8 +257,9 @@ class BrokerProcess():
 
         logger.debug("BrokerClient connected")
 
-        self.brokerclient.start_thread(broker_queue)
-        self.socket_server.start_thread(socket_queue)
+        self.brokerclient.start_thread(self.broker_queue)
+        self.socket_server.start_thread(self.socket_recv_queue,
+                                        self.socket_send_queue)
 
         logger.debug("End Function")
 

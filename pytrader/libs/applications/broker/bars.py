@@ -69,7 +69,7 @@ class BrokerBars(bars.BasicBars):
         self.contract = kwargs["contract"]
 
         ## Socket Server
-        self.socket_server = kwargs["socket_server"]
+        self.socket_queue = kwargs["socket_queue"]
 
         logger.debug10("Begin Function")
         if kwargs.get("brokerclient"):
@@ -124,7 +124,7 @@ class BrokerBars(bars.BasicBars):
     def send_bars(self, bar_type, bars):
         msg = {bar_type: {self.contract.symbol: {self.bar_size: bars}}}
         message = json.dumps(msg)
-        self.socket_server.send(message)
+        self.socket_queue.put(message)
 
     # ==============================================================================================
     #
