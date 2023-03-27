@@ -36,6 +36,7 @@ from pytrader.libs.system import logging
 
 # Other Application Libraries
 from pytrader.libs.applications.broker import bars
+from pytrader.libs.applications.broker import ticks
 from pytrader.libs.clients import broker
 from pytrader.libs.utilities import ipc
 
@@ -75,7 +76,9 @@ class BrokerProcess():
         self.socket_server = ipc.IpcServer()
         self.client_id = 2003
         self.bars = {}
+        self.ticks = {}
         self.rtb_thread = {}
+        self.tick_thread = {}
         self.broker_queue = queue.Queue()
         self.socket_recv_queue = queue.Queue()
         self.socket_send_queue = queue.Queue()
@@ -175,6 +178,8 @@ class BrokerProcess():
             self._request_option_details()
         elif subcommand == "real_time_bars":
             self._request_real_time_bars()
+        elif subcommand == "tick_by_tick_data":
+            self._request_tick_by_tick_data()
         else:
             logger.error("Command Not Implemented: %s", subcommand)
 
@@ -200,6 +205,17 @@ class BrokerProcess():
             self.rtb_thread[key] = threading.Thread(
                 target=self.bars[key]["rtb"].run, daemon=True)
             self.rtb_thread[key].start()
+
+    def _request_tick_by_tick_data(self):
+        for key in self.contracts.keys():
+            self.ticks[key] = ticks.BrokerTicks(
+                contract=self.contracts[key],
+                brokerclient=self.brokerclient,
+                socket_queue=self.socket_send_queue)
+            self.ticks[key].request_ticks()
+            self.tick_thread[key] = threading.Thread(
+                target=self.ticks[key].run, daemon=True)
+            self.tick_thread[key].start()
 
     def _set_contract_details(self, contract):
         req_id = self.brokerclient.req_contract_details(contract)

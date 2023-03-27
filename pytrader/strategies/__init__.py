@@ -27,6 +27,7 @@ Provides the Base Class for a Strategy.
 """
 # System libraries
 import datetime
+import json
 
 from abc import ABCMeta, abstractmethod
 
@@ -35,9 +36,11 @@ from ibapi import order
 
 # System Library Overrides
 from pytrader.libs.system import logging
-from pytrader.libs.utilities import ipc
 
 # Application Libraries
+from pytrader.libs import bars
+from pytrader.libs import ticks
+from pytrader.libs.utilities import ipc
 
 # ==================================================================================================
 #
@@ -67,7 +70,8 @@ class Strategy():
         self.socket_client = ipc.IpcClient()
 
         self.time_now = datetime.datetime.now()
-        self.bars = []
+        self.bars = {}
+        self.ticks = {}
 
         self.long_position = []
         self.short_position = []
@@ -84,7 +88,7 @@ class Strategy():
         pass
 
     @abstractmethod
-    def on_5sec_rtb(self, real_time_bar):
+    def on_5sec_rtb(self):
         pass
 
     @abstractmethod
@@ -117,27 +121,20 @@ class Strategy():
             self._send_bar_sizes()
             self._req_bar_history()
             self._req_real_time_bars()
-            #self._req_tick_by_tick_data()
+            self._req_tick_by_tick_data()
             #self._req_market_data()
 
-            while self.continue_strategy():
-                data = self.socket_client.recv()
-                self._process_data(data)
+            continue_strategy = True
+            while continue_strategy:
+                message = self.socket_client.recv()
+                self._process_data(message)
+                continue_strategy = self.continue_strategy()
+
         finally:
             #self.on_end()
             self.socket_client.disconnect()
 
         # bar_adjustment = self._bar_conversion()
-
-        # self.contract = contract.Contract()
-        # self.contract.symbol = self.security
-        # self.contract.secType = "STK"
-        # self.contract.exchange = "SMART"
-        # self.contract.currency = "USD"
-
-        # req_id = self.brokerclient.req_historical_data(self.contract,
-        #                                                self.bar_sizes,
-        #                                                duration_str="1 D")
 
         # bar_list = self.brokerclient.get_data(req_id)
 
@@ -248,32 +245,81 @@ class Strategy():
     # Private Functions
     #
     # ==============================================================================================
-    def _bar_conversion(self):
-        bar_conversion = {
-            "5 secs": 1,
-            "30 secs": 6,
-            "1 min": 12,
-            "5 mins": 60,
-            "15 mins": 180,
-            "30 mins": 360,
-            "1 hr": 720
-        }
-        return bar_conversion[self.bar_sizes]
+    def _process_5sec_rtb(self, bar_data):
+        logger.debug2("Bar Data: %s", bar_data)
+        ticker, bar_size = self._process_bars(bar_data)
 
-    def _process_data(self, data):
-        logger.debug("Processing Data: %s", data)
-        logger.debug("Data Type: %s", type(data))
-        # if data.get("real_time_bars"):
-        #     self.on_5sec_rtb(data["real_time_bars"])
-        # if data.get("bars"):
-        #     pass
+        for item in self.bar_sizes:
+            new_bar = self.bars[ticker][bar_size].rescale(item)
+
+            if new_bar:
+                self.bars[ticker][item].append_bar(new_bar)
+                if item == self.bar_sizes[0]:
+                    self.on_bar(ticker, item)
+            else:
+                self.on_5sec_rtb()
+
+    def _process_bars(self, bar_data):
+        logger.debug10("Begin Function")
+        # FIXME: There should only be the one key, I shouldn't need to loop this.
+        ticker = None
+        for ticker, bar_size_dict in bar_data.items():
+            logger.debug3("Ticker: %s", ticker)
+            if ticker not in self.bars.keys():
+                self.bars[ticker] = {}
+
+            # FIXME: Again there should only be one key.
+            for bar_size, bar_list in bar_size_dict.items():
+                logger.debug3("Bar Size: %s", bar_size)
+                logger.debug4("Bar List: %s", bar_list)
+                if bar_size in self.bars[ticker].keys():
+                    self.bars[ticker][bar_size].append_bar(bar_list)
+                else:
+                    self.bars[ticker][bar_size] = bars.Bars(bar_size=bar_size,
+                                                            bar_list=bar_list)
+
+        return ticker, bar_size
+
+        logger.debug10("End Function")
+
+    def _process_data(self, message):
+
+        # WTF! I really don't like this way of skipping over confirmation messages.
+        logger.debug4("Message: %s", message)
+        try:
+            data = json.loads(message)
+        except Exception as exception_msg:
+            logger.warning("Invalid JSON, Message: '%s', Error Msg: '%s'",
+                           message, exception_msg)
+            data = {}
+
+        if data.get("real_time_bars"):
+            logger.debug3("Processing Real Time Bars")
+            self._process_5sec_rtb(data["real_time_bars"])
+        if data.get("bars"):
+            logger.debug3("Processing Bars")
+            self._process_bars(data["bars"])
+
+        if data.get("tick"):
+            logger.debug("Processing Tick Data")
+            self._process_ticks(data["tick"])
+
+    def _process_ticks(self, new_ticks):
+        logger.debug10("Begin Function")
+        ticker = None
+        for ticker, tick in new_ticks.items():
+            if ticker not in self.ticks.keys():
+                self.ticks[ticker] = ticks.Ticks()
+
+            self.ticks[ticker].append_tick(tick)
+            self.on_tick(ticker, tick)
 
     def _req_bar_history(self):
         message = {"req": "bar_history"}
         self._send_msg(message)
 
     def _req_market_data(self):
-        message = {"req": "real_market_data"}
+        message = {"req": "realtime_market_data"}
         self._send_msg(message)
 
     def _req_option_details(self):

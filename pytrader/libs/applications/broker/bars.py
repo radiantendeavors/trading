@@ -3,7 +3,7 @@
 
 Provides Bar Data
 
-@author Geoff S. derber
+@author G. S. Derber
 @version HEAD
 @date 2022
 @copyright GNU Affero General Public License
@@ -27,9 +27,9 @@ Provides Bar Data
 # Standard libraries
 import datetime
 import json
+import queue
 
 # 3rd Party libraries
-import pandas
 
 # System Library Overrides
 from pytrader.libs.system import logging
@@ -62,14 +62,17 @@ class BrokerBars(bars.BasicBars):
         ## Bar history length
         self.duration = None
 
-        ## List of Long Duration Bar Sizes
-        self.bar_size_long_duration = ["1 day", "1 week", "1 month"]
-
         ## Bar contract
         self.contract = kwargs["contract"]
 
         ## Socket Server
         self.socket_queue = kwargs["socket_queue"]
+
+        ##
+        self.rtb_req_id = None
+
+        ##
+        self.queue = queue.Queue()
 
         logger.debug10("Begin Function")
         if kwargs.get("brokerclient"):
@@ -79,14 +82,12 @@ class BrokerBars(bars.BasicBars):
             if kwargs["duration"]:
                 self.duration = kwargs["duration"]
 
-        self.rtb_req_id = None
-
         super().__init__(*args, **kwargs)
 
     def run(self):
         broker_connection = True
         while broker_connection:
-            real_time_bar = self.brokerclient.rtb_queue[self.rtb_req_id].get()
+            real_time_bar = self.queue.get()
 
             bar_datetime = datetime.datetime.fromtimestamp(
                 real_time_bar[0]).strftime('%Y%m%d %H:%M:%S')
@@ -117,7 +118,7 @@ class BrokerBars(bars.BasicBars):
     def request_real_time_bars(self):
         if self.bar_size == "rtb":
             self.rtb_req_id = self.brokerclient.req_real_time_bars(
-                self.contract)
+                self.queue, self.contract)
         else:
             logger.error("Invalid Bar Size for real time bars")
 

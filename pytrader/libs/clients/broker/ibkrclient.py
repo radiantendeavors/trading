@@ -31,7 +31,9 @@ Provides the client for Interactive Brokers
 import datetime
 import threading
 import time
+
 from decimal import Decimal
+from queue import Queue
 
 # 3rd Party Libraries
 from ibapi.client import EClient
@@ -157,7 +159,11 @@ class IbkrClient(EWrapper, EClient):
         ##
         self.queue = None
 
+        ##
         self.rtb_queue = {}
+
+        ##
+        self.tick_queue = {}
 
     def get_account_list(self):
         """!
@@ -233,7 +239,7 @@ class IbkrClient(EWrapper, EClient):
 
         @return None
         """
-        raise NotImplementedError
+        self.req_id += 1
 
     def calculate_option_price(self,
                                contract: Contract,
@@ -250,9 +256,9 @@ class IbkrClient(EWrapper, EClient):
 
         @return None
         """
-        raise NotImplementedError
+        self.req_id += 1
 
-    def cancel_account_summary(self, req_id: int):
+    def cancel_account_summary(self):
         """!
         Cancels the account's summary request. After requesting an account's summary, invoke this
         function to cancel it.
@@ -261,9 +267,9 @@ class IbkrClient(EWrapper, EClient):
 
         @return None
         """
-        raise NotImplementedError
+        self.req_id += 1
 
-    def cancel_account_updates_multi(self, req_id: int):
+    def cancel_account_updates_multi(self):
         """!
         Cancels account updates request for account and/or model.
 
@@ -271,17 +277,32 @@ class IbkrClient(EWrapper, EClient):
 
         @return None
         """
-        raise NotImplementedError
+        self.req_id += 1
 
-    def cancel_calculate_implied_volatility(self, req_id: int):
-        raise NotImplementedError
+    def cancel_calculate_implied_volatility(self):
+        self.req_id += 1
 
-    def cancel_head_timestamp(self, req_id: int):
-        self.cancelHeadTimeStamp(req_id)
+    def cancel_head_timestamp(self):
+        self.req_id += 1
+        self.cancelHeadTimeStamp(self.req_id)
 
-    def cancel_historical_data(self, req_id: int):
+    def cancel_historical_data(self):
+        self.req_id += 1
         self.__active_historical_data_requests -= 1
-        self.cancelHistoricalData(req_id)
+        self.cancelHistoricalData(self.req_id)
+
+    def cancel_mkt_data(self):
+        self.req_id += 1
+
+    def cancel_mkt_depth(self, is_smart_depth: bool):
+        self.req_id += 1
+        self.cancelMktDepth(self.req_id, is_smart_depth)
+
+    def cancel_news_bulletin(self):
+        self.cancelNewsBulletin()
+
+    def cancel_order(self, order_id: int, manual_order_cancel_time: str):
+        raise NotImplementedError
 
     def is_connected(self):
         """!
@@ -620,6 +641,7 @@ class IbkrClient(EWrapper, EClient):
         return self.req_id
 
     def req_real_time_bars(self,
+                           rtb_queue: Queue,
                            contract: Contract,
                            bar_size_setting: int = 5,
                            what_to_show: str = "TRADES",
@@ -656,7 +678,9 @@ class IbkrClient(EWrapper, EClient):
         logger.debug4("Use Regular Trading Hours: %s",
                       use_regular_trading_hours)
         logger.debug4("Real time bar options: %s", real_time_bar_options)
+
         self.req_id += 1
+        self.rtb_queue[self.req_id] = rtb_queue
 
         self._historical_data_wait()
 
@@ -673,7 +697,6 @@ class IbkrClient(EWrapper, EClient):
         logger.debug("Request Timestamp: %s",
                      self.__historical_data_req_timestamp)
 
-        self.rtb_queue[self.req_id] = self.queue
         logger.debug4("Data: %s", self.data)
         logger.debug10("End Funuction")
         return self.req_id
@@ -697,8 +720,12 @@ class IbkrClient(EWrapper, EClient):
         logger.debug10("End Function")
         return self.req_id
 
-    def req_tick_by_tick_data(self, contract: Contract, tick_type: str,
-                              number_of_ticks: int, ignore_size: bool):
+    def req_tick_by_tick_data(self,
+                              tick_queue: Queue,
+                              contract: Contract,
+                              tick_type: str = "Last",
+                              number_of_ticks: int = 0,
+                              ignore_size: bool = False):
         """!
         Requests tick-by-tick data.
 
@@ -715,10 +742,13 @@ class IbkrClient(EWrapper, EClient):
 
         if tick_type in allowed_tick_types:
             self.req_id += 1
+            self._historical_data_wait()
+
+            self.tick_queue[self.req_id] = tick_queue
 
             self.reqTickByTickData(self.req_id, contract, tick_type,
                                    number_of_ticks, ignore_size)
-
+            self.__historical_data_req_timestamp = datetime.datetime.now()
             logger.debug("End Function")
             return self.req_id
         else:
@@ -2042,8 +2072,14 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
+
+        tick = [
+            tick_type, time, price, size, tick_attrib_last, exchange,
+            special_conditions
+        ]
+
+        self.tick_queue[req_id].put(tick)
         logger.debug10("End Function")
-        return None
 
     @iswrapper
     def tickByTickBidAsk(self, req_id: int, time: int, bid_price: float,
@@ -2051,7 +2087,7 @@ class IbkrClient(EWrapper, EClient):
                          ask_size: Decimal,
                          tick_attrib_bid_ask: TickAttribBidAsk):
         """!
-        Returns "Last" or "AllLast" tick-by-tick real-time tick
+        Returns "BidAsk" tick-by-tick real-time tick
 
         @param req_id: unique identifier of the request
         @param time: tick-by-tick real-time tick timestamp
@@ -2066,13 +2102,17 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
+        tick = [
+            time, bid_price, ask_price, bid_size, ask_size, tick_attrib_bid_ask
+        ]
+
+        self.tick_ba_queue[req_id].put(tick)
         logger.debug10("End Function")
-        return None
 
     @iswrapper
     def tickByTickMidPoint(self, req_id: int, time: int, mid_point: float):
         """!
-        Returns "Last" or "AllLast" tick-by-tick real-time tick
+        Returns "MidPoint" tick-by-tick real-time tick
 
         @param reqId: unique identifier of the request
         @param time: tick-by-tick real-time tick timestamp
@@ -2081,6 +2121,10 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
+        tick = [time, mid_point]
+
+        self.tick_mid_queue[req_id].put(tick)
+
         logger.debug10("End Function")
         return None
 

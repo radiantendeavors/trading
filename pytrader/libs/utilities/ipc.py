@@ -99,27 +99,27 @@ class Ipc():
         message.send(connection)
 
     def recv(self):
+        logger.debug10("Begin Function")
         connection = self._get_connection()
         message_str = None
 
-        logger.debug("Begin Function")
         header_msg = connection.recv(HEADER)
-        logger.debug("Header Message: %s", header_msg)
+        logger.debug4("Header Message: %s", header_msg)
         header_msg = header_msg.decode(FORMAT)
-        logger.debug("Header Message: %s", header_msg)
+        logger.debug4("Header Message: %s", header_msg)
 
         if len(header_msg) == HEADER:
             msg_length = int(header_msg)
             msg = connection.recv(msg_length)
-            logger.debug("Message: %s", msg)
+            logger.debug3("Message: %s", msg)
             message_str = msg.decode(FORMAT)
-            logger.debug("Message String: %s", message_str)
+            logger.debug3("Message String: %s", message_str)
 
         else:
             logger.error("Invalid Header")
             logger.error("Header Msg: %s", header_msg)
 
-        logger.debug("End Function")
+        logger.debug10("End Function")
 
         return message_str
 
@@ -248,8 +248,8 @@ class Message():
         return self.msg_length
 
     def send(self, connection):
-        logger.debug("Message to send: %s", self.message)
-        logger.debug("Sending Encoded Message: %s", self.encoded_message)
+        logger.debug2("Message to send: %s", self.message)
+        logger.debug3("Sending Encoded Message: %s", self.encoded_message)
         connection.sendall(self.encoded_message)
 
     def _to_str(self):

@@ -29,8 +29,6 @@ Provides an Example Strategy
 # System libraries
 import datetime
 
-import time
-
 # 3rd Party libraries
 
 # System Library Overrides
@@ -63,9 +61,9 @@ class Strategy(strategies.Strategy):
     def __init__(self):
 
         self.security = ["SPY", "QQQ", "IWM"]
-        self.bar_sizes = ["5 mins", "1 hour"]
-        self.short_period = 5
-        self.long_period = 20
+        self.bar_sizes = ["1 min"]
+        self.short_period = 3
+        self.long_period = 8
         self.quantity = 100
         self.use_options = False
 
@@ -83,57 +81,48 @@ class Strategy(strategies.Strategy):
         """
         logger.debug10("Begin Function")
 
-        condition1 = (datetime.datetime.now() < self.endtime)
-
-        logger.debug("Condition 1: %s", condition1)
+        cur_time = datetime.datetime.now()
+        condition1 = (cur_time < self.endtime)
+        logger.debug3("Curent Time: %s", cur_time)
+        logger.debug3("End Time: %s", self.endtime)
+        logger.debug2("Condition 1: %s", condition1)
 
         if condition1:
             return True
         else:
             return False
 
-    def on_bar(self):
-        short_name = str(self.short_period) + "EMA"
-        self.bars_df[short_name] = self.bars_df["Close"].ewm(
-            span=self.short_period, adjust=False).mean()
+    def on_bar(self, ticker, bar_size):
+        self.bars[ticker][bar_size].create_dataframe()
+        self.bars[ticker][bar_size].calculate_ema(self.short_period, "short")
+        self.bars[ticker][bar_size].calculate_ema(self.long_period, "long")
 
-        long_name = str(self.long_period) + "EMA"
-        self.bars_df[long_name] = self.bars_df["Close"].ewm(
-            span=self.long_period, adjust=False).mean()
-
-        logger.debug("Real Time Bar (with EMA): %s", self.bars_df.tail(20))
-
-        previous_short = self.bars_df[short_name].iloc[-2]
-        previous_long = self.bars_df[long_name].iloc[-2]
-
-        current_short = self.bars_df[short_name].iloc[-1]
-        current_long = self.bars_df[long_name].iloc[-1]
-
-        cross_down = ((current_short <= current_long) &
-                      (previous_short >= previous_long))
-
-        cross_up = ((current_short >= current_long) &
-                    (previous_short <= previous_long))
-        logger.debug("Cross Up: %s", cross_up)
-        logger.debug("Cross Down: %s", cross_down)
-
-        self.next_option_contract = self.contract
+        self.bars[ticker][bar_size].print_bar()
+        cross_up = self.bars[ticker][bar_size].is_cross_up()
+        cross_down = self.bars[ticker][bar_size].is_cross_down()
 
         if cross_up:
-            logger.info("EMA Cross Up")
+            logger.info("EMA Cross Up for ticker: %s", ticker)
 
-            if len(self.short_position) > 0:
-                self.close_short_position()
+            # if len(self.short_position) > 0:
+            #     self.close_short_position()
 
-            self.open_long_position()
+            # self.open_long_position()
 
         if cross_down:
-            logger.info("EMA Cross Down")
+            logger.info("EMA Cross Down for ticker: %s", ticker)
 
-            if len(self.long_position) > 0:
-                self.close_long_position()
+            # if len(self.long_position) > 0:
+            #     self.close_long_position()
 
-            self.open_short_position()
+            # self.open_short_position()
+
+    def on_tick(self, ticker, tick):
+        logger.debug10("Begin Function")
+        logger.debug("Run On Tick")
+        logger.debug("Ticker: %s", ticker)
+        logger.debug("Tick: %s", tick)
+        logger.debug10("End Function")
 
     def on_end(self):
         self.brokerclient.req_global_cancel()
