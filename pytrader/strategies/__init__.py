@@ -92,11 +92,31 @@ class Strategy():
         pass
 
     @abstractmethod
+    def on_ask(self):
+        pass
+
+    @abstractmethod
     def on_bar(self):
         pass
 
     @abstractmethod
+    def on_bid(self):
+        pass
+
+    @abstractmethod
     def on_end(self):
+        pass
+
+    @abstractmethod
+    def on_high(self):
+        pass
+
+    @abstractmethod
+    def on_last(self):
+        pass
+
+    @abstractmethod
+    def on_low(self):
         pass
 
     @abstractmethod
@@ -119,10 +139,10 @@ class Strategy():
                 self._req_option_details()
 
             self._send_bar_sizes()
-            self._req_bar_history()
-            self._req_real_time_bars()
-            self._req_tick_by_tick_data()
-            #self._req_market_data()
+            #self._req_bar_history()
+            #self._req_real_time_bars()
+            #self._req_tick_by_tick_data()
+            self._req_market_data()
 
             continue_strategy = True
             while continue_strategy:
@@ -133,78 +153,6 @@ class Strategy():
         finally:
             #self.on_end()
             self.socket_client.disconnect()
-
-        # bar_adjustment = self._bar_conversion()
-
-        # bar_list = self.brokerclient.get_data(req_id)
-
-        # for bar in bar_list:
-        #     logger.debug3("Bar: %s", bar)
-        #     bar_date = bar.date
-        #     bar_open = bar.open
-        #     bar_high = bar.high
-        #     bar_low = bar.low
-        #     bar_close = bar.close
-        #     bar_volume = bar.volume
-        #     bar_count = bar.barCount
-
-        #     self.bars.append([
-        #         bar_date, bar_open, bar_high, bar_low, bar_close, bar_volume,
-        #         bar_count
-        #     ])
-
-        # req_id = self.brokerclient.req_real_time_bars(self.contract)
-
-        # real_time_bars = []
-
-        # while self.time_now < self.endtime:
-        #     real_time_bar = self.brokerclient.realtime_bar_queue[req_id].get()
-
-        #     bar_datetime = datetime.datetime.fromtimestamp(
-        #         real_time_bar[0]).strftime('%Y%m%d %H:%M:%S')
-        #     bar_datetime_str = str(bar_datetime) + " EST"
-
-        #     real_time_bar[0] = bar_datetime_str
-        #     real_time_bar[5] = int(real_time_bar[5])
-        #     real_time_bar[6] = float(real_time_bar[6])
-
-        #     logger.debug("Real Time Bar: %s", real_time_bar)
-
-        #     real_time_bars.append(real_time_bar)
-
-        #     logger.debug("Bar adjustment: %s", bar_adjustment)
-        #     if len(real_time_bars) == bar_adjustment:
-        #         rtb_date = real_time_bars[0][0]
-        #         rtb_open = real_time_bars[0][1]
-        #         rtb_high = max(l[2] for l in real_time_bars)
-        #         rtb_low = min(l[3] for l in real_time_bars)
-        #         rtb_close = real_time_bars[-1][4]
-        #         rtb_volumn = sum(l[5] for l in real_time_bars)
-        #         rtb_count = sum(l[6] for l in real_time_bars)
-
-        #         new_bar = [
-        #             rtb_date, rtb_open, rtb_high, rtb_low, rtb_close,
-        #             rtb_volumn, rtb_count
-        #         ]
-        #         self.bars.append(new_bar)
-
-        #         self.bars_df = pandas.DataFrame(self.bars,
-        #                                         columns=[
-        #                                             "DateTime", "Open", "High",
-        #                                             "Low", "Close", "Volume",
-        #                                             "Count"
-        #                                         ])
-        #         self.bars_df["DateTime"] = pandas.to_datetime(
-        #             self.bars_df["DateTime"], format="%Y%m%d %H:%M:%S %Z")
-
-        #         self.on_bar()
-        #         real_time_bars = []
-        #     else:
-        #         # This feels like a crappy way to check if the real_time bar exists
-        #         try:
-        #             self.on_5sec_rtb(real_time_bar)
-        #         except Exception as msg:
-        #             logger.debug5("Exception: %s", msg)
 
         logger.debug10("End Function")
 
@@ -299,10 +247,44 @@ class Strategy():
         if data.get("bars"):
             logger.debug3("Processing Bars")
             self._process_bars(data["bars"])
-
         if data.get("tick"):
             logger.debug("Processing Tick Data")
             self._process_ticks(data["tick"])
+
+        if data.get("market_data"):
+            logger.debug("Processing Market Data")
+            self._process_market_data(data["market_data"])
+
+    def _process_market_data(self, new_market_data):
+        logger.debug10("Begin Function")
+
+        ticker = None
+
+        for ticker, market_data in new_market_data.items():
+            if market_data[0] == "tick_price":
+                self._process_mkt_tick_price(ticker, market_data)
+
+    def _process_mkt_tick_price(self, ticker, market_data):
+        func_map = {
+            1: self.on_bid,
+            2: self.on_ask,
+            4: self.on_last,
+            6: self.on_high,
+            7: self.on_low
+        }
+        logger.debug("Func Map: %s", func_map)
+        logger.debug("Tick Type ID: %s", market_data[1])
+        logger.debug("Broker Subclass: %s", func_map.get(market_data[1]))
+
+        # Until we have all tick types defined at:
+        # https://interactivebrokers.github.io/tws-api/tick_types.html
+        # we will need this 'if' statement.
+        if market_data[1] in func_map.keys():
+            func = func_map.get(market_data[1])
+            func(ticker, market_data)
+        else:
+            logger.error("Market Data Type Id #%s has not been implemented",
+                         market_data[1])
 
     def _process_ticks(self, new_ticks):
         logger.debug10("Begin Function")
@@ -319,7 +301,7 @@ class Strategy():
         self._send_msg(message)
 
     def _req_market_data(self):
-        message = {"req": "realtime_market_data"}
+        message = {"req": "real_time_market_data"}
         self._send_msg(message)
 
     def _req_option_details(self):

@@ -92,6 +92,20 @@ class Strategy(strategies.Strategy):
         else:
             return False
 
+    def on_5sec_rtb(self, ticker, bar):
+        logger.debug10("Begin Function")
+        logger.debug("Run On 5sec RTB")
+        logger.debug("Ticker: %s", ticker)
+        logger.debug("Bar: %s", bar)
+        logger.debug10("End Function")
+
+    def on_ask(self, ticker, tick):
+        logger.debug10("Begin Function")
+        logger.debug("Run On Ask")
+        logger.debug("Ticker: %s", ticker)
+        logger.debug("Tick: %s", tick)
+        logger.debug10("End Function")
+
     def on_bar(self, ticker, bar_size):
         self.bars[ticker][bar_size].create_dataframe()
         self.bars[ticker][bar_size].calculate_ema(self.short_period, "short")
@@ -117,9 +131,9 @@ class Strategy(strategies.Strategy):
 
             # self.open_short_position()
 
-    def on_tick(self, ticker, tick):
+    def on_bid(self, ticker, tick):
         logger.debug10("Begin Function")
-        logger.debug("Run On Tick")
+        logger.debug("Run On Bid")
         logger.debug("Ticker: %s", ticker)
         logger.debug("Tick: %s", tick)
         logger.debug10("End Function")
@@ -130,6 +144,34 @@ class Strategy(strategies.Strategy):
             self.close_long_position()
         if len(self.short_position) > 0:
             self.close_short_position()
+
+    def on_high(self, ticker, tick):
+        logger.debug10("Begin Function")
+        logger.debug("Run On High")
+        logger.debug("Ticker: %s", ticker)
+        logger.debug("Tick: %s", tick)
+        logger.debug10("End Function")
+
+    def on_last(self, ticker, tick):
+        logger.debug10("Begin Function")
+        logger.debug("Run On Last")
+        logger.debug("Ticker: %s", ticker)
+        logger.debug("Tick: %s", tick)
+        logger.debug10("End Function")
+
+    def on_low(self, ticker, tick):
+        logger.debug10("Begin Function")
+        logger.debug("Run On Low")
+        logger.debug("Ticker: %s", ticker)
+        logger.debug("Tick: %s", tick)
+        logger.debug10("End Function")
+
+    def on_tick(self, ticker, tick):
+        logger.debug10("Begin Function")
+        logger.debug("Run On Tick")
+        logger.debug("Ticker: %s", ticker)
+        logger.debug("Tick: %s", tick)
+        logger.debug10("End Function")
 
 
 # ==================================================================================================

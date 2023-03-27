@@ -165,6 +165,8 @@ class IbkrClient(EWrapper, EClient):
         ##
         self.tick_queue = {}
 
+        self.mkt_data_queue = {}
+
     def get_account_list(self):
         """!
         Returns the list of accounts
@@ -591,14 +593,13 @@ class IbkrClient(EWrapper, EClient):
         self.reqManagedAccounts()
         return None
 
-    def req_market_data(
-            self,
-            contract: Contract,
-            generic_tick_list:
-        str = "100,101,104,105,106,165,221,233,236,256,258,411,456",
-            snapshot: bool = False,
-            regulatory_snapshot: bool = False,
-            market_data_options: list = []):
+    def req_market_data(self,
+                        mkt_data_queue: Queue,
+                        contract: Contract,
+                        generic_tick_list: str = "",
+                        snapshot: bool = False,
+                        regulatory_snapshot: bool = False,
+                        market_data_options: list = []):
         """!
         Requests real time market data. Returns market data for an instrument either in real time or
         10-15 minutes delayed (depending on the market data type specified)
@@ -635,8 +636,14 @@ class IbkrClient(EWrapper, EClient):
         """
         logger.debug10("Begin Function")
         self.req_id += 1
+        self.mkt_data_queue[self.req_id] = mkt_data_queue
+
+        ## TODO: Verify if packing violations exist for market data
+        self._historical_data_wait()
         self.reqMktData(self.req_id, contract, generic_tick_list, snapshot,
                         regulatory_snapshot, market_data_options)
+
+        self.__historical_data_req_timestamp = datetime.datetime.now()
         logger.debug10("End Function")
         return self.req_id
 
@@ -2250,6 +2257,10 @@ class IbkrClient(EWrapper, EClient):
         logger.debug10("Begin Function")
         logger.info("Request Id: %s TickType: %s Price: %s Attrib: %s", req_id,
                     field, price, attrib)
+
+        tick = ["tick_price", field, price, attrib]
+        self.mkt_data_queue[req_id].put(tick)
+
         logger.debug10("End Function")
         return None
 

@@ -36,6 +36,7 @@ from pytrader.libs.system import logging
 
 # Other Application Libraries
 from pytrader.libs.applications.broker import bars
+from pytrader.libs.applications.broker import marketdata
 from pytrader.libs.applications.broker import ticks
 from pytrader.libs.clients import broker
 from pytrader.libs.utilities import ipc
@@ -77,8 +78,10 @@ class BrokerProcess():
         self.client_id = 2003
         self.bars = {}
         self.ticks = {}
+        self.market_data = {}
         self.rtb_thread = {}
         self.tick_thread = {}
+        self.market_data_thread = {}
         self.broker_queue = queue.Queue()
         self.socket_recv_queue = queue.Queue()
         self.socket_send_queue = queue.Queue()
@@ -176,6 +179,8 @@ class BrokerProcess():
             self._request_bar_history()
         elif subcommand == "option_details":
             self._request_option_details()
+        elif subcommand == "real_time_market_data":
+            self._request_market_data()
         elif subcommand == "real_time_bars":
             self._request_real_time_bars()
         elif subcommand == "tick_by_tick_data":
@@ -191,6 +196,17 @@ class BrokerProcess():
     def _request_option_details(self, contract_):
         req_id = self.brokerclient.req_sec_def_opt_params(contract_)
         return self.brokerclient.get_data(req_id)
+
+    def _request_market_data(self):
+        for key in self.contracts.keys():
+            self.market_data[key] = marketdata.BrokerMarketData(
+                contract=self.contracts[key],
+                brokerclient=self.brokerclient,
+                socket_queue=self.socket_send_queue)
+            self.market_data[key].request_market_data()
+            self.market_data_thread[key] = threading.Thread(
+                target=self.market_data[key].run, daemon=True)
+            self.market_data_thread[key].start()
 
     def _request_real_time_bars(self):
         for key in self.contracts.keys():
