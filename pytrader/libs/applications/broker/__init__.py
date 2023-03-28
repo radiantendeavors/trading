@@ -149,8 +149,10 @@ class BrokerProcess():
         logger.debug10("End Function")
 
     def _create_braket_order(self, order_request):
-        order_id = self.brokerclient.next_order_id
-        order_contract = self.contracts[order_request["ticker"]]
+        ticker = order_request["ticker"]
+        order_contract = self.contracts[ticker]
+        ticker_index_id = list(self.contracts.keys()).index(ticker)
+        order_id = self.brokerclient.next_order_id + ticker_index_id
 
         parent_order = order.Order()
         parent_order.orderId = order_id
