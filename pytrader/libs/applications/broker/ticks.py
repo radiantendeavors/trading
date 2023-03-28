@@ -85,7 +85,7 @@ class BrokerTicks(ticks.BasicTicks):
         broker_connection = True
         while broker_connection:
             new_tick = self.queue.get()
-            logger.debug("New Tick: %s", new_tick)
+            logger.debug3("New Tick: %s", new_tick)
 
             # Convert size from type Decimal to Float, because json can't work with Decimals
             new_tick[3] = float(new_tick[3])

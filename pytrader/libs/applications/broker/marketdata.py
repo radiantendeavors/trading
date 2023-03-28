@@ -78,7 +78,7 @@ class BrokerMarketData(marketdata.BasicMktData):
         broker_connection = True
         while broker_connection:
             new_tick = self.queue.get()
-            logger.debug("New Tick: %s", new_tick)
+            logger.debug3("New Tick: %s", new_tick)
 
             # Convert tickAttribLast to str
             new_tick[3] = str(new_tick[3])

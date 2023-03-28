@@ -167,18 +167,19 @@ class IpcServer(Ipc):
 
             while self.client_connected:
                 data_str = self.recv()
-                logger.debug("Received: %s", data_str)
+                logger.debug3("Received: %s", data_str)
 
                 if data_str == DISCONNECT_MESSAGE:
                     logger.debug("Client Disconnected")
                     self.client_connected = False
                 else:
-                    logger.debug("Sending Data to Broker")
+                    logger.debug3("Sending Data to Broker")
 
                     data_obj = json.loads(data_str)
 
                     if data_obj:
-                        logger.debug("Data Obj: %s", data_obj)
+                        logger.debug("Sending Data Obj to broker: %s",
+                                     data_obj)
                         self.recv_queue.put(data_obj)
 
         finally:
@@ -248,8 +249,8 @@ class Message():
         return self.msg_length
 
     def send(self, connection):
-        logger.debug2("Message to send: %s", self.message)
-        logger.debug3("Sending Encoded Message: %s", self.encoded_message)
+        logger.debug3("Message to send: %s", self.message)
+        logger.debug4("Sending Encoded Message: %s", self.encoded_message)
         connection.sendall(self.encoded_message)
 
     def _to_str(self):
