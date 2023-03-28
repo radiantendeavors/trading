@@ -315,11 +315,13 @@ class IbkrClient(EWrapper, EClient):
         """
         return self.isConnected()
 
-    def place_order(self, contract: Contract, order: Order):
+    def place_order(self, contract: Contract, order: Order, order_id=None):
         logger.debug("Order: %s", order)
-        self.next_valid_id_available.wait()
-        self.placeOrder(self.next_order_id, contract, order)
-        order_id = self.next_order_id
+        if order_id is None:
+            self.next_valid_id_available.wait()
+            order_id = self.next_order_id
+
+        self.placeOrder(order_id, contract, order)
         self.req_ids()
         return order_id
 
@@ -357,7 +359,7 @@ class IbkrClient(EWrapper, EClient):
         logger.debug10("Begin Function")
         self.req_id += 1
         self._contract_details_data_wait()
-        logger.debug("Requesting Contract Details for contract: %s", contract)
+        logger.debug3("Requesting Contract Details for contract: %s", contract)
         self.data_available[self.req_id] = threading.Event()
         self.reqContractDetails(self.req_id, contract)
         self.__contract_details_data_req_timestamp = datetime.datetime.now()
@@ -511,7 +513,7 @@ class IbkrClient(EWrapper, EClient):
 
             self._historical_data_wait()
 
-            logger.debug("Requesting Historical Bars: %s", bar_size_setting)
+            logger.debug3("Requesting Historical Bars: %s", bar_size_setting)
 
             self.data_available[self.req_id] = threading.Event()
             self.reqHistoricalData(self.req_id, contract, end_date_time,
@@ -523,8 +525,8 @@ class IbkrClient(EWrapper, EClient):
             # want to actually make the request before setting a new timer.
             self.__historical_data_req_timestamp = datetime.datetime.now()
 
-            logger.debug("Request Timestamp: %s",
-                         self.__historical_data_req_timestamp)
+            logger.debug5("Request Timestamp: %s",
+                          self.__historical_data_req_timestamp)
             self.data[self.req_id] = []
             logger.debug4("Data: %s", self.data)
             logger.debug10("End Funuction")
@@ -691,7 +693,7 @@ class IbkrClient(EWrapper, EClient):
 
         self._historical_data_wait()
 
-        logger.debug("Requesting Historical Bars: %s", bar_size_setting)
+        logger.debug3("Requesting Historical Bars: %s", bar_size_setting)
 
         self.reqRealTimeBars(self.req_id, contract, bar_size_setting,
                              what_to_show, use_regular_trading_hours,
@@ -701,8 +703,8 @@ class IbkrClient(EWrapper, EClient):
         # want to actually make the request before setting a new timer.
         self.__historical_data_req_timestamp = datetime.datetime.now()
 
-        logger.debug("Request Timestamp: %s",
-                     self.__historical_data_req_timestamp)
+        logger.debug5("Request Timestamp: %s",
+                      self.__historical_data_req_timestamp)
 
         logger.debug4("Data: %s", self.data)
         logger.debug10("End Funuction")
@@ -743,7 +745,7 @@ class IbkrClient(EWrapper, EClient):
 
         @return req_id: The request's identifier
         """
-        logger.debug("Begin Function")
+        logger.debug10("Begin Function")
 
         allowed_tick_types = ["Last", "AllLast", "BidAsk", "MidPoint"]
 
@@ -756,7 +758,7 @@ class IbkrClient(EWrapper, EClient):
             self.reqTickByTickData(self.req_id, contract, tick_type,
                                    number_of_ticks, ignore_size)
             self.__historical_data_req_timestamp = datetime.datetime.now()
-            logger.debug("End Function")
+            logger.debug10("End Function")
             return self.req_id
         else:
             raise Exception("Invalid Tick Type")
@@ -1020,37 +1022,37 @@ class IbkrClient(EWrapper, EClient):
         """
         logger.debug10("Begin Function")
 
-        logger.debug("Contract Info")
-        logger.debug("Contract ID: %s", details.contract.conId)
-        logger.debug("Symbol: %s", details.contract.symbol)
-        logger.debug("Security Type: %s", details.contract.secType)
-        logger.debug("Exchange: %s", details.contract.exchange)
-        logger.debug("Currency: %s", details.contract.currency)
-        logger.debug("Local Symbol: %s", details.contract.localSymbol)
-        logger.debug("Primary Exchange: %s", details.contract.primaryExchange)
-        logger.debug("Trading Class: %s", details.contract.tradingClass)
-        logger.debug("Security ID Type: %s", details.contract.secIdType)
-        logger.debug("Security ID: %s", details.contract.secId)
+        logger.debug4("Contract Info")
+        logger.debug4("Contract ID: %s", details.contract.conId)
+        logger.debug4("Symbol: %s", details.contract.symbol)
+        logger.debug4("Security Type: %s", details.contract.secType)
+        logger.debug4("Exchange: %s", details.contract.exchange)
+        logger.debug4("Currency: %s", details.contract.currency)
+        logger.debug4("Local Symbol: %s", details.contract.localSymbol)
+        logger.debug4("Primary Exchange: %s", details.contract.primaryExchange)
+        logger.debug4("Trading Class: %s", details.contract.tradingClass)
+        logger.debug4("Security ID Type: %s", details.contract.secIdType)
+        logger.debug4("Security ID: %s", details.contract.secId)
         #logger.debug("Description: %s", details.contract.description)
 
-        logger.debug("Contract Detail Info")
-        logger.debug("Market name: %s", details.marketName)
-        logger.debug("Min Tick: %s", details.minTick)
-        logger.debug("OrderTypes: %s", details.orderTypes)
-        logger.debug("Valid Exchanges: %s", details.validExchanges)
-        logger.debug("Underlying Contract ID: %s", details.underConId)
-        logger.debug("Long name: %s", details.longName)
-        logger.debug("Industry: %s", details.industry)
-        logger.debug("Category: %s", details.category)
-        logger.debug("Subcategory: %s", details.subcategory)
-        logger.debug("Time Zone: %s", details.timeZoneId)
-        logger.debug("Trading Hours: %s", details.tradingHours)
-        logger.debug("Liquid Hours: %s", details.liquidHours)
-        logger.debug("SecIdList: %s", details.secIdList)
-        logger.debug("Underlying Symbol: %s", details.underSymbol)
-        logger.debug("Stock Type: %s", details.stockType)
-        logger.debug("Next Option Date: %s", details.nextOptionDate)
-        logger.debug3("Details: %s", details)
+        logger.debug5("Contract Detail Info")
+        logger.debug5("Market name: %s", details.marketName)
+        logger.debug5("Min Tick: %s", details.minTick)
+        logger.debug5("OrderTypes: %s", details.orderTypes)
+        logger.debug5("Valid Exchanges: %s", details.validExchanges)
+        logger.debug5("Underlying Contract ID: %s", details.underConId)
+        logger.debug5("Long name: %s", details.longName)
+        logger.debug5("Industry: %s", details.industry)
+        logger.debug5("Category: %s", details.category)
+        logger.debug5("Subcategory: %s", details.subcategory)
+        logger.debug5("Time Zone: %s", details.timeZoneId)
+        logger.debug5("Trading Hours: %s", details.tradingHours)
+        logger.debug5("Liquid Hours: %s", details.liquidHours)
+        logger.debug5("SecIdList: %s", details.secIdList)
+        logger.debug5("Underlying Symbol: %s", details.underSymbol)
+        logger.debug5("Stock Type: %s", details.stockType)
+        logger.debug5("Next Option Date: %s", details.nextOptionDate)
+        logger.debug6("Details: %s", details)
 
         self.data[self.req_id] = details
         self.data_available[req_id].set()
@@ -1094,7 +1096,7 @@ class IbkrClient(EWrapper, EClient):
 
         @return None
         """
-        logger.debug("Contract Details End")
+        logger.debug3("Contract Details End")
         return None
 
     @iswrapper
@@ -1184,7 +1186,7 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
-        logger.debug2("Interactive Brokers Error Messages")
+        logger.debug4("Interactive Brokers Error Messages")
         critical_codes = [1300]
         error_codes = [
             100, 102, 103, 104, 105, 106, 107, 109, 110, 111, 113, 116, 117,
@@ -1230,7 +1232,7 @@ class IbkrClient(EWrapper, EClient):
                     "ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s",
                     req_id, code, msg, advanced_order_rejection)
             else:
-                logger.debug("ReqID# %s, Code: %s (%s)", req_id, code, msg)
+                logger.debug3("ReqID# %s, Code: %s (%s)", req_id, code, msg)
         else:
             if advanced_order_rejection:
                 logger.error(
@@ -2255,8 +2257,8 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
-        logger.info("Request Id: %s TickType: %s Price: %s Attrib: %s", req_id,
-                    field, price, attrib)
+        logger.debug4("Request Id: %s TickType: %s Price: %s Attrib: %s",
+                      req_id, field, price, attrib)
 
         tick = ["tick_price", field, price, attrib]
         self.mkt_data_queue[req_id].put(tick)
@@ -2695,13 +2697,13 @@ class IbkrClient(EWrapper, EClient):
         time_diff = datetime.datetime.now(
         ) - self.__historical_data_req_timestamp
         while time_diff.total_seconds() < SLEEP_TIME:
-            logger.debug("Now: %s", datetime.datetime.now())
-            logger.debug("Last Request: %s",
-                         self.__historical_data_req_timestamp)
-            logger.debug("Time Difference: %s seconds",
-                         time_diff.total_seconds())
+            logger.debug4("Now: %s", datetime.datetime.now())
+            logger.debug4("Last Request: %s",
+                          self.__historical_data_req_timestamp)
+            logger.debug3("Time Difference: %s seconds",
+                          time_diff.total_seconds())
             remaining_sleep_time = SLEEP_TIME - time_diff.total_seconds()
-            logger.debug("Sleep Time: %s", remaining_sleep_time)
+            logger.debug2("Sleep Time: %s", remaining_sleep_time)
             time.sleep(SLEEP_TIME - time_diff.total_seconds())
             time_diff = datetime.datetime.now(
             ) - self.__historical_data_req_timestamp
@@ -2718,13 +2720,13 @@ class IbkrClient(EWrapper, EClient):
         time_diff = datetime.datetime.now(
         ) - self.__contract_details_data_req_timestamp
         while time_diff.total_seconds() < SLEEP_TIME:
-            logger.debug("Now: %s", datetime.datetime.now())
-            logger.debug("Last Request: %s",
-                         self.__historical_data_req_timestamp)
-            logger.debug("Time Difference: %s seconds",
-                         time_diff.total_seconds())
+            logger.debug4("Now: %s", datetime.datetime.now())
+            logger.debug4("Last Request: %s",
+                          self.__historical_data_req_timestamp)
+            logger.debug3("Time Difference: %s seconds",
+                          time_diff.total_seconds())
             remaining_sleep_time = SLEEP_TIME - time_diff.total_seconds()
-            logger.debug("Sleep Time: %s", remaining_sleep_time)
+            logger.debug2("Sleep Time: %s", remaining_sleep_time)
             time.sleep(SLEEP_TIME - time_diff.total_seconds())
             time_diff = datetime.datetime.now(
             ) - self.__contract_details_data_req_timestamp

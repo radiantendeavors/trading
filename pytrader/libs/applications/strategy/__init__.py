@@ -23,6 +23,8 @@ The main user interface for the trading program.
 @file pytrader/libs/applications/trader/__init__.py
 """
 # Standard Libraries
+import importlib
+import threading
 
 # 3rd Party Libraries
 
@@ -62,8 +64,9 @@ class StrategyProcess():
         Runs the various strategies.
         """
         for i in strategy_list:
-            strategy = utilities.get_plugin_function(program=i,
-                                                     cmd='run',
-                                                     import_path=IMPORT_PATH)
-            logger.debug("Starting Strategy: %s", i)
-            strategy()
+            module_name = IMPORT_PATH + i
+            module = importlib.import_module(module_name, __name__)
+            strategy = module.Strategy()
+            strategy_thread = threading.Thread(target=strategy.run)
+
+            strategy_thread.start()

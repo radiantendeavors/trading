@@ -32,7 +32,6 @@ import json
 from abc import ABCMeta, abstractmethod
 
 # 3rd Party libraries
-from ibapi import order
 
 # System Library Overrides
 from pytrader.libs.system import logging
@@ -134,15 +133,15 @@ class Strategy():
             self.socket_client.connect()
             self._send_tickers()
 
-            logger.debug("Use Options: %s", self.use_options)
+            logger.debug3("Use Options: %s", self.use_options)
             if self.use_options:
                 self._req_option_details()
 
             self._send_bar_sizes()
-            #self._req_bar_history()
-            #self._req_real_time_bars()
+            self._req_bar_history()
+            self._req_real_time_bars()
             #self._req_tick_by_tick_data()
-            self._req_market_data()
+            #self._req_market_data()
 
             continue_strategy = True
             while continue_strategy:
@@ -156,37 +155,82 @@ class Strategy():
 
         logger.debug10("End Function")
 
-    def close_long_position(self):
-        contract = self.long_position.pop(0)
-        sell_order = order.Order()
-        sell_order.action = "SELL"
-        sell_order.totalQuantity = self.quantity
-        sell_order.orderType = "MKT"
-        self.brokerclient.place_order(contract, sell_order)
+    def close_long_position(self, ticker, order_type=None, price=None):
+        order = {
+            "ticker": ticker,
+            "order_type": order_type,
+            "action": "SELL",
+            "quantity": self.quantity
+        }
 
-    def open_long_position(self):
-        buy_order = order.Order()
-        buy_order.action = "BUY"
-        buy_order.totalQuantity = self.quantity
-        buy_order.orderType = "MKT"
-        self.brokerclient.place_order(self.next_option_contract, buy_order)
-        self.long_position.append(self.next_option_contract)
+        if order_type is None:
+            order_type = "MKT"
 
-    def open_short_position(self):
-        sell_order = order.Order()
-        sell_order.action = "SELL"
-        sell_order.totalQuantity = self.quantity
-        sell_order.orderType = "MKT"
-        self.brokerclient.place_order(self.next_option_contract, sell_order)
-        self.short_position.append(self.next_option_contract)
+        if price:
+            order["price"] = price
 
-    def close_short_position(self):
-        contract = self.short_position.pop(0)
-        buy_order = order.Order()
-        buy_order.action = "BUY"
-        buy_order.totalQuantity = self.quantity
-        buy_order.orderType = "MKT"
-        self.brokerclient.place_order(contract, buy_order)
+        self._send_order(order)
+
+    def open_long_position(self,
+                           ticker,
+                           order_type,
+                           price=None,
+                           profit_target=None,
+                           stop_loss=None):
+        order = {
+            "ticker": ticker,
+            "order_type": order_type,
+            "action": "BUY",
+            "quantity": self.quantity
+        }
+
+        if price:
+            order["price"] = price
+        if profit_target:
+            order["profit_target"] = profit_target
+        if stop_loss:
+            order["stop_loss"] = stop_loss
+
+        self._send_order(order)
+        self.long_position.append(ticker)
+
+    def open_short_position(self,
+                            ticker,
+                            order_type,
+                            price=None,
+                            profit_target=None,
+                            stop_loss=None):
+        order = {
+            "ticker": ticker,
+            "order_type": order_type,
+            "action": "SELL",
+            "quantity": self.quantity
+        }
+
+        if price:
+            order["price"] = price
+        if profit_target:
+            order["profit_target"] = profit_target
+        if stop_loss:
+            order["stop_loss"] = stop_loss
+
+        self._send_order(order)
+        self.short_position.append(ticker)
+
+    def close_short_position(self, ticker, order_type=None, price=None):
+        order = {
+            "ticker": ticker,
+            "order_type": order_type,
+            "action": "BUY",
+            "quantity": self.quantity
+        }
+        if order_type is None:
+            order_type = "MKT"
+
+        if price:
+            order["price"] = price
+
+        self._send_order(order)
 
     # ==============================================================================================
     #
@@ -194,7 +238,7 @@ class Strategy():
     #
     # ==============================================================================================
     def _process_5sec_rtb(self, bar_data):
-        logger.debug2("Bar Data: %s", bar_data)
+        logger.debug3("Bar Data: %s", bar_data)
         ticker, bar_size = self._process_bars(bar_data)
 
         for item in self.bar_sizes:
@@ -205,7 +249,7 @@ class Strategy():
                 if item == self.bar_sizes[0]:
                     self.on_bar(ticker, item)
             else:
-                self.on_5sec_rtb()
+                self.on_5sec_rtb(ticker, item)
 
     def _process_bars(self, bar_data):
         logger.debug10("Begin Function")
@@ -248,11 +292,10 @@ class Strategy():
             logger.debug3("Processing Bars")
             self._process_bars(data["bars"])
         if data.get("tick"):
-            logger.debug("Processing Tick Data")
+            logger.debug3("Processing Tick Data")
             self._process_ticks(data["tick"])
-
         if data.get("market_data"):
-            logger.debug("Processing Market Data")
+            logger.debug3("Processing Market Data")
             self._process_market_data(data["market_data"])
 
     def _process_market_data(self, new_market_data):
@@ -272,9 +315,9 @@ class Strategy():
             6: self.on_high,
             7: self.on_low
         }
-        logger.debug("Func Map: %s", func_map)
-        logger.debug("Tick Type ID: %s", market_data[1])
-        logger.debug("Broker Subclass: %s", func_map.get(market_data[1]))
+        logger.debug6("Func Map: %s", func_map)
+        logger.debug5("Tick Type ID: %s", market_data[1])
+        logger.debug4("Broker Subclass: %s", func_map.get(market_data[1]))
 
         # Until we have all tick types defined at:
         # https://interactivebrokers.github.io/tws-api/tick_types.html
@@ -296,6 +339,8 @@ class Strategy():
             self.ticks[ticker].append_tick(tick)
             self.on_tick(ticker, tick)
 
+        logger.debug10("End Function")
+
     def _req_bar_history(self):
         message = {"req": "bar_history"}
         self._send_msg(message)
@@ -314,6 +359,10 @@ class Strategy():
 
     def _req_tick_by_tick_data(self):
         message = {"req": "tick_by_tick_data"}
+        self._send_msg(message)
+
+    def _send_order(self, order):
+        message = {"place_order": order}
         self._send_msg(message)
 
     def _send_bar_sizes(self):

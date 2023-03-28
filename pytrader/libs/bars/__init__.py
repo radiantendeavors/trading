@@ -210,8 +210,11 @@ class Bars(BasicBars):
         self.bars[name] = self.bars["Close"].ewm(span=span,
                                                  adjust=False).mean()
 
-    def print_bar(self):
-        logger.debug("DataFrame:\n%s", self.bars)
+    def get_last_close(self):
+        return self.bars["Close"].iloc[-1]
+
+    def print_bar(self, ticker):
+        logger.debug2("DataFrame for %s:\n%s", ticker, self.bars.tail(10))
 
     def calculate_sma(self, span):
         name = str(span) + "SMA"
