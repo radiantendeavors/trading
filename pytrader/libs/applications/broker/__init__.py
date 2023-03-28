@@ -151,8 +151,11 @@ class BrokerProcess():
     def _create_braket_order(self, order_request):
         ticker = order_request["ticker"]
         order_contract = self.contracts[ticker]
+
+        # Fix bug caused by two tickers using the same order id if orders are triggered at the same
+        # time. Issue #56
         ticker_index_id = list(self.contracts.keys()).index(ticker)
-        order_id = self.brokerclient.next_order_id + ticker_index_id
+        order_id = self.brokerclient.next_order_id + (ticker_index_id * 3)
 
         parent_order = order.Order()
         parent_order.orderId = order_id
