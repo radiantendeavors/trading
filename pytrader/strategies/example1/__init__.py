@@ -139,10 +139,10 @@ class Strategy(strategies.Strategy):
 
     def on_end(self):
         self.brokerclient.req_global_cancel()
-        if len(self.long_position) > 0:
-            self.close_long_position()
-        if len(self.short_position) > 0:
-            self.close_short_position()
+        # if len(self.long_position) > 0:
+        #     self.close_long_position()
+        # if len(self.short_position) > 0:
+        #     self.close_short_position()
 
     def on_high(self, ticker, tick):
         logger.debug10("Begin Function")

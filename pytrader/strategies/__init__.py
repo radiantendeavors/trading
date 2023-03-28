@@ -140,8 +140,8 @@ class Strategy():
             self._send_bar_sizes()
             self._req_bar_history()
             self._req_real_time_bars()
-            #self._req_tick_by_tick_data()
-            #self._req_market_data()
+            self._req_tick_by_tick_data()
+            self._req_market_data()
 
             continue_strategy = True
             while continue_strategy:
@@ -150,7 +150,7 @@ class Strategy():
                 continue_strategy = self.continue_strategy()
 
         finally:
-            #self.on_end()
+            self.on_end()
             self.socket_client.disconnect()
 
         logger.debug10("End Function")
