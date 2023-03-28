@@ -74,7 +74,7 @@ clean_venv:
 	@rm -rf $(VENV_DIR)
 
 cleanpython: ##@Clean Cleans up python cache files
-	@rm -rf __pycache__
+	@find . -type f -name '*.py[co]' -delete -o -type d -name __pycache__ -delete
 
 # Combined targets
 clean: cleancpp cleanpython ##@Clean

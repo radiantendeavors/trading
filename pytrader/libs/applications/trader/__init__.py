@@ -24,8 +24,7 @@ The main user interface for the trading program.
 """
 
 # System libraries
-#import multiprocessing
-import threading
+import multiprocessing
 
 # 3rd Party libraries
 
@@ -34,8 +33,8 @@ from pytrader.libs.system import logging
 
 # Application Libraries
 #from pytrader.libs.applications import broker
-from pytrader.libs.clients import broker
-from pytrader.libs import utilities
+from pytrader.libs.applications import broker
+from pytrader.libs.applications import strategy
 
 # ==================================================================================================
 #
@@ -44,12 +43,6 @@ from pytrader.libs import utilities
 # ==================================================================================================
 ## The Base logger
 logger = logging.getLogger(__name__)
-
-## Client ID Used for the Interactive Brokers API
-client_id = 1003
-
-## The python formatted location of the strategies
-import_path = "pytrader.strategies."
 
 
 # ==================================================================================================
@@ -62,32 +55,31 @@ class ProcessManager():
     This class is responsible for managing the various processes that are running.
     """
 
-    def __init__(self):
-        ## Used far tracking the strategy processes.
-        self.strategy_processes = []
-
     def run_processes(self, processed_args):
+        """!
+        Runs the various subprocesses.
+
+        @param processed_args: A list of arguments.
+
+        @return None
+        """
         logger.debug10("Begin Function")
         address = processed_args[0]
         strategy_list = processed_args[1]
 
-        brokerclient = broker.BrokerClient("ibkr")
-        brokerclient.connect(address, 7497, client_id)
-        logger.debug("Broker Connected")
+        broker_client = broker.BrokerProcess(address)
+        broker_process = multiprocessing.Process(target=broker_client.run)
+        broker_process.start()
 
-        brokerclient.start_thread()
+        strat = strategy.StrategyProcess()
+        strategy_process = multiprocessing.Process(target=strat.run,
+                                                   args=(strategy_list, ))
+        strategy_process.start()
 
-        for i in strategy_list:
-            strategy = utilities.get_plugin_function(program=i,
-                                                     cmd='run',
-                                                     import_path=import_path)
-            logger.debug("Starting Strategy: %s", i)
-            strategy(brokerclient)
-
-        logger.debug("Processes Stopped")
+        strategy_process.join()
+        broker_process.join()
 
         logger.debug10("End Function")
-        return None
 
 
 # ==================================================================================================

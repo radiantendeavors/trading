@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
-"""!@package pytrader.ui.pytrdownload
+"""!@package pytrader.ui.pytrader
 
-The user interface for downloading data.
+The main user interface for the trading program.
 
 @author Geoff S. Derber
 @version HEAD
@@ -21,26 +20,21 @@ The user interface for downloading data.
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file ui/pytrdownload.py
+@file ui/pytrader.py
 
 """
-# ==================================================================================================
-#
-# pytrader
-#
-# ==================================================================================================
-# System libraries
+# Standard libraries
 import sys
 
 # 3rd Party libraries
 
-# System Library Overrides
+# Standard Library Overrides
 from pytrader.libs.system import argparse
 from pytrader.libs.system import logging
 
 # Application Libraries
 from pytrader import DEBUG
-from pytrader.libs import utilities
+from pytrader.libs.applications import broker
 from pytrader.libs.utilities import config
 
 # ==================================================================================================
@@ -48,21 +42,58 @@ from pytrader.libs.utilities import config
 # Global Variables
 #
 # ==================================================================================================
-"""!
-@var logger
-The base logger.
-"""
+## The Base logger
 logger = logging.getLogger(__name__)
-client_id = 2
 
 
 # ==================================================================================================
 #
-# Function init
+# Functions
 #
 # ==================================================================================================
+def broker_address(args, conf):
+    """!
+    Returns the address to be used by the broker.
+
+    @param args - Provides the arguments from the command line
+    @param conf - Provides the configuration information from config files.
+
+    @return address - The brokeclient's address
+    """
+    if args.address:
+        return args.address
+    else:
+        return conf.brokerclient_address
+
+
+def process_arguments(args, conf):
+    """!
+    Processes the arguments received from the command line.
+
+    @param args - Provides the arguments from the command line.
+    @param conf - Provides the configuration from config files.
+
+    @return None
+    """
+    # Create the client and connect to TWS or IB Gateway
+    logger.debug10("Begin Function")
+
+    address = broker_address(args, conf)
+
+    processed_args = (address, )
+    logger.debug10("End Function")
+    return processed_args
+
+
 def init(args):
-    import_path = "pytrader.plugins.download."
+    """! Initializates the program.
+
+    @param args
+    Provides the arguments from the command line.
+
+    @return 0
+    """
+    logger.debug("Entered real main")
 
     epilog_text = """
     See man pytrader for more information.\n
@@ -70,24 +101,14 @@ def init(args):
     Report bugs to ...
     """
 
-    parser = argparse.CommonParser(description="Automated trading system",
-                                   epilog=epilog_text)
+    parser = argparse.ArgParser(description="Automated trading system",
+                                epilog=epilog_text)
 
     parser.add_version_option()
     parser.add_ibapi_connection_options()
-    parent_parser = parser.add_logging_option()
-    subparsers = parser.create_subparsers()
+    parser.add_logging_option()
 
-    subcommands = ["broker", "init", "nasdaq", "polygon", "yahoo"]
-
-    for i in subcommands:
-        subcommand = utilities.get_plugin_function(scmd='download',
-                                                   program=i,
-                                                   cmd='parser',
-                                                   import_path=import_path)
-        subcommand(subparsers, parent_parser)
-
-    parser.set_defaults(func=False, debug=False, verbosity=0, loglevel='INFO')
+    parser.set_defaults(debug=False, verbosity=0, loglevel='INFO')
 
     args = parser.parse_args()
 
@@ -95,41 +116,39 @@ def init(args):
     conf.read_config()
     conf.set_loglevel(args)
 
-    logger.debug('Configuration set')
+    logger.debug2('Configuration set')
     logger.debug3('Configuration Settings: ' + str(conf))
-    logger.debug3('Arguments: ' + str(args))
-
-    logger.debug2("Desired Log Level: %s", conf.loglevel)
-
-    level = logger.getEffectiveLevel()
-    logger.debug2("Set Log Level: %s", level)
+    logger.debug4('Arguments: ' + str(args))
 
     # 'application' code
     if DEBUG is False:
+        logger.debug("Attempting to start client")
         try:
-            args.func(args)
+            processed_args = process_arguments(args, conf)
+            process_manager = broker.BrokerProcess()
+            process_manager.run()
         except Exception as msg:
             parser.print_help()
-            logger.debug(msg)
             logger.error('No command was given')
+            logger.critical(msg)
     else:
-        if args.func:
-            args.func(args)
-        else:
-            parser.print_help()
-            logger.debug("No command was given")
+        logger.debug("Starting Client")
+        processed_args = process_arguments(args, conf)
+        process_manager = broker.BrokerProcess(processed_args[0])
+        process_manager.run()
 
-    logger.debug10("End Function")
-    return None
+    logger.debug("End real main")
+    return 0
 
 
-# ==================================================================================================
-#
-# Function main
-#
-# ==================================================================================================
 def main(args=None):
+    """! The main program.
+
+    @param args - The input from the command line.
+    @return 0
+    """
     logger.debug("Begin Application")
+
     if DEBUG is False:
         try:
             init(args)
@@ -139,13 +158,8 @@ def main(args=None):
         init(args)
 
     logger.debug("End Application")
-    return 1
+    return 0
 
 
-# ==================================================================================================
-#
-#
-#
-# ==================================================================================================
 if __name__ == "__main__":
     sys.exit(main())

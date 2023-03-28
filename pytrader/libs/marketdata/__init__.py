@@ -1,8 +1,9 @@
-"""!@package pytrader.plugins.dbmgr.upgrade
+"""!
+@package pytrader.libs.marketdata
 
-Upgrades the database schema
+Provides real-time market data
 
-@author Geoff S. Derber
+@author G. S. Derber
 @version HEAD
 @date 2022-2023
 @copyright GNU Affero General Public License
@@ -20,69 +21,61 @@ Upgrades the database schema
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file pytrader/plugins/dbmgr/upgrade.py
 
-Upgrades the database schema
-
+@file pytrader/libs/market/__init__.py
 """
+# Standard libraries
 
-# System Libraries
-# import os
-# import sys
+# 3rd Party libraries
+import pandas
 
-# 3rd Party Libraries
-
-# Application Libraries
 # System Library Overrides
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs.clients.mysql import stock_info, ibkr_stock_info
-
-# Conditional Libraries
 
 # ==================================================================================================
 #
 # Global Variables
 #
 # ==================================================================================================
-"""!
-@var logger
-The base logger.
-
-"""
 logger = logging.getLogger(__name__)
 
 
 # ==================================================================================================
 #
-# Functions
+# Classes
 #
 # ==================================================================================================
-def upgrade(args):
-    logger.debug10("Begin Function")
-    info = stock_info.StockInfo()
-    new_info = ibkr_stock_info.IbkrStockInfo()
-    where = "`ibkr_contract_id` IS NOT NULL"
-    securities = info.select(where_clause=where)
+class BasicMktData():
+    """!
+    Contains bar history for a security
+    """
 
-    for item in securities:
-        new_info.insert(item['id'], item['ticker'], item['ibkr_contract_id'],
-                        item['ibkr_primary_exchange'], item['ibkr_exchange'],
-                        item['ipo_date'])
+    def __init__(self, *args, **kwargs):
+        """!
+        Initializes the class
 
-    logger.debug10("End Function")
+        @param args -
+        @param kwargs -
+
+        @return None
+        """
+
+        ## Data Frame used to hold bar history.
+        self.market_data = pandas.DataFrame()
+
+        ## List to hold bar history in list format
+        self.market_data_list = []
+
+        logger.debug10("End Function")
+
+    def append_tick(self, tick: list):
+        self.market_data_list.append(tick)
+
+    def get_ticks(self):
+        return self.market_data
 
 
-def parser(*args, **kwargs):
-    subparsers = args[0]
-    parent_parsers = list(args[1:])
-
-    cmd = subparsers.add_parser("upgrade",
-                                aliases=["u"],
-                                parents=parent_parsers,
-                                help="Upgrades the database")
-
-    cmd.set_defaults(func=upgrade)
-
-    return cmd
+class MarketData(BasicMktData):
+    pass

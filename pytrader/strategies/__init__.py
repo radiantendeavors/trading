@@ -27,19 +27,19 @@ Provides the Base Class for a Strategy.
 """
 # System libraries
 import datetime
+import json
 
 from abc import ABCMeta, abstractmethod
 
 # 3rd Party libraries
-import pandas
-from ibapi import contract
-from ibapi import order
 
 # System Library Overrides
 from pytrader.libs.system import logging
 
 # Application Libraries
-#from pytrader.libs.securities import security
+from pytrader.libs import bars
+from pytrader.libs import ticks
+from pytrader.libs.utilities import ipc
 
 # ==================================================================================================
 #
@@ -65,23 +65,33 @@ class Strategy():
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, brokerclient):
-        self.brokerclient = brokerclient
+    def __init__(self):
+        self.socket_client = ipc.IpcClient()
 
         self.time_now = datetime.datetime.now()
-        self.bars = []
-        ## Position Status: -1 = short, 0 = Empty, 1 = long
-        self.position_status = 0
+        self.bars = {}
+        self.ticks = {}
 
         self.long_position = []
         self.short_position = []
 
     @abstractmethod
-    def on_start(self):
+    def continue_strategy(self):
+        """!
+        Checks various conditions for continuing to run the strategy.
+
+        This function is Mandatory to define in each strategy.
+        """
+        # TODO: Experiment with Return False, and Raise if for if the strategy does not have this
+        # defined.
         pass
 
     @abstractmethod
-    def on_5sec_rtb(self, real_time_bar):
+    def on_5sec_rtb(self):
+        pass
+
+    @abstractmethod
+    def on_ask(self):
         pass
 
     @abstractmethod
@@ -89,134 +99,283 @@ class Strategy():
         pass
 
     @abstractmethod
+    def on_bid(self):
+        pass
+
+    @abstractmethod
     def on_end(self):
+        pass
+
+    @abstractmethod
+    def on_high(self):
+        pass
+
+    @abstractmethod
+    def on_last(self):
+        pass
+
+    @abstractmethod
+    def on_low(self):
+        pass
+
+    @abstractmethod
+    def on_start(self):
+        pass
+
+    @abstractmethod
+    def on_tick(self):
         pass
 
     def run(self):
         logger.debug10("Begin Function")
 
-        bar_adjustment = self._bar_conversion()
+        try:
+            self.socket_client.connect()
+            self._send_tickers()
 
-        self.contract = contract.Contract()
-        self.contract.symbol = self.security
-        self.contract.secType = "STK"
-        self.contract.exchange = "SMART"
-        self.contract.currency = "USD"
+            logger.debug3("Use Options: %s", self.use_options)
+            if self.use_options:
+                self._req_option_details()
 
-        req_id = self.brokerclient.req_historical_data(self.contract,
-                                                       self.bar_sizes,
-                                                       duration_str="1 D")
+            self._send_bar_sizes()
+            self._req_bar_history()
+            self._req_real_time_bars()
+            #self._req_tick_by_tick_data()
+            #self._req_market_data()
 
-        bar_list = self.brokerclient.get_data(req_id)
+            continue_strategy = True
+            while continue_strategy:
+                message = self.socket_client.recv()
+                self._process_data(message)
+                continue_strategy = self.continue_strategy()
 
-        for bar in bar_list:
-            logger.debug3("Bar: %s", bar)
-            bar_date = bar.date
-            bar_open = bar.open
-            bar_high = bar.high
-            bar_low = bar.low
-            bar_close = bar.close
-            bar_volume = bar.volume
-            bar_count = bar.barCount
-
-            self.bars.append([
-                bar_date, bar_open, bar_high, bar_low, bar_close, bar_volume,
-                bar_count
-            ])
-
-        req_id = self.brokerclient.req_real_time_bars(self.contract)
-
-        real_time_bars = []
-
-        while self.time_now < self.endtime:
-            real_time_bar = self.brokerclient.realtime_bar_queue[req_id].get()
-
-            bar_datetime = datetime.datetime.fromtimestamp(
-                real_time_bar[0]).strftime('%Y%m%d %H:%M:%S')
-            bar_datetime_str = str(bar_datetime) + " EST"
-
-            real_time_bar[0] = bar_datetime_str
-            real_time_bar[5] = int(real_time_bar[5])
-            real_time_bar[6] = float(real_time_bar[6])
-
-            logger.debug("Real Time Bar: %s", real_time_bar)
-
-            real_time_bars.append(real_time_bar)
-
-            logger.debug("Bar adjustment: %s", bar_adjustment)
-            if len(real_time_bars) == bar_adjustment:
-                rtb_date = real_time_bars[0][0]
-                rtb_open = real_time_bars[0][1]
-                rtb_high = max(l[2] for l in real_time_bars)
-                rtb_low = min(l[3] for l in real_time_bars)
-                rtb_close = real_time_bars[-1][4]
-                rtb_volumn = sum(l[5] for l in real_time_bars)
-                rtb_count = sum(l[6] for l in real_time_bars)
-
-                new_bar = [
-                    rtb_date, rtb_open, rtb_high, rtb_low, rtb_close,
-                    rtb_volumn, rtb_count
-                ]
-                self.bars.append(new_bar)
-
-                self.bars_df = pandas.DataFrame(self.bars,
-                                                columns=[
-                                                    "DateTime", "Open", "High",
-                                                    "Low", "Close", "Volume",
-                                                    "Count"
-                                                ])
-                self.bars_df["DateTime"] = pandas.to_datetime(
-                    self.bars_df["DateTime"], format="%Y%m%d %H:%M:%S %Z")
-
-                self.on_bar()
-                real_time_bars = []
-            else:
-                # This feels like a crappy way to check if the real_time bar exists
-                try:
-                    self.on_5sec_rtb(real_time_bar)
-                except Exception as msg:
-                    logger.debug5("Exception: %s", msg)
-
-        self.on_end()
+        finally:
+            #self.on_end()
+            self.socket_client.disconnect()
 
         logger.debug10("End Function")
 
-    def close_long_position(self):
-        contract = self.long_position.pop(0)
-        sell_order = order.Order()
-        sell_order.action = "SELL"
-        sell_order.totalQuantity = self.quantity
-        sell_order.orderType = "MKT"
-        self.brokerclient.place_order(contract, sell_order)
+    def close_long_position(self, ticker, order_type=None, price=None):
+        order = {
+            "ticker": ticker,
+            "order_type": order_type,
+            "action": "SELL",
+            "quantity": self.quantity
+        }
 
-    def open_long_position(self):
-        buy_order = order.Order()
-        buy_order.action = "BUY"
-        buy_order.totalQuantity = self.quantity
-        buy_order.orderType = "MKT"
-        self.brokerclient.place_order(self.next_option_contract, buy_order)
-        self.long_position.append(self.next_option_contract)
+        if order_type is None:
+            order_type = "MKT"
 
-    def open_short_position(self):
-        sell_order = order.Order()
-        sell_order.action = "SELL"
-        sell_order.totalQuantity = self.quantity
-        sell_order.orderType = "MKT"
-        self.brokerclient.place_order(self.next_option_contract, sell_order)
-        self.short_position.append(self.next_option_contract)
+        if price:
+            order["price"] = price
 
-    def close_short_position(self):
-        contract = self.short_position.pop(0)
-        buy_order = order.Order()
-        buy_order.action = "BUY"
-        buy_order.totalQuantity = self.quantity
-        buy_order.orderType = "MKT"
-        self.brokerclient.place_order(self.next_option_contract, buy_order)
-        self.short_position.append(self.next_option_contract)
+        self._send_order(order)
 
-    def _bar_conversion(self):
-        bar_conversion = {"5 secs": 1, "30 secs": 6, "1 min": 12, "5 mins": 60}
-        return bar_conversion[self.bar_sizes]
+    def open_long_position(self,
+                           ticker,
+                           order_type,
+                           price=None,
+                           profit_target=None,
+                           stop_loss=None):
+        order = {
+            "ticker": ticker,
+            "order_type": order_type,
+            "action": "BUY",
+            "quantity": self.quantity
+        }
+
+        if price:
+            order["price"] = price
+        if profit_target:
+            order["profit_target"] = profit_target
+        if stop_loss:
+            order["stop_loss"] = stop_loss
+
+        self._send_order(order)
+        self.long_position.append(ticker)
+
+    def open_short_position(self,
+                            ticker,
+                            order_type,
+                            price=None,
+                            profit_target=None,
+                            stop_loss=None):
+        order = {
+            "ticker": ticker,
+            "order_type": order_type,
+            "action": "SELL",
+            "quantity": self.quantity
+        }
+
+        if price:
+            order["price"] = price
+        if profit_target:
+            order["profit_target"] = profit_target
+        if stop_loss:
+            order["stop_loss"] = stop_loss
+
+        self._send_order(order)
+        self.short_position.append(ticker)
+
+    def close_short_position(self, ticker, order_type=None, price=None):
+        order = {
+            "ticker": ticker,
+            "order_type": order_type,
+            "action": "BUY",
+            "quantity": self.quantity
+        }
+        if order_type is None:
+            order_type = "MKT"
+
+        if price:
+            order["price"] = price
+
+        self._send_order(order)
+
+    # ==============================================================================================
+    #
+    # Private Functions
+    #
+    # ==============================================================================================
+    def _process_5sec_rtb(self, bar_data):
+        logger.debug3("Bar Data: %s", bar_data)
+        ticker, bar_size = self._process_bars(bar_data)
+
+        for item in self.bar_sizes:
+            new_bar = self.bars[ticker][bar_size].rescale(item)
+
+            if new_bar:
+                self.bars[ticker][item].append_bar(new_bar)
+                if item == self.bar_sizes[0]:
+                    self.on_bar(ticker, item)
+            else:
+                self.on_5sec_rtb(ticker, item)
+
+    def _process_bars(self, bar_data):
+        logger.debug10("Begin Function")
+        # FIXME: There should only be the one key, I shouldn't need to loop this.
+        ticker = None
+        for ticker, bar_size_dict in bar_data.items():
+            logger.debug3("Ticker: %s", ticker)
+            if ticker not in self.bars.keys():
+                self.bars[ticker] = {}
+
+            # FIXME: Again there should only be one key.
+            for bar_size, bar_list in bar_size_dict.items():
+                logger.debug3("Bar Size: %s", bar_size)
+                logger.debug4("Bar List: %s", bar_list)
+                if bar_size in self.bars[ticker].keys():
+                    self.bars[ticker][bar_size].append_bar(bar_list)
+                else:
+                    self.bars[ticker][bar_size] = bars.Bars(bar_size=bar_size,
+                                                            bar_list=bar_list)
+
+        return ticker, bar_size
+
+        logger.debug10("End Function")
+
+    def _process_data(self, message):
+
+        # WTF! I really don't like this way of skipping over confirmation messages.
+        logger.debug4("Message: %s", message)
+        try:
+            data = json.loads(message)
+        except Exception as exception_msg:
+            logger.warning("Invalid JSON, Message: '%s', Error Msg: '%s'",
+                           message, exception_msg)
+            data = {}
+
+        if data.get("real_time_bars"):
+            logger.debug3("Processing Real Time Bars")
+            self._process_5sec_rtb(data["real_time_bars"])
+        if data.get("bars"):
+            logger.debug3("Processing Bars")
+            self._process_bars(data["bars"])
+        if data.get("tick"):
+            logger.debug3("Processing Tick Data")
+            self._process_ticks(data["tick"])
+        if data.get("market_data"):
+            logger.debug3("Processing Market Data")
+            self._process_market_data(data["market_data"])
+
+    def _process_market_data(self, new_market_data):
+        logger.debug10("Begin Function")
+
+        ticker = None
+
+        for ticker, market_data in new_market_data.items():
+            if market_data[0] == "tick_price":
+                self._process_mkt_tick_price(ticker, market_data)
+
+    def _process_mkt_tick_price(self, ticker, market_data):
+        func_map = {
+            1: self.on_bid,
+            2: self.on_ask,
+            4: self.on_last,
+            6: self.on_high,
+            7: self.on_low
+        }
+        logger.debug6("Func Map: %s", func_map)
+        logger.debug5("Tick Type ID: %s", market_data[1])
+        logger.debug4("Broker Subclass: %s", func_map.get(market_data[1]))
+
+        # Until we have all tick types defined at:
+        # https://interactivebrokers.github.io/tws-api/tick_types.html
+        # we will need this 'if' statement.
+        if market_data[1] in func_map.keys():
+            func = func_map.get(market_data[1])
+            func(ticker, market_data)
+        else:
+            logger.error("Market Data Type Id #%s has not been implemented",
+                         market_data[1])
+
+    def _process_ticks(self, new_ticks):
+        logger.debug10("Begin Function")
+        ticker = None
+        for ticker, tick in new_ticks.items():
+            if ticker not in self.ticks.keys():
+                self.ticks[ticker] = ticks.Ticks()
+
+            self.ticks[ticker].append_tick(tick)
+            self.on_tick(ticker, tick)
+
+        logger.debug10("End Function")
+
+    def _req_bar_history(self):
+        message = {"req": "bar_history"}
+        self._send_msg(message)
+
+    def _req_market_data(self):
+        message = {"req": "real_time_market_data"}
+        self._send_msg(message)
+
+    def _req_option_details(self):
+        message = {"req": "option_details"}
+        self._send_msg(message)
+
+    def _req_real_time_bars(self):
+        message = {"req": "real_time_bars"}
+        self._send_msg(message)
+
+    def _req_tick_by_tick_data(self):
+        message = {"req": "tick_by_tick_data"}
+        self._send_msg(message)
+
+    def _send_order(self, order):
+        message = {"place_order": order}
+        self._send_msg(message)
+
+    def _send_bar_sizes(self):
+        message = {"set": {"bar_sizes": self.bar_sizes}}
+        self._send_msg(message)
+
+    def _send_tickers(self):
+        message = {"set": {"tickers": self.security}}
+        self._send_msg(message)
+
+    def _send_msg(self, message):
+        msg = ipc.Message(message)
+        self.socket_client.send(msg.to_json())
 
 
 # ==================================================================================================

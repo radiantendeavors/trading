@@ -28,29 +28,21 @@ Provides an Example Strategy
 """
 # System libraries
 import datetime
-import time
 
 # 3rd Party libraries
-from ibapi import order
 
 # System Library Overrides
 from pytrader.libs.system import logging
 
 # Application Libraries
-#from pytrader.libs.securities import security
 from pytrader import strategies
+
 # ==================================================================================================
 #
 # Global Variables
 #
 # ==================================================================================================
-"""!
-@var logger
-The base logger.
-
-@var colortext
-Allows Color text on the console
-"""
+## The base logger.
 logger = logging.getLogger(__name__)
 
 
@@ -61,60 +53,89 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 class Strategy(strategies.Strategy):
 
-    def __init__(self, brokerclient):
-        self.security = "IWM"
-        self.bar_sizes = "1 min"
-        self.short_period = 5
-        self.long_period = 20
+    def __init__(self):
+
+        self.security = ["SPY", "QQQ", "IWM", "SOXL", "TQQQ"]
+        self.bar_sizes = ["1 min"]
+        self.short_period = 3
+        self.long_period = 8
         self.quantity = 100
+        self.use_options = False
 
         self.endtime = datetime.datetime.combine(
-            datetime.date.today(), datetime.time(hour=15, minute=45))
+            datetime.date.today(), datetime.time(hour=15, minute=55))
 
-        super().__init__(brokerclient)
+        super().__init__()
 
-    def on_bar(self):
-        short_name = str(self.short_period) + "EMA"
-        self.bars_df[short_name] = self.bars_df["Close"].ewm(
-            span=self.short_period, adjust=False).mean()
+    def continue_strategy(self):
+        """!
+        Checks various conditions for continuing to run the strategy
 
-        long_name = str(self.long_period) + "EMA"
-        self.bars_df[long_name] = self.bars_df["Close"].ewm(
-            span=self.long_period, adjust=False).mean()
+        @return True - if all conditions are True
+        @return False - if any condition is False
+        """
+        logger.debug10("Begin Function")
 
-        logger.debug("Real Time Bar (with EMA): %s", self.bars_df.tail(20))
+        cur_time = datetime.datetime.now()
+        condition1 = (cur_time < self.endtime)
+        logger.debug4("Curent Time: %s", cur_time)
+        logger.debug4("End Time: %s", self.endtime)
+        logger.debug3("Condition 1: %s", condition1)
 
-        previous_short = self.bars_df[short_name].iloc[-2]
-        previous_long = self.bars_df[long_name].iloc[-2]
+        if condition1:
+            return True
+        else:
+            return False
 
-        current_short = self.bars_df[short_name].iloc[-1]
-        current_long = self.bars_df[long_name].iloc[-1]
+    def on_5sec_rtb(self, ticker, bar):
+        logger.debug10("Begin Function")
+        logger.debug4("Run On 5sec RTB")
+        logger.debug3("Ticker: %s, Bar: %s", ticker, bar)
+        logger.debug10("End Function")
 
-        cross_down = ((current_short <= current_long) &
-                      (previous_short >= previous_long))
+    def on_ask(self, ticker, tick):
+        logger.debug10("Begin Function")
+        logger.debug4("Run On Ask")
+        logger.debug3("Ticker: %s, Tick: %s", ticker, tick)
+        logger.debug10("End Function")
 
-        cross_up = ((current_short >= current_long) &
-                    (previous_short <= previous_long))
-        logger.debug("Cross Up: %s", cross_up)
-        logger.debug("Cross Down: %s", cross_down)
+    def on_bar(self, ticker, bar_size):
+        self.bars[ticker][bar_size].create_dataframe()
+        self.bars[ticker][bar_size].calculate_ema(self.short_period, "short")
+        self.bars[ticker][bar_size].calculate_ema(self.long_period, "long")
 
-        self.next_option_contract = self.contract
+        self.bars[ticker][bar_size].print_bar(ticker)
+        cross_up = self.bars[ticker][bar_size].is_cross_up()
+        cross_down = self.bars[ticker][bar_size].is_cross_down()
 
         if cross_up:
-            logger.info("EMA Cross Up")
+            logger.debug("EMA Cross Up for ticker: %s", ticker)
 
-            if len(self.short_position) > 0:
-                self.close_short_position()
+            # if len(self.short_position) > 0:
+            #     self.close_short_position()
 
-            self.open_long_position()
+            limit_price = self.bars[ticker][bar_size].get_last_close() - 0.05
+            profit_target = limit_price + 0.10
+            stop_loss = limit_price - 0.10
+
+            self.open_long_position(ticker, "LMT", limit_price, profit_target,
+                                    stop_loss)
 
         if cross_down:
-            logger.info("EMA Cross Down")
+            logger.debug("EMA Cross Down for ticker: %s", ticker)
 
-            if len(self.long_position) > 0:
-                self.close_long_position()
+            limit_price = self.bars[ticker][bar_size].get_last_close() + 0.05
+            profit_target = limit_price - 0.10
+            stop_loss = limit_price + 0.10
 
-            self.open_short_position()
+            self.open_short_position(ticker, "LMT", limit_price, profit_target,
+                                     stop_loss)
+
+    def on_bid(self, ticker, tick):
+        logger.debug10("Begin Function")
+        logger.debug4("Run On Bid")
+        logger.debug3("Ticker: %s, Bid: %s", ticker, tick)
+        logger.debug10("End Function")
 
     def on_end(self):
         self.brokerclient.req_global_cancel()
@@ -123,15 +144,26 @@ class Strategy(strategies.Strategy):
         if len(self.short_position) > 0:
             self.close_short_position()
 
+    def on_high(self, ticker, tick):
+        logger.debug10("Begin Function")
+        logger.debug4("Run On High")
+        logger.debug3("Ticker: %s, High: %s", ticker, tick)
+        logger.debug10("End Function")
 
-# ==================================================================================================
-#
-# Functions
-#
-# ==================================================================================================
-def run(brokerclient):
-    logger.debug10("Begin Function")
-    strategy = Strategy(brokerclient)
+    def on_last(self, ticker, tick):
+        logger.debug10("Begin Function")
+        logger.debug4("Run On Last")
+        logger.debug3("Ticker: %s, Last: %s", ticker, tick)
+        logger.debug10("End Function")
 
-    strategy.run()
-    logger.debug("End Function")
+    def on_low(self, ticker, tick):
+        logger.debug10("Begin Function")
+        logger.debug4("Run On Low")
+        logger.debug3("Ticker: %s, Low: %s", ticker, tick)
+        logger.debug10("End Function")
+
+    def on_tick(self, ticker, tick):
+        logger.debug10("Begin Function")
+        logger.debug4("Run On Tick")
+        logger.debug3("Ticker: %s, Tick: %s", ticker, tick)
+        logger.debug10("End Function")

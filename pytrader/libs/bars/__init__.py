@@ -24,12 +24,12 @@ Provides Bar Data
 
 @file pytrader/libs/bars/__init__.py
 """
-# System libraries
-#import queue
-import pandas
-import sys
+# Standard libraries
+import datetime
+import time
 
 # 3rd Party libraries
+import pandas
 
 # System Library Overrides
 from pytrader.libs.system import logging
@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class Bars():
+class BasicBars():
     """!
     Contains bar history for a security
     """
@@ -64,221 +64,178 @@ class Bars():
         @return None
         """
 
-        ## Broker Client
-        self.brokerclient = None
-
-        ## Process Queue
-        self.process_queue = None
-
         ## Data Frame used to hold bar history.
-        self.bars = pandas.DataFrame()
+        self.bars = None
 
         ## List to hold bar history in list format
         self.bar_list = []
 
-        ## Bar contract
-        self.contract = kwargs["contract"]
-
         ## Size of the bars
         self.bar_size = "1 day"
 
-        ## The oldest date available for download
-        self.begin_date = kwargs["begin_date"]
-
-        ## Bar history length
-        self.duration = None
-
-        logger.debug10("Begin Function")
-        if kwargs.get("brokerclient"):
-            self.brokerclient = kwargs["brokerclient"]
-
-        # if kwargs["queue"]:
-        #     self.process_queue = kwargs["queue"]
+        if kwargs.get("bar_list"):
+            if isinstance(kwargs["bar_list"][0], list):
+                self.bar_list = kwargs["bar_list"]
+            else:
+                self.bar_list.append(kwargs["bar_list"])
 
         if kwargs.get("bar_size"):
             if kwargs["bar_size"]:
                 self.bar_size = kwargs["bar_size"]
-                self._fix_bar_size_format()
 
-        if kwargs.get("duration"):
-            if kwargs["duration"]:
-                self.duration = kwargs["duration"]
-
-        if kwargs.get("keep_up_to_date"):
-            self.keep_up_to_date = kwargs["keep_up_to_date"]
-        else:
-            self.keep_up_to_date = False
-
+        ## List of Long Duration Bar Sizes
         self.bar_size_long_duration = ["1 day", "1 week", "1 month"]
+
         logger.debug10("End Function")
 
-        #self.bar_queue = queue.Queue()
+    def __repr__(self):
+        if self.bars is None:
+            if len(self.bar_list) == 0:
+                return f'Bar(Size: "{self.bar_size}", Empty)'
+            else:
+                self.create_dataframe(self)
 
-        return None
+            return f'Bar(Size: "{self.bar_size}", "Bars: "{self.bars})'
 
-    def get_bars(self):
-        return self.bars
+    def append_bar(self, bar: list):
+        # FIXME: If length < list_length, the following changes should be made:
+        #
+        # Open = last row self.bar_list open
+        # High = max rdb_high, last row self.bar_list high
+        # Low = min rdb_low, last row self.bar_list low
+        #
+        # Finally, the last row should be modified, rather than a new row appended
 
-    def retrieve_bar_history(self):
+        self.bar_list.append(bar)
+
+    def create_dataframe(self):
         logger.debug10("Begin Function")
-        logger.debug("Duration: %s", self.duration)
-        self._set_duration()
-        logger.debug("Duration: %s", self.duration)
-
-        if self.brokerclient:
-            self._retreive_broker_bar_history()
+        if self.bar_size in self.bar_size_long_duration:
+            datetime_str = "Date"
+            datetime_fmt = "%Y%m%d"
         else:
-            raise NotImplementedError
+            datetime_str = "DateTime"
+            datetime_fmt = "%Y%m%d %H:%M:%S %Z"
 
+        logger.debug3("Bar List: %s", self.bar_list)
+
+        self.bars = pandas.DataFrame(self.bar_list,
+                                     columns=[
+                                         datetime_str, "Open", "High", "Low",
+                                         "Close", "Volume", "Count"
+                                     ])
+        self.bars[datetime_str] = pandas.to_datetime(self.bars[datetime_str],
+                                                     format=datetime_fmt)
         logger.debug10("End Function")
-        return None
 
-    def update_bars(self):
-        logger.debug10("Begin Function")
-        bar_update = self.bar_queue.get()
+    def rescale(self, size):
+        seconds = self._bar_seconds(size)
+        bar_datetime = datetime.datetime.strptime(self.bar_list[-1][0],
+                                                  "%Y%m%d %H:%M:%S %Z")
+        unixtime = int(time.mktime(bar_datetime.timetuple()))
 
-        while True:
-            #while bar_update != "ConnectionClosed":
-            logger.debug3("Got Queue Item: %s", bar_update)
+        # We use '55' here because we are converting 5 second bars, and the timestamp is from the
+        # open of the bar (Open = 11:09:55 Close = 11:10:00)
 
-            for i in bar_update:
-                logger.debug("Bar Update for bar size %s: %s", self.bar_size,
-                             i)
+        unixtime += 5
+        if unixtime % seconds == 0:
+            list_length = self._bar_conversion(size)
+            length = min(len(self.bar_list), list_length)
 
-            bar_update = self.bar_queue.get()
+            bar_list = self.bar_list[-length:]
+            rtb_date = bar_list[0][0]
+            rtb_open = bar_list[0][1]
+            rtb_high = max(l[2] for l in bar_list)
+            rtb_low = min(l[3] for l in bar_list)
+            rtb_close = bar_list[-1][4]
+            rtb_volumn = sum(l[5] for l in bar_list)
+            rtb_count = sum(l[6] for l in bar_list)
 
-        logger.debug("Update Complete")
-        logger.debug("End Function")
+            new_bar = [
+                rtb_date, rtb_open, rtb_high, rtb_low, rtb_close, rtb_volumn,
+                rtb_count
+            ]
 
-    def calculate_ema(self, span):
+            return new_bar
+
+        else:
+            return None
+
+    # ==============================================================================================
+    #
+    # Private Functions
+    #
+    # ==============================================================================================
+    def _bar_conversion(self, size):
+        bar_conversion = {
+            "5 secs": 1,
+            "30 secs": 6,
+            "1 min": 12,
+            "5 mins": 60,
+            "15 mins": 180,
+            "30 mins": 360,
+            "1 hour": 720
+        }
+        return bar_conversion[size]
+
+    def _bar_seconds(self, size):
+        bar_seconds = {
+            "rtb": 5,
+            "5 secs": 5,
+            "30 secs": 30,
+            "1 min": 60,
+            "5 mins": 300,
+            "15 mins": 900,
+            "30 mins": 1800,
+            "1 hour": 3600
+        }
+
+        return bar_seconds[size]
+
+
+class Bars(BasicBars):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def calculate_ema(self, span, span_type):
         name = str(span) + "EMA"
+
+        if span_type == "long":
+            self.long_period = name
+        elif span_type == "short":
+            self.short_period = name
+        else:
+            logger.error("Invalid Span Type: %s", span_type)
         self.bars[name] = self.bars["Close"].ewm(span=span,
                                                  adjust=False).mean()
+
+    def get_last_close(self):
+        return self.bars["Close"].iloc[-1]
+
+    def print_bar(self, ticker):
+        logger.debug2("DataFrame for %s:\n%s", ticker, self.bars.tail(10))
 
     def calculate_sma(self, span):
         name = str(span) + "SMA"
         self.bars[name] = self.bars["Close"].rolling(span).mean()
 
-    # ==============================================================================================
-    #
-    # Internal Use only functions.  These should not be used outside the class.
-    #
-    # ==============================================================================================
-    def _convert_bars_to_panda(self):
-        logger.debug10("Begin Function")
-        if self.bar_size in self.bar_size_long_duration:
-            self.bars = pandas.DataFrame(self.bar_list,
-                                         columns=[
-                                             "Date", "Open", "High", "Low",
-                                             "Close", "Volume", "Count"
-                                         ])
-            self.bars["Date"] = pandas.to_datetime(self.bars["Date"],
-                                                   format="%Y%m%d")
-        else:
-            self.bars = pandas.DataFrame(self.bar_list,
-                                         columns=[
-                                             "DateTime", "Open", "High", "Low",
-                                             "Close", "Volume", "Count"
-                                         ])
-            self.bars["DateTime"] = pandas.to_datetime(
-                self.bars["DateTime"], format="%Y%m%d %H:%M:%S %Z")
-        logger.debug10("End Function")
+    def is_cross_up(self):
+        previous_short = self.bars[self.short_period].iloc[-2]
+        previous_long = self.bars[self.long_period].iloc[-2]
 
-    def _fix_bar_size_format(self):
-        """!
-        Converts the input format for self.bar_size to the format required by Interactive Brokers.
+        current_short = self.bars[self.short_period].iloc[-1]
+        current_long = self.bars[self.long_period].iloc[-1]
 
-        @param bar_sizes - The bar sizes requested using the command line arguments.
+        return ((current_short >= current_long) &
+                (previous_short <= previous_long))
 
-        @return None
-        """
-        bar_size_map = {
-            "1secs": "1 secs",
-            "5secs": "5 secs",
-            "10secs": "10 secs",
-            "15secs": "15 secs",
-            "30secs": "30 secs",
-            "1min": "1 min",
-            "2mins": "2 mins",
-            "3mins": "3 mins",
-            "5mins": "5 mins",
-            "10mins": "10 mins",
-            "15mins": "15 mins",
-            "20mins": "20 mins",
-            "30mins": "30 mins",
-            "1hour": "1 hour",
-            "2hours": "2 hours",
-            "3hours": "3 hours",
-            "4hours": "4 hours",
-            "8hours": "8 hours",
-            "1day": "1 day",
-            "1week": "1 week",
-            "1month": "1 month"
-        }
+    def is_cross_down(self):
+        previous_short = self.bars[self.short_period].iloc[-2]
+        previous_long = self.bars[self.long_period].iloc[-2]
 
-        fixed_bar_size = bar_size_map[self.bar_size]
-        self.bar_size = fixed_bar_size
-        return None
+        current_short = self.bars[self.short_period].iloc[-1]
+        current_long = self.bars[self.long_period].iloc[-1]
 
-    def _retreive_broker_bar_history(self):
-        logger.debug("Duration: %s", self.duration)
-
-        if self.duration == "all":
-            logger.debug("Getting all history")
-            #if self.bar_size not in self.bar_size_long_duration:
-            #for
-
-        else:
-            req_id = self.brokerclient.req_historical_data(
-                self.contract,
-                self.bar_size,
-                duration_str=self.duration,
-                keep_up_to_date=self.keep_up_to_date)
-
-        #self.brokerclient.add_bar_queue(req_id, self.bar_queue)
-        bar_list = self.brokerclient.get_data(req_id)
-        logger.debug4("Bar List: %s", bar_list)
-
-        for bar in bar_list:
-            logger.debug3("Bar: %s", bar)
-            bar_date = bar.date
-            bar_open = bar.open
-            bar_high = bar.high
-            bar_low = bar.low
-            bar_close = bar.close
-            bar_volume = bar.volume
-            #bar_wap = bar.wap
-            bar_count = bar.barCount
-
-            self.bar_list.append([
-                bar_date, bar_open, bar_high, bar_low, bar_close, bar_volume,
-                bar_count
-            ])
-
-        logger.debug4("Bar List: %s", self.bar_list[0])
-        self._convert_bars_to_panda()
-        logger.debug10("End Function")
-
-    def _set_duration(self):
-        logger.debug10("Begin Function")
-        if self.duration is None:
-            logger.debug("Setting Duration for Bar Size: %s", self.bar_size)
-            if self.bar_size == "1 month":
-                self.duration = "2 Y"
-            elif self.bar_size == "1 week":
-                self.duration = "1 Y"
-            elif self.bar_size == "1 day":
-                self.duration = "1 Y"
-            elif self.bar_size == "1 hour":
-                self.duration = "7 W"
-            elif self.bar_size == "30 mins":
-                self.duration = "4 W"
-            elif self.bar_size == "15 mins":
-                self.duration = "10 D"
-            elif self.bar_size == "5 mins":
-                self.duration = "4 D"
-            elif self.bar_size == "1 min":
-                self.duration = "1 D"
-            logger.debug("Duration Set to %s", self.duration)
-        logger.debug10("End Function")
-        return None
+        return ((current_short <= current_long) &
+                (previous_short >= previous_long))

@@ -6,9 +6,9 @@ Argparse:
   Provides additional functionality to the Argparse library from
   Python.
 
-@author Geoff S. Derber
+@author G. S. Derber
 @version HEAD
-@date 2022
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify

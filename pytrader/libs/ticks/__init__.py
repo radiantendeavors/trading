@@ -1,8 +1,9 @@
-"""!@package pytrader.plugins.dbmgr.init
+"""!
+@package pytrader.libs.ticks
 
-Initializes the database
+Provides Tick
 
-@author Geoff S. Derber
+@author G. S. Derber
 @version HEAD
 @date 2022-2023
 @copyright GNU Affero General Public License
@@ -20,61 +21,63 @@ Initializes the database
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file pytrader/plugins/dbmgr/init.py
 
-Initializes the database
-
+@file pytrader/libs/ticks/__init__.py
 """
+# Standard libraries
+#import queue
+import sys
 
-# System Libraries
-# import os
-# import sys
+# 3rd Party libraries
+import pandas
 
-# 3rd Party Libraries
-
-# Application Libraries
 # System Library Overrides
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs.clients import database
-
-# Conditional Libraries
 
 # ==================================================================================================
 #
 # Global Variables
 #
 # ==================================================================================================
-## An instance of the logging class
 logger = logging.getLogger(__name__)
 
 
 # ==================================================================================================
 #
-# Functions
+# Classes
 #
 # ==================================================================================================
-def initialize(args):
-    logger.debug10("Begin Function")
-    db = database.Database()
+class BasicTicks():
+    """!
+    Contains bar history for a security
+    """
 
-    db.create_engine()
-    db_session = db.create_session()
+    def __init__(self, *args, **kwargs):
+        """!
+        Initializes the class
 
-    db.create_tables()
-    logger.debug10("End Funuction")
+        @param args -
+        @param kwargs -
+
+        @return None
+        """
+
+        ## Data Frame used to hold bar history.
+        self.ticks = pandas.DataFrame()
+
+        ## List to hold bar history in list format
+        self.tick_list = []
+
+        logger.debug10("End Function")
+
+    def append_tick(self, tick: list):
+        self.tick_list.append(tick)
+
+    def get_ticks(self):
+        return self.ticks
 
 
-def parser(*args, **kwargs):
-    subparsers = args[0]
-    parent_parsers = list(args[1:])
-
-    cmd = subparsers.add_parser("init",
-                                aliases=["i"],
-                                parents=parent_parsers,
-                                help="Initial data download")
-
-    cmd.set_defaults(func=initialize)
-
-    return cmd
+class Ticks(BasicTicks):
+    pass

@@ -37,7 +37,7 @@ from pytrader.libs.system import logging
 
 # Application Libraries
 from pytrader import DEBUG
-from pytrader.libs.applications import trader
+from pytrader.libs.applications import strategy
 from pytrader.libs.utilities import config
 
 # ==================================================================================================
@@ -135,8 +135,8 @@ def init(args):
         logger.debug("Attempting to start client")
         try:
             processed_args = process_arguments(args, conf)
-            process_manager = trader.ProcessManager()
-            process_manager.run_processes(processed_args)
+            process_manager = strategy.StrategyProcess()
+            process_manager.run(processed_args[1])
         except Exception as msg:
             parser.print_help()
             logger.error('No command was given')
@@ -144,9 +144,8 @@ def init(args):
     else:
         logger.debug("Starting Client")
         processed_args = process_arguments(args, conf)
-        process_manager = trader.ProcessManager()
-        process_manager.run_processes(processed_args)
-
+        process_manager = strategy.StrategyProcess()
+        process_manager.run(processed_args[1])
     logger.debug("End real main")
     return 0
 

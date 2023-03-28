@@ -52,19 +52,20 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 class BrokerClient():
     """!
-    Acts as a unifying class for various brokers.  Dynamically selects the correct broker at runtime.
+    Acts as a unifying class for various brokers.  Dynamically selects the correct broker at
+    runtime.
 
     Currently, only supports Interactive Brokers
     """
 
     def __new__(cls, *args, **kwargs):
         """!
-        Broker Client Class initializer.
+        Creates an instance of the BrokerClient Class.
 
         @param *args
         @param **kwargs
 
-        @returun subclass - An instance of one of the potential broker clients.
+        @returun subclass: An instance of one of the potential broker clients.
         """
         subclass_map = {"ibkr": ibkrclient.IbkrClient}
 
@@ -72,7 +73,6 @@ class BrokerClient():
             broker = args[0]
         else:
             raise Exception("Invalid Broker Selected")
-            sys.exit(1)
 
         logger.debug3("Subclass Map: %s", subclass_map)
         logger.debug2("Broker: %s", broker)
@@ -80,36 +80,3 @@ class BrokerClient():
 
         subclass = subclass_map.get(broker)
         return subclass(*args, **kwargs)
-
-
-# ==================================================================================================
-#
-# Functions
-#
-# ==================================================================================================
-def brokerclient(broker):
-    """!
-    Used to initialize the broker connection.
-
-    @param address - The URL / IP address for the broker server
-    @param port - The Port used by the broker server
-    @param client_id - The Client ID number.
-
-    @return brokerclient - An instance of the broker client.
-    """
-    logger.debug10("Begin Function")
-
-    brokerclient = BrokerClient(broker)
-    logger.debug10("End Function")
-    return brokerclient
-
-
-def run_loop(client):
-    logger.debug10("Begin Function")
-    api_thread = threading.Thread(target=client.run, daemon=True)
-
-    logger.debug2("Start Broker Client Thread")
-    api_thread.start()
-    logger.debug2("Broker Client Thread Started")
-    logger.debug10("End Function")
-    return api_thread

@@ -1,9 +1,9 @@
 """!
-@package pytrader.libs.orders.limit
+@package pytrader.libs.applications.broker.marketdata
 
-Provides the broker client
+Provides Bar Data
 
-@author Geoff S. derber
+@author G. S. Derber
 @version HEAD
 @date 2022
 @copyright GNU Affero General Public License
@@ -22,9 +22,11 @@ Provides the broker client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file security.py
+@file pytrader/libs/applications/broker/marketdata.py
 """
-# System libraries
+# Standard libraries
+import json
+import queue
 
 # 3rd Party libraries
 
@@ -32,7 +34,7 @@ Provides the broker client
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs.orders import orderbase
+from pytrader.libs import marketdata
 
 # ==================================================================================================
 #
@@ -47,11 +49,48 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class LimitOrder(orderbase.OrderBase):
+class BrokerMarketData(marketdata.BasicMktData):
+    """!
+    Contains bar history for a security
+    """
 
     def __init__(self, *args, **kwargs):
+        ## Broker Client
+        self.brokerclient = None
+
+        ## Bar contract
+        self.contract = kwargs["contract"]
+
+        ## Socket Server
+        self.socket_queue = kwargs["socket_queue"]
+
         logger.debug10("Begin Function")
+        if kwargs.get("brokerclient"):
+            self.brokerclient = kwargs["brokerclient"]
+
+        self.market_data_req_id = None
+
+        self.queue = queue.Queue()
+
         super().__init__(*args, **kwargs)
-        self.order.orderType = "LMT"
-        self.order.lmtPrice = kwargs["price"]
-        logger.debug10("End Function")
+
+    def run(self):
+        broker_connection = True
+        while broker_connection:
+            new_tick = self.queue.get()
+            logger.debug3("New Tick: %s", new_tick)
+
+            # Convert tickAttribLast to str
+            new_tick[3] = str(new_tick[3])
+
+            self.send_ticks(new_tick)
+            broker_connection = self.brokerclient.is_connected()
+
+    def request_market_data(self):
+        self.market_data_req_id = self.brokerclient.req_market_data(
+            self.queue, self.contract)
+
+    def send_ticks(self, tick):
+        msg = {"market_data": {self.contract.symbol: tick}}
+        message = json.dumps(msg)
+        self.socket_queue.put(message)

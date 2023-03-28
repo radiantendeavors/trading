@@ -22,15 +22,18 @@ The main user interface for the trading program.
 
 @file pytrader/libs/applications/trader/__init__.py
 """
-# System Libraries
+# Standard Libraries
+import importlib
+import threading
 
 # 3rd Party Libraries
 
 # Application Libraries
-# System Library Overrides
+# Standard Library Overrides
 from pytrader.libs.system import logging
 
 # Other Application Libraries
+from pytrader.libs import utilities
 
 # Conditional Libraries
 
@@ -39,12 +42,11 @@ from pytrader.libs.system import logging
 # Global Variables
 #
 # ==================================================================================================
-"""!
-@var logger
-The base logger.
-
-"""
+## The base logger.
 logger = logging.getLogger(__name__)
+
+## The python formatted location of the strategies
+IMPORT_PATH = "pytrader.strategies."
 
 
 # ==================================================================================================
@@ -53,15 +55,18 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class StrategyProcess():
+    """!
+    This prosess manages the various strategies that are running.
+    """
 
-    def start_strategy_process(self, strategy, brokerclient, process_queue,
-                               securities_list, bar_sizes):
-        logger.debug10("Begin Function")
-        # strategy_process = multiprocessing.Process(
-        #     target=strategy,
-        #     args=(brokerclient, process_queue, securities_list, bar_sizes))
-        # strategy_process.start()
-        strategy(brokerclient, process_queue, securities_list, bar_sizes)
-        logger.debug10("End Function")
-        #return strategy_process
-        return None
+    def run(self, strategy_list):
+        """!
+        Runs the various strategies.
+        """
+        for i in strategy_list:
+            module_name = IMPORT_PATH + i
+            module = importlib.import_module(module_name, __name__)
+            strategy = module.Strategy()
+            strategy_thread = threading.Thread(target=strategy.run)
+
+            strategy_thread.start()
