@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.23)
 
-project(trader VERSION 0.2.1)
+project(trader VERSION 0.2.2)
 
 # Specify C++ Standard
 set(CMAKE_CXX_STANDARD 20)

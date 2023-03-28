@@ -36,7 +36,7 @@ __contact__ = 'gd.github@radiantendeavors.com'
 __copyright__ = 2022
 __license__ = 'AGPL'
 __status__ = 'Prototype'
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 
 # ==================================================================================================
 #
