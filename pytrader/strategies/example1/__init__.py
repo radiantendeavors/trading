@@ -55,11 +55,11 @@ class Strategy(strategies.Strategy):
 
     def __init__(self):
 
-        self.security = ["SPY", "QQQ", "IWM", "SOXL", "TQQQ"]
-        self.bar_sizes = ["1 min"]
+        self.security = ["SPY", "QQQ", "IWM"]
+        self.bar_sizes = ["5 mins"]
         self.short_period = 3
         self.long_period = 8
-        self.quantity = 100
+        self.quantity = 200
         self.use_options = False
 
         self.endtime = datetime.datetime.combine(
@@ -114,9 +114,9 @@ class Strategy(strategies.Strategy):
             # if len(self.short_position) > 0:
             #     self.close_short_position()
 
-            limit_price = self.bars[ticker][bar_size].get_last_close() - 0.05
+            limit_price = self.bars[ticker][bar_size].get_last_close() - 0.01
             profit_target = limit_price + 0.10
-            stop_loss = limit_price - 0.10
+            stop_loss = limit_price - 0.20
 
             self.open_long_position(ticker, "LMT", limit_price, profit_target,
                                     stop_loss)
@@ -124,9 +124,9 @@ class Strategy(strategies.Strategy):
         if cross_down:
             logger.debug("EMA Cross Down for ticker: %s", ticker)
 
-            limit_price = self.bars[ticker][bar_size].get_last_close() + 0.05
+            limit_price = self.bars[ticker][bar_size].get_last_close() + 0.01
             profit_target = limit_price - 0.10
-            stop_loss = limit_price + 0.10
+            stop_loss = limit_price + 0.20
 
             self.open_short_position(ticker, "LMT", limit_price, profit_target,
                                      stop_loss)
