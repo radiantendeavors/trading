@@ -65,7 +65,7 @@ class BrokerTicks(ticks.BasicTicks):
         self.contract = kwargs["contract"]
 
         ## Socket Server
-        self.socket_queue = kwargs["socket_queue"]
+        self.data_queue = kwargs["data_queue"]
 
         logger.debug10("Begin Function")
         if kwargs.get("brokerclient"):
@@ -101,6 +101,5 @@ class BrokerTicks(ticks.BasicTicks):
             self.queue, self.contract)
 
     def send_ticks(self, tick):
-        msg = {"tick": {self.contract.symbol: tick}}
-        message = json.dumps(msg)
-        self.socket_queue.put(message)
+        message = {"tick": {self.contract.symbol: tick}}
+        self.data_queue.put(message)

@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 class Strategy(strategies.Strategy):
 
-    def __init__(self):
+    def __init__(self, send_queue, recv_queue):
 
         self.security = ["SPY", "QQQ", "IWM"]
         self.bar_sizes = ["5 mins"]
@@ -65,7 +65,7 @@ class Strategy(strategies.Strategy):
         self.endtime = datetime.datetime.combine(
             datetime.date.today(), datetime.time(hour=15, minute=55))
 
-        super().__init__()
+        super().__init__(send_queue, recv_queue)
 
     def continue_strategy(self):
         """!
@@ -138,7 +138,8 @@ class Strategy(strategies.Strategy):
         logger.debug10("End Function")
 
     def on_end(self):
-        self.brokerclient.req_global_cancel()
+        pass
+        #self.brokerclient.req_global_cancel()
         # if len(self.long_position) > 0:
         #     self.close_long_position()
         # if len(self.short_position) > 0:

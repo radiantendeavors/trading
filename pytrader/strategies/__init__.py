@@ -2,7 +2,7 @@
 
 Provides the Base Class for a Strategy.
 
-@author Geoff S. derber
+@author G S derber
 @version HEAD
 @date 2022
 @copyright GNU Affero General Public License
@@ -20,9 +20,9 @@ Provides the Base Class for a Strategy.
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file strategies/__init__.py
+@file pytrader/strategies/__init__.py
 
-    Contains global variables for the pyTrader program.
+    Provides the Base Class for a Strategy
 
 """
 # System libraries
@@ -32,27 +32,22 @@ import json
 from abc import ABCMeta, abstractmethod
 
 # 3rd Party libraries
+from ibapi import contract
 
 # System Library Overrides
 from pytrader.libs.system import logging
 
 # Application Libraries
 from pytrader.libs import bars
+# from pytrader.libs import contracts
 from pytrader.libs import ticks
-from pytrader.libs.utilities import ipc
 
 # ==================================================================================================
 #
 # Global Variables
 #
 # ==================================================================================================
-"""!
-@var logger
-The base logger.
-
-@var colortext
-Allows Color text on the console
-"""
+## The Base Logger
 logger = logging.getLogger(__name__)
 
 
@@ -65,10 +60,12 @@ class Strategy():
 
     __metaclass__ = ABCMeta
 
-    def __init__(self):
-        self.socket_client = ipc.IpcClient()
+    def __init__(self, cmd_queue, data_queue):
+        self.cmd_queue = cmd_queue
+        self.data_queue = data_queue
 
         self.time_now = datetime.datetime.now()
+        self.contracts = {}
         self.bars = {}
         self.ticks = {}
 
@@ -130,28 +127,27 @@ class Strategy():
         logger.debug10("Begin Function")
 
         try:
-            self.socket_client.connect()
-            self._send_tickers()
+            self._send_tickers(self.security)
+
+            self._send_bar_sizes()
+            self._req_bar_history()
 
             logger.debug3("Use Options: %s", self.use_options)
             if self.use_options:
                 self._req_option_details()
 
-            self._send_bar_sizes()
-            self._req_bar_history()
             self._req_real_time_bars()
             self._req_tick_by_tick_data()
             self._req_market_data()
 
             continue_strategy = True
             while continue_strategy:
-                message = self.socket_client.recv()
-                self._process_data(message)
+                message = self.data_queue.get()
+                self._process_message(message)
                 continue_strategy = self.continue_strategy()
 
         finally:
             self.on_end()
-            self.socket_client.disconnect()
 
         logger.debug10("End Function")
 
@@ -274,17 +270,10 @@ class Strategy():
 
         logger.debug10("End Function")
 
-    def _process_data(self, message):
-
-        # WTF! I really don't like this way of skipping over confirmation messages.
-        logger.debug4("Message: %s", message)
-        try:
-            data = json.loads(message)
-        except Exception as exception_msg:
-            logger.warning("Invalid JSON, Message: '%s', Error Msg: '%s'",
-                           message, exception_msg)
-            data = {}
-
+    def _process_data(self, data):
+        if data.get("contracts"):
+            self.contracts = data["contracts"]
+            logger.debug("Contracts: %s", self.contracts)
         if data.get("real_time_bars"):
             logger.debug3("Processing Real Time Bars")
             self._process_5sec_rtb(data["real_time_bars"])
@@ -297,6 +286,15 @@ class Strategy():
         if data.get("market_data"):
             logger.debug3("Processing Market Data")
             self._process_market_data(data["market_data"])
+
+    def _process_message(self, message):
+
+        logger.debug4("Message: %s", message)
+        if isinstance(message, dict):
+            self._process_data(message)
+        else:
+            # We have an informational message
+            logger.info(message)
 
     def _process_market_data(self, new_market_data):
         logger.debug10("Begin Function")
@@ -326,8 +324,8 @@ class Strategy():
             func = func_map.get(market_data[1])
             func(ticker, market_data)
         else:
-            logger.error("Market Data Type Id #%s has not been implemented",
-                         market_data[1])
+            logger.warning("Market Data Type Id #%s has not been implemented",
+                           market_data[1])
 
     def _process_ticks(self, new_ticks):
         logger.debug10("Begin Function")
@@ -343,39 +341,43 @@ class Strategy():
 
     def _req_bar_history(self):
         message = {"req": "bar_history"}
-        self._send_msg(message)
+        self.cmd_queue.put(message)
 
     def _req_market_data(self):
         message = {"req": "real_time_market_data"}
-        self._send_msg(message)
+        self.cmd_queue.put(message)
 
     def _req_option_details(self):
         message = {"req": "option_details"}
-        self._send_msg(message)
+        self.cmd_queue.put(message)
 
     def _req_real_time_bars(self):
         message = {"req": "real_time_bars"}
-        self._send_msg(message)
+        self.cmd_queue.put(message)
 
     def _req_tick_by_tick_data(self):
         message = {"req": "tick_by_tick_data"}
-        self._send_msg(message)
+        self.cmd_queue.put(message)
 
     def _send_order(self, order):
         message = {"place_order": order}
-        self._send_msg(message)
+        self.cmd_queue.put(message)
 
     def _send_bar_sizes(self):
         message = {"set": {"bar_sizes": self.bar_sizes}}
-        self._send_msg(message)
+        self.cmd_queue.put(message)
 
-    def _send_tickers(self):
-        message = {"set": {"tickers": self.security}}
-        self._send_msg(message)
+    def _send_tickers(self, tickers, sec_type: str = "STK"):
+        for item in tickers:
+            contract_ = contract.Contract()
+            contract_.symbol = item
+            contract_.secType = sec_type
+            contract_.exchange = "SMART"
+            contract_.currency = "USD"
+            self.contracts[item] = contract_
 
-    def _send_msg(self, message):
-        msg = ipc.Message(message)
-        self.socket_client.send(msg.to_json())
+        message = {"set": {"tickers": self.contracts}}
+        self.cmd_queue.put(message)
 
 
 # ==================================================================================================

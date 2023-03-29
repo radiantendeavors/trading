@@ -65,14 +65,14 @@ class BrokerBars(bars.BasicBars):
         ## Bar contract
         self.contract = kwargs["contract"]
 
-        ## Socket Server
-        self.socket_queue = kwargs["socket_queue"]
-
         ##
         self.rtb_req_id = None
 
         ##
         self.queue = queue.Queue()
+
+        ##
+        self.data_queue = kwargs["data_queue"]
 
         logger.debug10("Begin Function")
         if kwargs.get("brokerclient"):
@@ -123,9 +123,8 @@ class BrokerBars(bars.BasicBars):
             logger.error("Invalid Bar Size for real time bars")
 
     def send_bars(self, bar_type, bars):
-        msg = {bar_type: {self.contract.symbol: {self.bar_size: bars}}}
-        message = json.dumps(msg)
-        self.socket_queue.put(message)
+        message = {bar_type: {self.contract.symbol: {self.bar_size: bars}}}
+        self.data_queue.put(message)
 
     # ==============================================================================================
     #

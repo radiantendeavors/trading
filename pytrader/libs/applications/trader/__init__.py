@@ -55,6 +55,10 @@ class ProcessManager():
     This class is responsible for managing the various processes that are running.
     """
 
+    def __init__(self):
+        self.cmd_queue = multiprocessing.Queue()
+        self.data_queue = multiprocessing.Queue()
+
     def run_processes(self, processed_args):
         """!
         Runs the various subprocesses.
@@ -67,11 +71,12 @@ class ProcessManager():
         address = processed_args[0]
         strategy_list = processed_args[1]
 
-        broker_client = broker.BrokerProcess(address)
+        broker_client = broker.BrokerProcess(self.cmd_queue, self.data_queue,
+                                             address)
         broker_process = multiprocessing.Process(target=broker_client.run)
         broker_process.start()
 
-        strat = strategy.StrategyProcess()
+        strat = strategy.StrategyProcess(self.cmd_queue, self.data_queue)
         strategy_process = multiprocessing.Process(target=strat.run,
                                                    args=(strategy_list, ))
         strategy_process.start()

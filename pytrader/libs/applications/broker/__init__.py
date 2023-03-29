@@ -26,6 +26,7 @@ The main user interface for the trading program.
 import queue
 import socket
 import threading
+from multiprocessing import Queue
 
 # 3rd Party Libraries
 from ibapi import contract
@@ -40,7 +41,6 @@ from pytrader.libs.applications.broker import bars
 from pytrader.libs.applications.broker import marketdata
 from pytrader.libs.applications.broker import ticks
 from pytrader.libs.clients import broker
-from pytrader.libs.utilities import ipc
 
 # Conditional Libraries
 
@@ -67,16 +67,22 @@ class BrokerProcess():
 
     """
 
-    def __init__(self, address: str = "127.0.0.1"):
+    def __init__(
+        self,
+        cmd_queue: Queue,
+        data_queue: Queue,
+        address: str = "127.0.0.1",
+    ):
         """!
         Creates an instance of the BrokerProcess.
         """
         self.address = address
+        self.cmd_queue = cmd_queue
+        self.data_queue = data_queue
         self.available_ports = []
         self.brokerclient = broker.BrokerClient("ibkr")
         self.contracts = {}
-        self.socket_server = ipc.IpcServer()
-        self.client_id = 2003
+        self.client_id = 2004
         self.bars = {}
         self.ticks = {}
         self.market_data = {}
@@ -84,8 +90,6 @@ class BrokerProcess():
         self.tick_thread = {}
         self.market_data_thread = {}
         self.broker_queue = queue.Queue()
-        self.socket_recv_queue = queue.Queue()
-        self.socket_send_queue = queue.Queue()
 
     def run(self):
         """!
@@ -101,7 +105,7 @@ class BrokerProcess():
         broker_connection = True
         while broker_connection:
             logger.debug4("Loop while connected")
-            cmd = self.socket_recv_queue.get()
+            cmd = self.cmd_queue.get()
             logger.debug2("Command: %s", cmd)
             logger.debug3("Command Data Type: %s", type(cmd))
 
@@ -282,7 +286,7 @@ class BrokerProcess():
             self.market_data[key] = marketdata.BrokerMarketData(
                 contract=self.contracts[key],
                 brokerclient=self.brokerclient,
-                socket_queue=self.socket_send_queue)
+                data_queue=self.data_queue)
             self.market_data[key].request_market_data()
             self.market_data_thread[key] = threading.Thread(
                 target=self.market_data[key].run, daemon=True)
@@ -294,7 +298,7 @@ class BrokerProcess():
                 contract=self.contracts[key],
                 bar_size="rtb",
                 brokerclient=self.brokerclient,
-                socket_queue=self.socket_send_queue)
+                data_queue=self.data_queue)
 
             self.bars[key]["rtb"].request_real_time_bars()
 
@@ -304,19 +308,23 @@ class BrokerProcess():
 
     def _request_tick_by_tick_data(self):
         for key in self.contracts.keys():
-            self.ticks[key] = ticks.BrokerTicks(
-                contract=self.contracts[key],
-                brokerclient=self.brokerclient,
-                socket_queue=self.socket_send_queue)
+            self.ticks[key] = ticks.BrokerTicks(contract=self.contracts[key],
+                                                brokerclient=self.brokerclient,
+                                                data_queue=self.data_queue)
             self.ticks[key].request_ticks()
             self.tick_thread[key] = threading.Thread(
                 target=self.ticks[key].run, daemon=True)
             self.tick_thread[key].start()
 
-    def _set_contract_details(self, contract):
-        req_id = self.brokerclient.req_contract_details(contract)
-        contract_details = self.brokerclient.get_data(req_id)
-        return contract_details.contract
+    def _set_bar_sizes(self, bar_sizes):
+        for key in self.contracts.keys():
+            self.bars[key] = {}
+            for item in bar_sizes:
+                self.bars[key][item] = bars.BrokerBars(
+                    contract=self.contracts[key],
+                    bar_size=item,
+                    brokerclient=self.brokerclient,
+                    data_queue=self.data_queue)
 
     def _set_broker_ports(self):
         """!
@@ -336,22 +344,24 @@ class BrokerProcess():
         """
         logger.debug10("Begin Function")
         if subcommand.get("tickers"):
-            self._create_contracts(subcommand["tickers"])
-            self.socket_send_queue.put("Contracts Created")
+            self._set_contracts(subcommand["tickers"])
+            self.data_queue.put("Contracts Created")
         if subcommand.get("bar_sizes"):
             self._set_bar_sizes(subcommand["bar_sizes"])
-            self.socket_send_queue.put("Bar Sizes Set")
+            self.data_queue.put("Bar Sizes Set")
         logger.debug10("End Function")
 
-    def _set_bar_sizes(self, bar_sizes):
-        for key in self.contracts.keys():
-            self.bars[key] = {}
-            for item in bar_sizes:
-                self.bars[key][item] = bars.BrokerBars(
-                    contract=self.contracts[key],
-                    bar_size=item,
-                    brokerclient=self.brokerclient,
-                    socket_queue=self.socket_send_queue)
+    def _set_contracts(self, contracts):
+        for ticker, contract_ in contracts.items():
+            if ticker not in self.contracts.keys():
+                logger.debug("Contract: %s", contract_)
+                req_id = self.brokerclient.req_contract_details(contract_)
+                contract_details = self.brokerclient.get_data(req_id)
+                logger.debug("Contract Details: %s", contract_details)
+                self.contracts[ticker] = contract_details.contract
+
+        msg = {"contracts": self.contracts}
+        self.data_queue.put(msg)
 
     def _start_threads(self):
         """!
@@ -370,8 +380,6 @@ class BrokerProcess():
         logger.debug("BrokerClient connected")
 
         self.brokerclient.start_thread(self.broker_queue)
-        self.socket_server.start_thread(self.socket_recv_queue,
-                                        self.socket_send_queue)
 
         logger.debug10("End Function")
 

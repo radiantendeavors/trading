@@ -59,6 +59,10 @@ class StrategyProcess():
     This prosess manages the various strategies that are running.
     """
 
+    def __init__(self, cmd_queue, data_queue):
+        self.cmd_queue = cmd_queue
+        self.data_queue = data_queue
+
     def run(self, strategy_list):
         """!
         Runs the various strategies.
@@ -66,7 +70,7 @@ class StrategyProcess():
         for i in strategy_list:
             module_name = IMPORT_PATH + i
             module = importlib.import_module(module_name, __name__)
-            strategy = module.Strategy()
+            strategy = module.Strategy(self.cmd_queue, self.data_queue)
             strategy_thread = threading.Thread(target=strategy.run)
 
             strategy_thread.start()
