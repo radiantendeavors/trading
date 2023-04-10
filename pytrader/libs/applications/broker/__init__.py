@@ -67,12 +67,11 @@ class BrokerProcess():
 
     """
 
-    def __init__(
-        self,
-        cmd_queue: Queue,
-        data_queue: Queue,
-        address: str = "127.0.0.1",
-    ):
+    def __init__(self,
+                 cmd_queue: Queue,
+                 data_queue: Queue,
+                 address: str = "127.0.0.1",
+                 broker_id: str = "ibkr"):
         """!
         Creates an instance of the BrokerProcess.
         """
@@ -80,7 +79,7 @@ class BrokerProcess():
         self.cmd_queue = cmd_queue
         self.data_queue = data_queue
         self.available_ports = []
-        self.brokerclient = broker.BrokerClient("ibkr")
+        self.brokerclient = broker.BrokerClient(broker_id)
         self.contracts = {}
         self.client_id = 2004
         self.bars = {}
@@ -130,6 +129,29 @@ class BrokerProcess():
         logger.debug10("End Function")
         return tws_socket.connect_ex((self.address, port)) == 0
 
+    def _create_contract(self,
+                         ticker,
+                         sec_type: str = "STK",
+                         exchange: str = "SMART",
+                         currency: str = "USD",
+                         strike: float = 0.0,
+                         right: str = ""):
+        """!
+        Creates a contract
+        """
+        contract_ = contract.Contract()
+        contract_.symbol = ticker
+        contract_.secType = "STK"
+        contract_.exchange = "SMART"
+        contract_.currency = "USD"
+
+        if strike > 0.0:
+            contract_.strike = strike
+
+        if right != "":
+            contract_.right = right
+        self.contracts[ticker] = self._set_contract_details(contract_)
+
     def _create_contracts(self, tickers):
         """!
         Takes a list of tickers, and creates contracts for them.
@@ -142,13 +164,7 @@ class BrokerProcess():
         for item in tickers:
             if not self.contracts.get(item):
                 logger.debug2("Creating contract for %s", item)
-                contract_ = contract.Contract()
-                contract_.symbol = item
-                contract_.secType = "STK"
-                contract_.exchange = "SMART"
-                contract_.currency = "USD"
-                self.contracts[item] = self._set_contract_details(contract_)
-
+                self._create_contract(item)
             self.bars[item] = {}
         logger.debug10("End Function")
 
@@ -200,26 +216,6 @@ class BrokerProcess():
         self.brokerclient.place_order(order_contract, stop_order,
                                       stop_order.orderId)
 
-    def _create_option_contracts(self):
-        for key in self.contracts.keys():
-            opt_details = self._request_option_details(self.contracts[key])
-
-            expiry_set = set()
-            strike_set = set()
-            for key in opt_details:
-                if key == "expirations":
-                    expiry = expiry_set.union(opt_details[key])
-                if key == "multiplier":
-                    multiplier = opt_details[key]
-                if key == "strikes":
-                    strikes = strike_set.union(opt_details[key])
-
-            expiry = list(expiry_set)
-            strikes = list(strike_set)
-
-            expiry.sort()
-            strikes.sort()
-
     def _create_order(self, order_request):
         order_contract = self.contracts[order_request["ticker"]]
 
@@ -269,17 +265,19 @@ class BrokerProcess():
             self._request_real_time_bars()
         elif subcommand == "tick_by_tick_data":
             self._request_tick_by_tick_data()
+        elif subcommand == "global_cancel":
+            self._request_global_cancel()
         else:
             logger.error("Command Not Implemented: %s", subcommand)
 
     def _request_bar_history(self):
         for key in self.contracts.keys():
             for size in self.bars[key].keys():
-                self.bars[key][size].retrieve_bar_history()
+                if size != "rtb":
+                    self.bars[key][size].retrieve_bar_history()
 
-    def _request_option_details(self, contract_):
-        req_id = self.brokerclient.req_sec_def_opt_params(contract_)
-        return self.brokerclient.get_data(req_id)
+    def _request_global_cancel(self):
+        self.brokerclient.req_global_cancel()
 
     def _request_market_data(self):
         for key in self.contracts.keys():
@@ -292,19 +290,35 @@ class BrokerProcess():
                 target=self.market_data[key].run, daemon=True)
             self.market_data_thread[key].start()
 
+    def _request_option_details(self):
+        for ticker, contract_ in self.contracts.items():
+            req_id = self.brokerclient.req_sec_def_opt_params(contract_)
+            option_details = self.brokerclient.get_data(req_id)
+
+            message = {
+                "option_details": {
+                    "ticker": ticker,
+                    "details": option_details
+                }
+            }
+            logger.debug("Option Details: %s", message)
+            self.data_queue.put(message)
+
     def _request_real_time_bars(self):
         for key in self.contracts.keys():
-            self.bars[key]["rtb"] = bars.BrokerBars(
-                contract=self.contracts[key],
-                bar_size="rtb",
-                brokerclient=self.brokerclient,
-                data_queue=self.data_queue)
+            logger.debug("Ticker: %s", key)
+            logger.debug("Bar Tickers: %s", self.bars.keys())
+            if key not in self.bars.keys() or "rtb" not in self.bars.get(key):
+                self.bars[key]["rtb"] = bars.BrokerBars(
+                    contract=self.contracts[key],
+                    bar_size="rtb",
+                    brokerclient=self.brokerclient,
+                    data_queue=self.data_queue)
+                self.bars[key]["rtb"].request_real_time_bars()
 
-            self.bars[key]["rtb"].request_real_time_bars()
-
-            self.rtb_thread[key] = threading.Thread(
-                target=self.bars[key]["rtb"].run, daemon=True)
-            self.rtb_thread[key].start()
+                self.rtb_thread[key] = threading.Thread(
+                    target=self.bars[key]["rtb"].run, daemon=True)
+                self.rtb_thread[key].start()
 
     def _request_tick_by_tick_data(self):
         for key in self.contracts.keys():
@@ -317,14 +331,23 @@ class BrokerProcess():
             self.tick_thread[key].start()
 
     def _set_bar_sizes(self, bar_sizes):
+        """!
+        Sets bar sizes
+
+        @param bar_sizes: Bar sizes to use
+
+        @return None
+        """
+        # We use keys here because we do not need the entire key, value pair
         for key in self.contracts.keys():
-            self.bars[key] = {}
-            for item in bar_sizes:
-                self.bars[key][item] = bars.BrokerBars(
-                    contract=self.contracts[key],
-                    bar_size=item,
-                    brokerclient=self.brokerclient,
-                    data_queue=self.data_queue)
+            if key not in self.bars.keys():
+                self.bars[key] = {}
+                for item in bar_sizes:
+                    self.bars[key][item] = bars.BrokerBars(
+                        contract=self.contracts[key],
+                        bar_size=item,
+                        brokerclient=self.brokerclient,
+                        data_queue=self.data_queue)
 
     def _set_broker_ports(self):
         """!
@@ -353,14 +376,20 @@ class BrokerProcess():
 
     def _set_contracts(self, contracts):
         for ticker, contract_ in contracts.items():
-            if ticker not in self.contracts.keys():
-                logger.debug("Contract: %s", contract_)
-                req_id = self.brokerclient.req_contract_details(contract_)
-                contract_details = self.brokerclient.get_data(req_id)
-                logger.debug("Contract Details: %s", contract_details)
-                self.contracts[ticker] = contract_details.contract
+            req_id = self.brokerclient.req_contract_details(contract_)
+            contract_details = self.brokerclient.get_data(req_id)
+
+            if isinstance(contract_details, (dict, set)):
+                logger.error("Failed to obtain contract details for %s",
+                             ticker)
+                logger.error("Contract: %s", contract_details)
+            else:
+                new_contract = contract_details.contract
+                if new_contract.localSymbol not in self.contracts.keys():
+                    self.contracts[new_contract.localSymbol] = new_contract
 
         msg = {"contracts": self.contracts}
+        logger.warning("Sending New Contracts: %s", msg)
         self.data_queue.put(msg)
 
     def _start_threads(self):

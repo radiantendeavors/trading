@@ -60,7 +60,9 @@ class Strategy(strategies.Strategy):
         self.short_period = 3
         self.long_period = 8
         self.quantity = 200
-        self.use_options = False
+        self.use_options = True
+        self.days_to_expiration = 1
+        self.num_strikes = 14
 
         self.endtime = datetime.datetime.combine(
             datetime.date.today(), datetime.time(hour=15, minute=55))
@@ -96,7 +98,7 @@ class Strategy(strategies.Strategy):
     def on_ask(self, ticker, tick):
         logger.debug10("Begin Function")
         logger.debug4("Run On Ask")
-        logger.debug3("Ticker: %s, Tick: %s", ticker, tick)
+        logger.debug3("Ticker: %s, Ask: %s", ticker, tick)
         logger.debug10("End Function")
 
     def on_bar(self, ticker, bar_size):
@@ -138,7 +140,7 @@ class Strategy(strategies.Strategy):
         logger.debug10("End Function")
 
     def on_end(self):
-        pass
+        self.cancel_orders()
         #self.brokerclient.req_global_cancel()
         # if len(self.long_position) > 0:
         #     self.close_long_position()
@@ -158,6 +160,12 @@ class Strategy(strategies.Strategy):
         logger.debug10("End Function")
 
     def on_low(self, ticker, tick):
+        logger.debug10("Begin Function")
+        logger.debug4("Run On Low")
+        logger.debug3("Ticker: %s, Low: %s", ticker, tick)
+        logger.debug10("End Function")
+
+    def on_open(self, ticker, tick):
         logger.debug10("Begin Function")
         logger.debug4("Run On Low")
         logger.debug3("Ticker: %s, Low: %s", ticker, tick)

@@ -93,7 +93,7 @@ class BasicBars():
             if len(self.bar_list) == 0:
                 return f'Bar(Size: "{self.bar_size}", Empty)'
             else:
-                self.create_dataframe(self)
+                self.create_dataframe()
 
             return f'Bar(Size: "{self.bar_size}", "Bars: "{self.bars})'
 

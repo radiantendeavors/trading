@@ -101,5 +101,5 @@ class BrokerTicks(ticks.BasicTicks):
             self.queue, self.contract)
 
     def send_ticks(self, tick):
-        message = {"tick": {self.contract.symbol: tick}}
+        message = {"tick": {self.contract.localSymbol: tick}}
         self.data_queue.put(message)

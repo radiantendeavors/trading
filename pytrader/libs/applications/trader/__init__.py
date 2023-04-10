@@ -71,18 +71,21 @@ class ProcessManager():
         address = processed_args[0]
         strategy_list = processed_args[1]
 
-        broker_client = broker.BrokerProcess(self.cmd_queue, self.data_queue,
-                                             address)
-        broker_process = multiprocessing.Process(target=broker_client.run)
-        broker_process.start()
+        try:
+            broker_client = broker.BrokerProcess(self.cmd_queue,
+                                                 self.data_queue, address)
+            broker_process = multiprocessing.Process(target=broker_client.run)
+            broker_process.start()
 
-        strat = strategy.StrategyProcess(self.cmd_queue, self.data_queue)
-        strategy_process = multiprocessing.Process(target=strat.run,
-                                                   args=(strategy_list, ))
-        strategy_process.start()
-
-        strategy_process.join()
-        broker_process.join()
+            strat = strategy.StrategyProcess(self.cmd_queue, self.data_queue)
+            strategy_process = multiprocessing.Process(target=strat.run,
+                                                       args=(strategy_list, ))
+            strategy_process.start()
+        except KeyboardInterrupt as msg:
+            logger.critical("Keyboard Interrupt, Closing Application: %s", msg)
+        finally:
+            strategy_process.join()
+            broker_process.join()
 
         logger.debug10("End Function")
 

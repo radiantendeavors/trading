@@ -123,7 +123,13 @@ class BrokerBars(bars.BasicBars):
             logger.error("Invalid Bar Size for real time bars")
 
     def send_bars(self, bar_type, bars):
-        message = {bar_type: {self.contract.symbol: {self.bar_size: bars}}}
+        message = {
+            bar_type: {
+                self.contract.localSymbol: {
+                    self.bar_size: bars
+                }
+            }
+        }
         self.data_queue.put(message)
 
     # ==============================================================================================
@@ -144,6 +150,8 @@ class BrokerBars(bars.BasicBars):
                 self.contract, self.bar_size, duration_str=self.duration)
 
         bar_list = self.brokerclient.get_data(req_id)
+
+        # self.brokerclient.cancel_historical_data(req_id)
         logger.debug4("Bar List: %s", bar_list)
 
         for bar in bar_list:

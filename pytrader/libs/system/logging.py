@@ -40,7 +40,6 @@ from logging import *
 # 3rd Party Libraries
 
 # Application Libraries
-from pytrader import __version__
 from pytrader.libs.utilities import text
 
 # ==================================================================================================

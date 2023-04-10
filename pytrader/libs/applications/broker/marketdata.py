@@ -80,10 +80,11 @@ class BrokerMarketData(marketdata.BasicMktData):
             new_tick = self.queue.get()
             logger.debug3("New Tick: %s", new_tick)
 
-            # Convert tickAttribLast to str
-            new_tick[3] = str(new_tick[3])
+            if new_tick[0] == "tick_price":
+                # Convert tickAttribLast to str
+                new_tick[3] = str(new_tick[3])
+                self.send_ticks(new_tick)
 
-            self.send_ticks(new_tick)
             broker_connection = self.brokerclient.is_connected()
 
     def request_market_data(self):
@@ -91,5 +92,5 @@ class BrokerMarketData(marketdata.BasicMktData):
             self.queue, self.contract)
 
     def send_ticks(self, tick):
-        message = {"market_data": {self.contract.symbol: tick}}
+        message = {"market_data": {self.contract.localSymbol: tick}}
         self.data_queue.put(message)

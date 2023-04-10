@@ -75,6 +75,9 @@ logger = logging.getLogger(__name__)
 ## Amount of time to sleep to avoid pacing violations.
 SLEEP_TIME = 15
 
+##
+CONTRACT_DETAILS_SLEEP_TIME = 15
+
 ## Used to store allowed intraday bar sizes
 INTRADAY_BAR_SIZES = [
     "1 secs", "5 secs", "10 secs", "15 secs", "30 secs", "1 min", "2 mins",
@@ -112,16 +115,16 @@ class IbkrClient(EWrapper, EClient):
         logger.debug("Broker: %s", args[0])
 
         ## Used to track when the last historical data request was made
-        self.__historical_data_req_timestamp = datetime.datetime(year=1980,
+        self.__historical_data_req_timestamp = datetime.datetime(year=1970,
                                                                  month=1,
                                                                  day=1,
                                                                  hour=0,
                                                                  minute=0,
                                                                  second=0)
 
-        ## Used to track when the contract deitals data request was made
+        ## Used to track when the last contract details data request was made
         self.__contract_details_data_req_timestamp = datetime.datetime(
-            year=1980, month=1, day=1, hour=0, minute=0, second=0)
+            year=1970, month=1, day=1, hour=0, minute=0, second=0)
 
         ## Used to track the number of active historical data requests.
         self.__active_historical_data_requests = 0
@@ -598,7 +601,7 @@ class IbkrClient(EWrapper, EClient):
     def req_market_data(self,
                         mkt_data_queue: Queue,
                         contract: Contract,
-                        generic_tick_list: str = "",
+                        generic_tick_list: str = "221, 233, 258, 411, 456",
                         snapshot: bool = False,
                         regulatory_snapshot: bool = False,
                         market_data_options: list = []):
@@ -618,13 +621,30 @@ class IbkrClient(EWrapper, EClient):
             - 165 Miscellaneous Stats
             - 221 Mark Price (used in TWS P&L computations)
             - 225 Auction values (volume, price and imbalance)
+            - 232 TBD
             - 233 RTVolume - contains the last trade price, last trade size, last trade time, total
               volume, VWAP, and single trade flag.
             - 236 Shortable
             - 256 Inventory
             - 258 Fundamental Ratios
+            - 292 TBD
+            - 293 TBD
+            - 294 TBD
+            - 295 TBD
+            - 318 TBD
+            - 375 TBD
             - 411 Realtime Historical Volatility
             - 456 IBDividends
+            - 460 TBD
+            - 576 TBD
+            - 577 TBD
+            - 578 TBD
+            - 586 TBD
+            - 588 TBD
+            - 595 TBD
+            - 614 TBD
+            - 619 TBD
+            - 623 TBD
         @param snapshot: for users with corresponding real time market data subscriptions:
             - True will return a one-time snapshot
             - False will provide streaming data
@@ -639,6 +659,12 @@ class IbkrClient(EWrapper, EClient):
         logger.debug10("Begin Function")
         self.req_id += 1
         self.mkt_data_queue[self.req_id] = mkt_data_queue
+
+        if contract.secType == "STK":
+            if generic_tick_list == "":
+                generic_tick_list = "100, 101, 105, 106, 165"
+            else:
+                generic_tick_list += ", 100, 101, 105, 106, 165"
 
         ## TODO: Verify if packing violations exist for market data
         self._historical_data_wait()
@@ -1054,7 +1080,7 @@ class IbkrClient(EWrapper, EClient):
         logger.debug5("Next Option Date: %s", details.nextOptionDate)
         logger.debug6("Details: %s", details)
 
-        self.data[self.req_id] = details
+        self.data[req_id] = details
         self.data_available[req_id].set()
 
         # if details.contract.secType == "Bond":
@@ -1212,6 +1238,11 @@ class IbkrClient(EWrapper, EClient):
                     req_id, code, msg, advanced_order_rejection)
             else:
                 logger.error("ReqID# %s, Code: %s (%s)", req_id, code, msg)
+
+            if code == 200:
+                self.data[req_id] = {"Error": msg}
+                self.data_available[req_id].set()
+
         elif code in warning_codes:
             if advanced_order_rejection:
                 logger.warning(
@@ -1344,8 +1375,8 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
-        logger.debug3("ReqID: %s", req_id)
-        logger.debug2("Bar: %s", bar)
+        logger.debug4("ReqID: %s", req_id)
+        logger.debug3("Bar: %s", bar)
 
         self.data[req_id].append(bar)
 
@@ -1355,9 +1386,10 @@ class IbkrClient(EWrapper, EClient):
     @iswrapper
     def historicalDataEnd(self, req_id: int, start: str, end: str):
         logger.debug10("Begin Function")
-        logger.debug("Data Complete for ReqID: %s from: %s to: %s", req_id,
-                     start, end)
+        logger.debug2("Data Complete for ReqID: %s from: %s to: %s", req_id,
+                      start, end)
         self.data_available[req_id].set()
+        self.__active_historical_data_requests -= 1
         logger.debug10("End Function")
 
     @iswrapper
@@ -2163,10 +2195,9 @@ class IbkrClient(EWrapper, EClient):
         """
         logger.debug10("Begin Function")
         logger.debug10("End Function")
-        return None
 
     @iswrapper
-    def tickGeneric(self, ticker_id: int, field: int, value: float):
+    def tickGeneric(self, req_id: int, field: int, value: float):
         """!
         Market data callback.
 
@@ -2179,11 +2210,13 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
+        tick = ["tick_generic", field, value]
+        logger.debug("Tick Generic for %s: %s", req_id, tick)
+        self.mkt_data_queue[req_id].put(tick)
         logger.debug10("End Function")
-        return None
 
     @iswrapper
-    def tickNews(self, ticker_id: int, timestamp: int, provider_code: str,
+    def tickNews(self, req_id: int, timestamp: int, provider_code: str,
                  article_id: str, headline: str, extra_data: str):
         """!
         Ticks with news headlines
@@ -2199,15 +2232,20 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
+        tick = [
+            "tick_news", timestamp, provider_code, article_id, headline,
+            extra_data
+        ]
+        logger.debug("Tick News for %s: %s", req_id, tick)
+        self.mkt_data_queue[req_id].put(tick)
         logger.debug10("End Function")
-        return None
 
     @iswrapper
-    def tickOptionComputation(self, ticker_id: int, field: int,
-                              tick_attrib: int, implied_volatility: float,
-                              delta: float, opt_price: float,
-                              pv_dividend: float, gamma: float, vega: float,
-                              theta: float, und_price: float):
+    def tickOptionComputation(self, req_id: int, field: int, tick_attrib: int,
+                              implied_volatility: float, delta: float,
+                              opt_price: float, pv_dividend: float,
+                              gamma: float, vega: float, theta: float,
+                              und_price: float):
         """!
         Receive's option specific market data. This method is called when the market in an option or
         its underlier moves. TWS’s option model volatilities, prices, and deltas, along with the
@@ -2234,8 +2272,13 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
+        tick = [
+            "tick_option_computation", field, tick_attrib, implied_volatility,
+            delta, opt_price, pv_dividend, gamma, vega, theta, und_price
+        ]
+        #logger.debug("Tick Option Computation for %s: %s", req_id, tick)
+        self.mkt_data_queue[req_id].put(tick)
         logger.debug10("End Function")
-        return None
 
     @iswrapper
     def tickPrice(self, req_id: int, field: int, price: float,
@@ -2267,7 +2310,7 @@ class IbkrClient(EWrapper, EClient):
         return None
 
     @iswrapper
-    def tickReqParams(self, ticker_id: int, min_tick: float, bbo_exchange: str,
+    def tickReqParams(self, req_id: int, min_tick: float, bbo_exchange: str,
                       snapshot_permissions: int):
         """!
         Tick with BOO exchange and snapshot permissions.
@@ -2282,11 +2325,16 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
+        tick = [
+            "tick_req_params", min_tick, bbo_exchange, snapshot_permissions
+        ]
+        logger.debug("Tick Req Params for %s: %s", req_id, tick)
+        self.mkt_data_queue[req_id].put(tick)
         logger.debug10("End Function")
         return None
 
     @iswrapper
-    def tickSize(self, ticker_id: int, field: int, size: Decimal):
+    def tickSize(self, req_id: int, field: int, size: Decimal):
         """!
         Market data tick size callback.  Handles all size-related ticks.
 
@@ -2298,15 +2346,19 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
+        tick = ["tick_size", field, size]
+        #logger.debug("Tick Size for %s: %s", req_id, tick)
+        self.mkt_data_queue[req_id].put(tick)
         logger.debug10("End Function")
-        return None
 
     @iswrapper
-    def tickString(self, ticker_id: int, field: int, value: str):
+    def tickString(self, req_id: int, field: int, value: str):
         """!
         Market data callback. Every tickPrice is followed by a tickSize. There are also independent
         tickSize callbacks anytime the tickSize changes, and so there will be duplicate tickSize
         messages following a tickPrice.
+
+        WTF is the point of this callback? The data provided is complete gibberish!
 
         IB API's description is incomplete.
         TODO: Write descriptions
@@ -2318,8 +2370,10 @@ class IbkrClient(EWrapper, EClient):
         @return None
         """
         logger.debug10("Begin Function")
+        # tick = ["tick_string", field, value]
+        # logger.debug("Tick String for %s: %s", req_id, tick)
+        # self.mkt_data_queue[req_id].put(tick)
         logger.debug10("End Function")
-        return None
 
     @iswrapper
     def updateAccountTime(self, timestamp: str):
@@ -2719,13 +2773,14 @@ class IbkrClient(EWrapper, EClient):
         """
         time_diff = datetime.datetime.now(
         ) - self.__contract_details_data_req_timestamp
-        while time_diff.total_seconds() < SLEEP_TIME:
+        while time_diff.total_seconds() < CONTRACT_DETAILS_SLEEP_TIME:
             logger.debug4("Now: %s", datetime.datetime.now())
             logger.debug4("Last Request: %s",
                           self.__historical_data_req_timestamp)
             logger.debug3("Time Difference: %s seconds",
                           time_diff.total_seconds())
-            remaining_sleep_time = SLEEP_TIME - time_diff.total_seconds()
+            remaining_sleep_time = CONTRACT_DETAILS_SLEEP_TIME - time_diff.total_seconds(
+            )
             logger.debug2("Sleep Time: %s", remaining_sleep_time)
             time.sleep(SLEEP_TIME - time_diff.total_seconds())
             time_diff = datetime.datetime.now(
