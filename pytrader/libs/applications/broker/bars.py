@@ -103,10 +103,13 @@ class BrokerBars(bars.BasicBars):
         logger.debug10("Begin Function")
         if self.bar_size == "rtb":
             logger.error("Invalid Bar Size for History")
+            logger.debug("Retrieving Real Time Bars for %s", self.contract)
         else:
-            logger.debug("Duration: %s", self.duration)
+            logger.debug3("Duration: %s", self.duration)
             self._set_duration()
-            logger.debug("Duration: %s", self.duration)
+            logger.debug3("Duration: %s", self.duration)
+            logger.debug("Retrieving %s Bar History for %s", self.bar_size,
+                         self.contract.localSymbol)
 
             if self.brokerclient:
                 self._retreive_broker_bar_history()
@@ -138,10 +141,10 @@ class BrokerBars(bars.BasicBars):
     #
     # ==============================================================================================
     def _retreive_broker_bar_history(self):
-        logger.debug("Duration: %s", self.duration)
+        logger.debug4("Duration: %s", self.duration)
 
         if self.duration == "all":
-            logger.debug("Getting all history")
+            logger.debug4("Getting all history")
             #if self.bar_size not in self.bar_size_long_duration:
             #for
 
@@ -176,7 +179,7 @@ class BrokerBars(bars.BasicBars):
     def _set_duration(self):
         logger.debug10("Begin Function")
         if self.duration is None:
-            logger.debug("Setting Duration for Bar Size: %s", self.bar_size)
+            logger.debug3("Setting Duration for Bar Size: %s", self.bar_size)
             if self.bar_size == "1 month":
                 self.duration = "2 Y"
             elif self.bar_size == "1 week":
@@ -193,6 +196,6 @@ class BrokerBars(bars.BasicBars):
                 self.duration = "4 D"
             elif self.bar_size == "1 min":
                 self.duration = "2 D"
-            logger.debug("Duration Set to %s", self.duration)
+            logger.debug3("Duration Set to %s", self.duration)
         logger.debug10("End Function")
         return None
