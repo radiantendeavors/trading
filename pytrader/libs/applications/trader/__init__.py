@@ -32,8 +32,8 @@ import multiprocessing
 from pytrader.libs.system import logging
 
 # Application Libraries
-#from pytrader.libs.applications import broker
 from pytrader.libs.applications import broker
+from pytrader.libs.applications import downloader
 from pytrader.libs.applications import strategy
 
 # ==================================================================================================
@@ -59,7 +59,7 @@ class ProcessManager():
         self.cmd_queue = multiprocessing.Queue()
         self.data_queue = multiprocessing.Queue()
 
-    def run_processes(self, processed_args):
+    def run_processes(self, *args, **kwargs):
         """!
         Runs the various subprocesses.
 
@@ -68,8 +68,12 @@ class ProcessManager():
         @return None
         """
         logger.debug10("Begin Function")
-        address = processed_args[0]
-        strategy_list = processed_args[1]
+        address = args[0]
+        strategy_list = []
+
+        logger.debug("Length args: %s", len(args))
+        if len(args) > 1:
+            strategy_list = args[1]
 
         try:
             broker_client = broker.BrokerProcess(self.cmd_queue,
@@ -77,14 +81,35 @@ class ProcessManager():
             broker_process = multiprocessing.Process(target=broker_client.run)
             broker_process.start()
 
-            strat = strategy.StrategyProcess(self.cmd_queue, self.data_queue)
-            strategy_process = multiprocessing.Process(target=strat.run,
-                                                       args=(strategy_list, ))
-            strategy_process.start()
+            if kwargs.get("downloader"):
+                if kwargs.get("asset_classes"):
+                    asset_classes = kwargs["asset_classes"]
+
+                if kwargs.get("securities_list"):
+                    securities_list = kwargs["securities_list"]
+                else:
+                    securities_list = []
+
+                downloader_ = downloader.DownloadProcess(
+                    self.cmd_queue, self.data_queue)
+
+                downloader_process = multiprocessing.Process(
+                    target=downloader_.run,
+                    args=(asset_classes, securities_list))
+                downloader_process.start()
+            elif len(strategy_list) > 0:
+                strat = strategy.StrategyProcess(self.cmd_queue,
+                                                 self.data_queue)
+                strategy_process = multiprocessing.Process(
+                    target=strat.run, args=(strategy_list, ))
+                strategy_process.start()
         except KeyboardInterrupt as msg:
             logger.critical("Keyboard Interrupt, Closing Application: %s", msg)
         finally:
-            strategy_process.join()
+            if len(args) > 1:
+                strategy_process.join()
+            elif kwargs.get("downloader"):
+                downloader_process.join()
             broker_process.join()
 
         logger.debug10("End Function")
