@@ -97,7 +97,15 @@ class Strategy():
         pass
 
     @abstractmethod
-    def on_ask(self):
+    def on_ask(self, ticker, tick):
+        pass
+
+    @abstractmethod
+    def on_ask_size(self, ticker, tick):
+        pass
+
+    @abstractmethod
+    def on_average_volume(self, ticker, tick):
         pass
 
     @abstractmethod
@@ -109,6 +117,14 @@ class Strategy():
         pass
 
     @abstractmethod
+    def on_bid_size(self):
+        pass
+
+    @abstractmethod
+    def on_call_open_interest(self):
+        pass
+
+    @abstractmethod
     def on_close(self):
         pass
 
@@ -117,11 +133,23 @@ class Strategy():
         pass
 
     @abstractmethod
+    def on_halt(self, ticker):
+        pass
+
+    @abstractmethod
     def on_high(self):
         pass
 
     @abstractmethod
+    def on_index_future_premium(self):
+        pass
+
+    @abstractmethod
     def on_last(self):
+        pass
+
+    @abstractmethod
+    def on_last_size(self):
         pass
 
     @abstractmethod
@@ -137,11 +165,31 @@ class Strategy():
         pass
 
     @abstractmethod
+    def on_option_historical_volatility(self, ticker, tick):
+        pass
+
+    @abstractmethod
+    def on_option_implied_volatility(self, ticker, tick):
+        pass
+
+    @abstractmethod
+    def on_put_open_interest(self):
+        pass
+
+    @abstractmethod
+    def on_shortable(self, ticker, tick):
+        pass
+
+    @abstractmethod
     def on_start(self):
         pass
 
     @abstractmethod
     def on_tick(self):
+        pass
+
+    @abstractmethod
+    def on_volume(self):
         pass
 
     def run(self):
@@ -423,6 +471,31 @@ class Strategy():
         for ticker, market_data in new_market_data.items():
             if market_data[0] == "tick_price":
                 self._process_mkt_tick_price(ticker, market_data)
+            elif market_data[0] == "tick_generic":
+                self._process_mkt_tick_generic(ticker, market_data)
+            else:
+                logger.warning(
+                    "Processing for tick type '%s' for ticker '%s' has not been implemented.",
+                    market_data[0], ticker)
+                logger.warning("Market Data: %s", market_data)
+
+    def _process_mkt_tick_generic(self, ticker, market_data):
+        func_map = {
+            23: self.on_option_historical_volatility,
+            24: self.on_option_implied_volatility,
+            31: self.on_index_future_premium,
+            46: self.on_shortable,
+            49: self.on_halt
+        }
+
+        if market_data[1] in func_map.keys():
+            func = func_map.get(market_data[1])
+            func(ticker, market_data[2])
+        else:
+            logger.warning("Market Data Type Id #%s has not been implemented",
+                           market_data[1])
+            logger.warning("Market Data for Ticker %s: %s", ticker,
+                           market_data)
 
     def _process_mkt_tick_price(self, ticker, market_data):
         func_map = {
@@ -450,9 +523,32 @@ class Strategy():
                 self.opening_prices[ticker] = market_data
                 func = func_map.get(market_data[1])
                 func(ticker, market_data[2])
+
         elif market_data[1] in func_map.keys():
             func = func_map.get(market_data[1])
             func(ticker, market_data[2])
+        else:
+            logger.warning("Market Data Type Id #%s has not been implemented",
+                           market_data[1])
+            logger.warning("Market Data for Ticker %s: %s", ticker,
+                           market_data)
+
+    def _process_mkt_tick_size(self, ticker, market_data):
+        func_map = {
+            0: self.on_bid_size,
+            3: self.on_ask_size,
+            5: self.on_last_size,
+            8: self.on_volume,
+            21: self.on_average_volume,
+            27: self.on_call_open_interest,
+            28: self.on_put_open_interest
+        }
+
+        if market_data[1] in func_map.keys():
+            func = func_map.get(market_data[1])
+            func(ticker, market_data[2])
+            logger.debug("Market Data for Ticker %s: %s", ticker, market_data)
+
         else:
             logger.warning("Market Data Type Id #%s has not been implemented",
                            market_data[1])
