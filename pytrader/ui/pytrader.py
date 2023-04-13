@@ -69,26 +69,6 @@ def broker_address(args, conf):
         return conf.brokerclient_address
 
 
-def process_arguments(args, conf):
-    """!
-    Processes the arguments received from the command line.
-
-    @param args - Provides the arguments from the command line.
-    @param conf - Provides the configuration from config files.
-
-    @return None
-    """
-    # Create the client and connect to TWS or IB Gateway
-    logger.debug10("Begin Function")
-
-    address = broker_address(args, conf)
-    strategy_list = args.strategies
-
-    processed_args = (address, strategy_list)
-    logger.debug10("End Function")
-    return processed_args
-
-
 def init(args):
     """! Initializates the program.
 
@@ -134,18 +114,20 @@ def init(args):
     if DEBUG is False:
         logger.debug("Attempting to start client")
         try:
-            processed_args = process_arguments(args, conf)
+            address = broker_address(args, conf)
+            strategy_list = args.strategies
             process_manager = trader.ProcessManager()
-            process_manager.run_processes(processed_args)
+            process_manager.run_processes(address, strategy_list)
         except Exception as msg:
             parser.print_help()
             logger.error('No command was given')
             logger.critical(msg)
     else:
         logger.debug("Starting Client")
-        processed_args = process_arguments(args, conf)
+        address = broker_address(args, conf)
+        strategy_list = args.strategies
         process_manager = trader.ProcessManager()
-        process_manager.run_processes(processed_args)
+        process_manager.run_processes(address, strategy_list)
 
     logger.debug("End real main")
     return 0
