@@ -375,6 +375,7 @@ class BrokerProcess():
         logger.debug10("End Function")
 
     def _set_contracts(self, contracts):
+        logger.debug10("Set Contracts: Begin Function")
         for ticker, contract_ in contracts.items():
             req_id = self.brokerclient.req_contract_details(contract_)
             contract_details = self.brokerclient.get_data(req_id)
@@ -385,12 +386,15 @@ class BrokerProcess():
                 logger.error("Contract: %s", contract_details)
             else:
                 new_contract = contract_details.contract
+                logger.debug("New Contract: %s", new_contract)
                 if new_contract.localSymbol not in self.contracts.keys():
                     self.contracts[new_contract.localSymbol] = new_contract
+                logger.debug4("All contracts: %s", self.contracts)
 
         msg = {"contracts": self.contracts}
         logger.warning("Sending New Contracts: %s", msg)
         self.data_queue.put(msg)
+        logger.debug10("Set Contracts: End Function")
 
     def _start_threads(self):
         """!
