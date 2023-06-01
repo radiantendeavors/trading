@@ -51,22 +51,56 @@ logger = logging.getLogger(__name__)
 
 # ==================================================================================================
 #
+# Classes
+#
+# ==================================================================================================
+class PyTrader():
+    """!
+    The main program class.
+    """
+
+    def __init__(self, args):
+        self.conf = config.Config()
+        self.strategies_list = args.strategies
+        self.client_id = self._client_id(args)
+        self.address = self._broker_address(args)
+
+    def read_config(self):
+        self.conf.read_config()
+
+    def change_loglevel(self, args):
+        self.conf.set_loglevel(args)
+
+    def run(self):
+        process_manager = trader.ProcessManager()
+        process_manager.add_strategy_list(self.strategies_list)
+        process_manager.run(self.address, self.client_id)
+
+    def _broker_address(self, args):
+        """!
+        Returns the address to be used by the broker.
+
+        @param args - Provides the arguments from the command line
+
+        @return address - The brokeclient's address
+        """
+        if args.address:
+            return args.address
+        else:
+            return self.conf.brokerclient_address
+
+    def _client_id(self, args):
+        if args.client_id:
+            return args.client_id
+        else:
+            return self.conf.brokerclient_id
+
+
+# ==================================================================================================
+#
 # Functions
 #
 # ==================================================================================================
-def broker_address(args, conf):
-    """!
-    Returns the address to be used by the broker.
-
-    @param args - Provides the arguments from the command line
-    @param conf - Provides the configuration information from config files.
-
-    @return address - The brokeclient's address
-    """
-    if args.address:
-        return args.address
-    else:
-        return conf.brokerclient_address
 
 
 def init(args):
@@ -102,32 +136,25 @@ def init(args):
 
     args = parser.parse_args()
 
-    conf = config.Config()
-    conf.read_config()
-    conf.set_loglevel(args)
+    pytrader = PyTrader(args)
+    pytrader.read_config()
+    pytrader.change_loglevel(args)
 
     logger.debug2('Configuration set')
-    logger.debug3('Configuration Settings: ' + str(conf))
     logger.debug4('Arguments: ' + str(args))
 
     # 'application' code
     if DEBUG is False:
-        logger.debug("Attempting to start client")
+        logger.debug("Attempting to start all clients.")
         try:
-            address = broker_address(args, conf)
-            strategy_list = args.strategies
-            process_manager = trader.ProcessManager()
-            process_manager.run_processes(address, strategy_list)
+            pytrader.run()
         except Exception as msg:
             parser.print_help()
             logger.error('No command was given')
             logger.critical(msg)
     else:
-        logger.debug("Starting Client")
-        address = broker_address(args, conf)
-        strategy_list = args.strategies
-        process_manager = trader.ProcessManager()
-        process_manager.run_processes(address, strategy_list)
+        logger.debug("Starting all clients.")
+        pytrader.run()
 
     logger.debug("End real main")
     return 0

@@ -172,17 +172,17 @@ class CommonParser(ArgumentParser):
         conf = config.Config()
 
         default_address = conf.get_brokerclient_address()
-        default_port = conf.get_brokerclient_port()
+        default_id = conf.get_brokerclient_id()
         self.add_argument(
             '-a',
             '--address',
             default=default_address,
             help="TWS / IB Gateway Address (Default is localhost)")
-        self.add_argument('-p',
-                          '--port',
-                          default=default_port,
-                          type=int,
-                          help="TWS / IB Gateway port (Default is 7497)")
+        self.add_argument("-c",
+                          "--client_id",
+                          default=default_id,
+                          help="Client Id number for TWSAPI (Default is " +
+                          str(default_id) + ")")
         return None
 
     # ==============================================================================================

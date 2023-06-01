@@ -25,23 +25,30 @@ Creates a basic interface for interacting with a broker
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 """
-# System libraries
-import sys
+# System Libraries
+import queue
+import socket
 import threading
 
-# 3rd Party libraries
+from abc import ABCMeta, abstractmethod
+from multiprocessing import Queue
 
+# 3rd Party Libraries
+
+# Application Libraries
 # System Library Overrides
 from pytrader.libs.system import logging
 
-# Application Libraries
-from pytrader.libs.clients.broker import ibkrclient
+# Other Application Libraries
+
+# Conditional Libraries
 
 # ==================================================================================================
 #
 # Global Variables
 #
 # ==================================================================================================
+## The Base Logger
 logger = logging.getLogger(__name__)
 
 
@@ -52,31 +59,118 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 class BrokerClient():
     """!
-    Acts as a unifying class for various brokers.  Dynamically selects the correct broker at
-    runtime.
-
-    Currently, only supports Interactive Brokers
+    Creates a client instance of the broker.
     """
 
-    def __new__(cls, *args, **kwargs):
+    __metaclass__ = ABCMeta
+
+    def __init__(self, *args, **kwargs):
         """!
-        Creates an instance of the BrokerClient Class.
+        Initializes the BrokeClient Class
 
-        @param *args
-        @param **kwargs
+        @param args:
+        @param kwargs:
 
-        @returun subclass: An instance of one of the potential broker clients.
+        @return None
         """
-        subclass_map = {"ibkr": ibkrclient.IbkrClient}
+        ## Thread Message Queue
+        self.queue = queue.Queue()
 
-        if args[0] in subclass_map:
-            broker = args[0]
-        else:
-            raise Exception("Invalid Broker Selected")
+        ## Process Data Queue
+        self.data_queue = args[0]
 
-        logger.debug3("Subclass Map: %s", subclass_map)
-        logger.debug2("Broker: %s", broker)
-        logger.debug2("Broker Subclass: %s", subclass_map.get(broker))
+        ## Ticker List
+        self.ticker_list = []
 
-        subclass = subclass_map.get(broker)
-        return subclass(*args, **kwargs)
+        ## Bar Sizes
+        self.bar_sizes = []
+
+    @abstractmethod
+    def is_connected(self):
+        """!
+        Abstract method to check if the client is connected to the broker.
+        """
+        logger.error("Connection Check: Not implemented")
+
+    @abstractmethod
+    def request_ticks(self, *args):
+        """!
+        Abstract method to request tick information from the broker.
+        """
+        logger.error("Request Ticks: Not implemented")
+
+    @abstractmethod
+    def start_threads(self):
+        """!
+        Starts threads
+        """
+        logger.error("Starting Threads: Not implemented")
+
+    def stop(self):
+        """!
+        Alias for _stop_thread
+        """
+        self.stop_thread()
+
+    @abstractmethod
+    def stop_thread(self):
+        """!
+        Abstract method to stop the thread.
+        """
+        logger.error("Not implemented")
+
+    # ==============================================================================================
+    #
+    # Internal Use only functions.  These should not be used outside the class.
+    #
+    # ==============================================================================================
+    def _process_data(self, data):
+        """!
+        Processes data received from the broker.
+        """
+        func_map = {
+            "contract_details": self._add_contract,
+            "head_time_stamp": self._send_head_time_stamp,
+            "real_time_bar": self._send_real_time_bar,
+            "tick_by_tick_all_last": self._send_tick_by_tick_data,
+            "tick_generic": self._send_mkt_data,
+            "tick_option_computation": self._send_mkt_data,
+            "tick_price": self._send_mkt_data
+        }
+
+        key = data.keys()[0]
+        func = func_map.get(key)
+        func(data[key])
+
+    @abstractmethod
+    def _add_contract(self, data):
+        """!
+        Abstract method to add contracts.
+        """
+        logger.error("Adding Contract")
+
+    @abstractmethod
+    def _send_bars(self, data):
+        """!
+        Abstract method to send bar data to the strategies.
+        """
+        logger.debug("Send Bar Data")
+
+    @abstractmethod
+    def _send_head_time_stamp(self, data):
+        logger.debug("Sending Head Timestamp: %s", data)
+
+    @abstractmethod
+    def _send_mkt_data(self, data):
+        logger.debug("Sending Ticks: %s", data)
+
+    @abstractmethod
+    def _send_real_time_bar(self, data):
+        logger.debug("Sending Ticks: %s", data)
+
+    def _send_tick_by_tick_data(self, data):
+        logger.debug("Sending Tick-By-Tick Data: %s", data)
+
+    @abstractmethod
+    def _send_ticks(self, data):
+        logger.debug("Sending Ticks: %s", data)
