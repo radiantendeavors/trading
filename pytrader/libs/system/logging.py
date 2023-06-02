@@ -47,8 +47,6 @@ from pytrader.libs.utilities import text
 # Global Variables
 #
 # ==================================================================================================
-#for level in ['DEBUG','INFOV','INFO']:
-
 DEBUG2 = 9
 DEBUG3 = 8
 DEBUG4 = 7
@@ -169,8 +167,6 @@ class LocalLogger(Logger):
         if self.isEnabledFor(9):
             self._log(9, message, args, **kws)
 
-        return
-
     #-------------------------------------------------------------------
     #
     # Function debug3
@@ -197,8 +193,6 @@ class LocalLogger(Logger):
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(8):
             self._log(8, message, args, **kws)
-
-        return
 
     #-------------------------------------------------------------------
     #
@@ -227,8 +221,6 @@ class LocalLogger(Logger):
         if self.isEnabledFor(7):
             self._log(7, message, args, **kws)
 
-        return
-
     #-------------------------------------------------------------------
     #
     # Function debug5
@@ -255,8 +247,6 @@ class LocalLogger(Logger):
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(6):
             self._log(6, message, args, **kws)
-
-        return
 
     #-------------------------------------------------------------------
     #
@@ -285,8 +275,6 @@ class LocalLogger(Logger):
         if self.isEnabledFor(5):
             self._log(5, message, args, **kws)
 
-        return
-
     #-------------------------------------------------------------------
     #
     # Function debug7
@@ -313,8 +301,6 @@ class LocalLogger(Logger):
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(4):
             self._log(4, message, args, **kws)
-
-        return
 
     #-------------------------------------------------------------------
     #
@@ -343,8 +329,6 @@ class LocalLogger(Logger):
         if self.isEnabledFor(3):
             self._log(3, message, args, **kws)
 
-        return
-
     #-------------------------------------------------------------------
     #
     # Function debug9
@@ -371,8 +355,6 @@ class LocalLogger(Logger):
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(2):
             self._log(2, message, args, **kws)
-
-        return
 
     #-------------------------------------------------------------------
     #
@@ -401,8 +383,6 @@ class LocalLogger(Logger):
         if self.isEnabledFor(1):
             self._log(1, message, args, **kws)
 
-        return
-
     #-------------------------------------------------------------------
     #
     # Function vinfo1
@@ -429,8 +409,6 @@ class LocalLogger(Logger):
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(19):
             self._log(19, message, args, **kws)
-
-        return
 
     #-------------------------------------------------------------------
     #
@@ -459,8 +437,6 @@ class LocalLogger(Logger):
         if self.isEnabledFor(18):
             self._log(18, message, args, **kws)
 
-        return
-
     #-------------------------------------------------------------------
     #
     # Function vinfo3
@@ -487,8 +463,6 @@ class LocalLogger(Logger):
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(17):
             self._log(17, message, args, **kws)
-
-        return
 
     #-------------------------------------------------------------------
     #
@@ -517,8 +491,6 @@ class LocalLogger(Logger):
         if self.isEnabledFor(16):
             self._log(16, message, args, **kws)
 
-        return
-
     #-------------------------------------------------------------------
     #
     # Function vinfo5
@@ -545,8 +517,6 @@ class LocalLogger(Logger):
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(15):
             self._log(15, message, args, **kws)
-
-        return
 
     #-------------------------------------------------------------------
     #
@@ -575,8 +545,6 @@ class LocalLogger(Logger):
         if self.isEnabledFor(14):
             self._log(14, message, args, **kws)
 
-        return
-
     #-------------------------------------------------------------------
     #
     # Function vinfo7
@@ -603,8 +571,6 @@ class LocalLogger(Logger):
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(13):
             self._log(13, message, args, **kws)
-
-        return
 
     #-------------------------------------------------------------------
     #
@@ -633,8 +599,6 @@ class LocalLogger(Logger):
         if self.isEnabledFor(12):
             self._log(12, message, args, **kws)
 
-        return
-
     #-------------------------------------------------------------------
     #
     # Function vinfo9
@@ -661,8 +625,6 @@ class LocalLogger(Logger):
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(11):
             self._log(11, message, args, **kws)
-
-        return
 
     #-------------------------------------------------------------------
     #
@@ -691,8 +653,6 @@ class LocalLogger(Logger):
         if self.isEnabledFor(21):
             self._log(21, message, args, **kws)
 
-        return
-
     #-------------------------------------------------------------------
     #
     # Function info2
@@ -719,8 +679,6 @@ class LocalLogger(Logger):
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(22):
             self._log(22, message, args, **kws)
-
-        return
 
     #-------------------------------------------------------------------
     #
@@ -749,8 +707,6 @@ class LocalLogger(Logger):
         if self.isEnabledFor(23):
             self._log(23, message, args, **kws)
 
-        return
-
     #-------------------------------------------------------------------
     #
     # Function info4
@@ -777,8 +733,6 @@ class LocalLogger(Logger):
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(24):
             self._log(24, message, args, **kws)
-
-        return
 
     #-------------------------------------------------------------------
     #
@@ -807,8 +761,6 @@ class LocalLogger(Logger):
         if self.isEnabledFor(25):
             self._log(25, message, args, **kws)
 
-        return
-
     #-------------------------------------------------------------------
     #
     # Function info6
@@ -835,8 +787,6 @@ class LocalLogger(Logger):
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(26):
             self._log(26, message, args, **kws)
-
-        return
 
     #-------------------------------------------------------------------
     #
@@ -865,8 +815,6 @@ class LocalLogger(Logger):
         if self.isEnabledFor(27):
             self._log(27, message, args, **kws)
 
-        return
-
     #-------------------------------------------------------------------
     #
     # Function info8
@@ -894,8 +842,6 @@ class LocalLogger(Logger):
         if self.isEnabledFor(28):
             self._log(28, message, args, **kws)
 
-        return
-
     #-------------------------------------------------------------------
     #
     # Function info9
@@ -922,8 +868,6 @@ class LocalLogger(Logger):
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(29):
             self._log(29, message, args, **kws)
-
-        return
 
 
 #-----------------------------------------------------------------------
@@ -958,7 +902,6 @@ class ConsoleLvlFormatter(Formatter):
         self.warn_fmt = "%(levelname)-8s: %(message)s"
         self.err_fmt = "%(levelname)-8s: %(message)s"
         self.crit_fmt = "%(levelname)-8s: %(message)s"
-        return
 
     #-------------------------------------------------------------------
     #
@@ -1136,8 +1079,6 @@ class ColorizingStreamHandler(logging.StreamHandler, text.ConsoleText):
         except Exception:
             self.handleError(record)
 
-        return
-
     #-------------------------------------------------------------------
     #
     # Function setLevelColor
@@ -1161,7 +1102,6 @@ class ColorizingStreamHandler(logging.StreamHandler, text.ConsoleText):
     #-------------------------------------------------------------------
     def setLevelColor(self, logging_level, escaped_ansi_code):
         self._colors[logging_level] = escaped_ansi_code
-        return
 
 
 local_manager = copy.copy(Logger.manager)

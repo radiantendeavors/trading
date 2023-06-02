@@ -97,7 +97,7 @@ class Strategy():
         pass
 
     @abstractmethod
-    def on_ask(self):
+    def on_ask(self, ticker, tick):
         pass
 
     @abstractmethod
@@ -105,11 +105,11 @@ class Strategy():
         pass
 
     @abstractmethod
-    def on_bid(self):
+    def on_bid(self, ticker, tick):
         pass
 
     @abstractmethod
-    def on_close(self):
+    def on_close(self, ticker, tick):
         pass
 
     @abstractmethod
@@ -117,23 +117,23 @@ class Strategy():
         pass
 
     @abstractmethod
-    def on_high(self):
+    def on_high(self, ticker, tick):
         pass
 
     @abstractmethod
-    def on_last(self):
+    def on_last(self, ticker, tick):
         pass
 
     @abstractmethod
-    def on_low(self):
+    def on_low(self, ticker, tick):
         pass
 
     @abstractmethod
-    def on_mark(self):
+    def on_mark(self, ticker, tick):
         pass
 
     @abstractmethod
-    def on_open(self):
+    def on_open(self, ticker, tick):
         pass
 
     @abstractmethod
@@ -152,11 +152,12 @@ class Strategy():
             self._send_contracts()
 
             self._send_bar_sizes()
-            self._req_bar_history()
 
             logger.debug3("Use Options: %s", self.use_options)
             if self.use_options:
                 self._req_option_details()
+
+            self._req_bar_history()
 
             self._req_real_time_bars()
             #self._req_tick_by_tick_data()
@@ -327,7 +328,7 @@ class Strategy():
         for item in self.security:
             self.contracts[item] = self._create_contract(item)
 
-        logger.debug("Contracts: %s", self.contracts)
+        logger.debug5("Contracts: %s", self.contracts)
 
     def _create_option_contracts(self, ticker):
         contracts = {}
@@ -413,7 +414,7 @@ class Strategy():
             self._process_data(message)
         else:
             # We have an informational message
-            logger.info(message)
+            logger.debug5("Informational Message exists: %s", message)
 
     def _process_market_data(self, new_market_data):
         logger.debug10("Begin Function")

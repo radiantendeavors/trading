@@ -83,8 +83,9 @@ def process_arguments(args, conf):
 
     address = broker_address(args, conf)
     strategy_list = args.strategies
+    broker = args.broker
 
-    processed_args = (address, strategy_list)
+    processed_args = (address, strategy_list, broker)
     logger.debug10("End Function")
     return processed_args
 
@@ -117,6 +118,11 @@ def init(args):
                         nargs="+",
                         required=True,
                         help="One or more strategies to run.")
+    parser.add_argument("-b",
+                        "--broker",
+                        choices=["twsapi"],
+                        default="twsapi",
+                        help="Broker")
 
     parser.set_defaults(debug=False, verbosity=0, loglevel='INFO')
 
@@ -132,22 +138,23 @@ def init(args):
 
     # 'application' code
     if DEBUG is False:
-        logger.debug("Attempting to start client")
+        logger.debug8("Attempting to start client")
         try:
             processed_args = process_arguments(args, conf)
             process_manager = trader.ProcessManager()
-            process_manager.run_processes(processed_args)
+            process_manager.run_processes(processed_args[0], processed_args[1],
+                                          processed_args[2])
         except Exception as msg:
             parser.print_help()
             logger.error('No command was given')
             logger.critical(msg)
     else:
-        logger.debug("Starting Client")
+        logger.debug8("Starting Client")
         processed_args = process_arguments(args, conf)
         process_manager = trader.ProcessManager()
-        process_manager.run_processes(processed_args)
+        process_manager.run_processes(processed_args[0], processed_args[1],
+                                      processed_args[2])
 
-    logger.debug("End real main")
     return 0
 
 
