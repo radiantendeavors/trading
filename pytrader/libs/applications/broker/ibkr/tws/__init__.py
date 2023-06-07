@@ -23,12 +23,13 @@ The main user interface for the trading program.
 @file pytrader/libs/applications/broker/tws.py
 """
 # System Libraries
+import datetime
 import threading
 from multiprocessing import Queue
 
 # 3rd Party Libraries
-from ibapi import contract
-from ibapi import order
+from ibapi.contract import Contract
+from ibapi.order import Order
 
 # Application Libraries
 # System Library Overrides
@@ -61,13 +62,79 @@ class TwsDataThread(BrokerDataThread):
     def __init__(self, *args, **kwargs):
         self.contracts = {}
         self.bar_sizes = []
+        self.historical_bar_ids = {}
         self.rtb_ids = {}
         self.rtmd_ids = {}
 
         super().__init__(*args, **kwargs)
 
+    def create_braket_order(self, order_request):
+        # Fix bug caused by two tickers using the same order id if orders are triggered at the same
+        # time. Issue #56
+        self.next_order_id += 5
+
+        order_contract = order_request["ticker"]
+
+        parent_order = Order()
+        parent_order.orderId = self.next_order_id
+        parent_order.action = order_request["action"]
+        parent_order.orderType = "LMT"
+        parent_order.totalQuantity = order_request["quantity"]
+        parent_order.lmtPrice = order_request["price"]
+        parent_order.transmit = False
+
+        profit_order = Order()
+        profit_order.orderId = parent_order.orderId + 1
+        if order_request["action"] == "BUY":
+            profit_order.action = "SELL"
+        else:
+            profit_order.action = "BUY"
+        profit_order.orderType = "LMT"
+        profit_order.totalQuantity = order_request["quantity"]
+        profit_order.lmtPrice = order_request["profit_target"]
+        profit_order.parentId = parent_order.orderId
+        profit_order.transmit = False
+
+        stop_order = Order()
+        stop_order.orderId = parent_order.orderId + 2
+        if order_request["action"] == "BUY":
+            stop_order.action = "SELL"
+        else:
+            stop_order.action = "BUY"
+        stop_order.orderType = "STP"
+        stop_order.totalQuantity = order_request["quantity"]
+        stop_order.auxPrice = order_request["stop_loss"]
+        stop_order.parentId = parent_order.orderId
+        stop_order.transmit = True
+
+        self.brokerclient.place_order(order_contract, parent_order,
+                                      parent_order.orderId)
+        self.brokerclient.place_order(order_contract, profit_order,
+                                      profit_order.orderId)
+        self.brokerclient.place_order(order_contract, stop_order,
+                                      stop_order.orderId)
+
+    def create_order(self, order_request):
+        self.next_order_id += 5
+
+        order_contract = order_request["ticker"]
+
+        parent_order = Order()
+        parent_order.orderId = self.next_order_id
+        parent_order.action = order_request["action"]
+        parent_order.orderType = order_request["order_type"]
+        parent_order.quantity = order_request["quantity"]
+
+        if order_request.get("price"):
+            parent_order.lmtPrice = order_request["price"]
+
+        parent_order.transmit = True
+
+        self.brokerclient.place_order(order_contract, parent_order,
+                                      parent_order.orderId)
+
     def request_bar_history(self):
-        for key, contract_ in self.contracts.items():
+        for ticker, contract_ in self.contracts.items():
             for size in self.bar_sizes:
                 if size != "rtb":
                     self._retrieve_bar_history(contract_, size)
@@ -76,6 +143,7 @@ class TwsDataThread(BrokerDataThread):
         for ticker, contract_ in self.contracts.items():
             req_id = self.brokerclient.req_sec_def_opt_params(contract_)
             option_details = self.brokerclient.get_data(req_id)
+            #logger.debug2("Requesting Option Details  for Ticker: %s", ticker)
 
             message = {
                 "option_details": {
@@ -83,27 +151,24 @@ class TwsDataThread(BrokerDataThread):
                     "details": option_details
                 }
             }
-            logger.debug("Option Details: %s", message)
+            logger.debug4("Option Details: %s", message)
             self.data_queue.put(message)
 
     def request_real_time_bars(self):
         for ticker, contract_ in self.contracts.items():
-            logger.debug("Ticker: %s", ticker)
 
-            if ticker not in self.rtb_ids.keys():
+            if ticker not in self.rtb_ids.values():
+                logger.debug2("Requesting Real Time Bars for Ticker: %s",
+                              ticker)
                 req_id = self.brokerclient.req_real_time_bars(contract_)
                 self.rtb_ids[req_id] = ticker
-            else:
-                logger.error("Real Time Bars for %s already requested.",
-                             ticker)
 
     def request_market_data(self):
         for ticker, contract_ in self.contracts.items():
-            if ticker not in self.rtmd_ids.keys():
+            if ticker not in self.rtmd_ids.values():
+                logger.debug2("Requesting Market Data for Ticker: %s", ticker)
                 req_id = self.brokerclient.req_market_data(contract_)
                 self.rtmd_ids[req_id] = ticker
-            else:
-                logger.error("Market Data for %s already requested.", ticker)
 
     def send_market_data_ticks(self, market_data: dict):
         req_id = list(market_data.keys())[0]
@@ -116,8 +181,17 @@ class TwsDataThread(BrokerDataThread):
         req_id = list(real_time_bar.keys())[0]
         ticker = self.rtb_ids[req_id]
         contract_ = self.contracts[ticker]
-        self.send_bars(contract_, "real_time_bar", "rtb",
-                       real_time_bar[req_id])
+
+        rtb = real_time_bar[req_id]
+
+        bar_datetime = datetime.datetime.fromtimestamp(
+            rtb[0]).strftime('%Y%m%d %H:%M:%S')
+        bar_datetime_str = str(bar_datetime) + " EST"
+
+        rtb[0] = bar_datetime_str
+        rtb[5] = int(rtb[5])
+        rtb[6] = float(rtb[6])
+        self.send_bars(contract_, "real_time_bars", "rtb", rtb)
 
     def set_bar_sizes(self, bar_sizes: list):
         """!
@@ -130,8 +204,11 @@ class TwsDataThread(BrokerDataThread):
         # We use keys here because we do not need the entire key, value pair
         self.bar_sizes = bar_sizes
 
-    def set_contracts(self, contracts):
+    def set_contracts(self, contracts: dict):
         for ticker, contract_ in contracts.items():
+            logger.debug2("Requesting Contract Details for contract: %s",
+                          ticker)
+
             req_id = self.brokerclient.req_contract_details(contract_)
             contract_details = self.brokerclient.get_data(req_id)
 
@@ -145,7 +222,7 @@ class TwsDataThread(BrokerDataThread):
                     self.contracts[new_contract.localSymbol] = new_contract
 
         msg = {"contracts": self.contracts}
-        logger.warning("Sending New Contracts: %s", msg)
+        logger.debug4("Sending New Contracts: %s", msg)
         self.data_queue.put(msg)
 
     # ==============================================================================================
@@ -153,7 +230,7 @@ class TwsDataThread(BrokerDataThread):
     # Internal Use only functions.  These should not be used outside the class.
     #
     # ==============================================================================================
-    def _retrieve_bar_history(self, contract_, size):
+    def _retrieve_bar_history(self, contract_: Contract, size: str):
         if size == "rtb":
             logger.error("Invalid Bar Size for History")
         else:
@@ -164,42 +241,48 @@ class TwsDataThread(BrokerDataThread):
             else:
                 raise NotImplementedError
 
-    def _retreive_broker_bar_history(self, contract_, size, duration):
-        new_bar_list = []
+    def _retreive_broker_bar_history(self, contract_: Contract, size: str,
+                                     duration: str):
+        if contract_.localSymbol not in self.historical_bar_ids.keys():
+            self.historical_bar_ids[contract_.localSymbol] = {}
 
-        if duration == "all":
-            logger.debug8("Getting all history")
-            #if self.bar_size not in self.bar_size_long_duration:
-            #for
+        if size not in self.historical_bar_ids[contract_.localSymbol].keys():
+            new_bar_list = []
 
-        else:
-            req_id = self.brokerclient.req_historical_data(
-                contract_, size, duration_str=duration)
+            if duration == "all":
+                logger.debug8("Getting all history")
+                #if self.bar_size not in self.bar_size_long_duration:
+                #for
 
-        bar_list = self.brokerclient.get_data(req_id)
+            else:
+                req_id = self.brokerclient.req_historical_data(
+                    contract_, size, duration_str=duration)
 
-        # self.brokerclient.cancel_historical_data(req_id)
-        logger.debug3("Bar List: %s", bar_list)
+            bar_list = self.brokerclient.get_data(req_id)
 
-        for ohlc_bar in bar_list:
-            logger.debug5("Bar: %s", ohlc_bar)
-            bar_date = ohlc_bar.date
-            bar_open = ohlc_bar.open
-            bar_high = ohlc_bar.high
-            bar_low = ohlc_bar.low
-            bar_close = ohlc_bar.close
-            bar_volume = float(ohlc_bar.volume)
-            #bar_wap = ohlc_bar.wap
-            bar_count = ohlc_bar.barCount
+            # self.brokerclient.cancel_historical_data(req_id)
+            logger.debug3("Bar List: %s", bar_list)
 
-            new_bar_list.append([
-                bar_date, bar_open, bar_high, bar_low, bar_close, bar_volume,
-                bar_count
-            ])
+            for ohlc_bar in bar_list:
+                logger.debug5("Bar: %s", ohlc_bar)
+                bar_date = ohlc_bar.date
+                bar_open = ohlc_bar.open
+                bar_high = ohlc_bar.high
+                bar_low = ohlc_bar.low
+                bar_close = ohlc_bar.close
+                bar_volume = float(ohlc_bar.volume)
+                bar_wap = ohlc_bar.wap
+                bar_count = ohlc_bar.barCount
 
-        self.send_bars(contract_, "bars", size, new_bar_list)
+                new_bar_list.append([
+                    bar_date, bar_open, bar_high, bar_low, bar_close,
+                    bar_volume, bar_wap, bar_count
+                ])
 
-    def _set_duration(self, size):
+            self.send_bars(contract_, "bars", size, new_bar_list)
+            self.historical_bar_ids[contract_.localSymbol][size] = req_id
+
+    def _set_duration(self, size: str):
         logger.debug5("Setting Duration for Bar Size: %s", size)
         if size == "1 month":
             duration = "2 Y"

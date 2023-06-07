@@ -70,7 +70,8 @@ class BrokerProcess():
                  cmd_queue: Queue,
                  data_queue: Queue,
                  address: str = "127.0.0.1",
-                 broker_id: str = "twsapi"):
+                 broker_id: str = "twsapi",
+                 client_id: int = 2004):
         """!
         Creates an instance of the BrokerProcess.
         """
@@ -79,7 +80,7 @@ class BrokerProcess():
         self.data_queue = data_queue
         self.available_ports = []
         self.contracts = {}
-        self.client_id = 2004
+        self.client_id = client_id
         broker_client_class = {"twsapi": TwsApiClient()}
         broker_class = {"twsapi": TwsDataThread()}
         self.brokerclient = broker_client_class.get(broker_id)
@@ -161,69 +162,6 @@ class BrokerProcess():
                 self._create_contract(item)
             self.bars[item] = {}
 
-    def _create_braket_order(self, order_request):
-        ticker = order_request["ticker"]
-        order_contract = self.contracts[ticker]
-
-        # Fix bug caused by two tickers using the same order id if orders are triggered at the same
-        # time. Issue #56
-        ticker_index_id = list(self.contracts.keys()).index(ticker)
-        order_id = self.brokerclient.next_order_id + (ticker_index_id * 3)
-
-        parent_order = order.Order()
-        parent_order.orderId = order_id
-        parent_order.action = order_request["action"]
-        parent_order.orderType = "LMT"
-        parent_order.totalQuantity = order_request["quantity"]
-        parent_order.lmtPrice = order_request["price"]
-        parent_order.transmit = False
-
-        profit_order = order.Order()
-        profit_order.orderId = parent_order.orderId + 1
-        if order_request["action"] == "BUY":
-            profit_order.action = "SELL"
-        else:
-            profit_order.action = "BUY"
-        profit_order.orderType = "LMT"
-        profit_order.totalQuantity = order_request["quantity"]
-        profit_order.lmtPrice = order_request["profit_target"]
-        profit_order.parentId = parent_order.orderId
-        profit_order.transmit = False
-
-        stop_order = order.Order()
-        stop_order.orderId = parent_order.orderId + 2
-        if order_request["action"] == "BUY":
-            stop_order.action = "SELL"
-        else:
-            stop_order.action = "BUY"
-        stop_order.orderType = "STP"
-        stop_order.totalQuantity = order_request["quantity"]
-        stop_order.auxPrice = order_request["stop_loss"]
-        stop_order.parentId = parent_order.orderId
-        stop_order.transmit = True
-
-        self.brokerclient.place_order(order_contract, parent_order,
-                                      parent_order.orderId)
-        self.brokerclient.place_order(order_contract, profit_order,
-                                      profit_order.orderId)
-        self.brokerclient.place_order(order_contract, stop_order,
-                                      stop_order.orderId)
-
-    def _create_order(self, order_request):
-        order_contract = self.contracts[order_request["ticker"]]
-
-        parent_order = order.Order()
-        parent_order.action = order_request["action"]
-        parent_order.orderType = order_request["order_type"]
-        parent_order.quantity = order_request["quantity"]
-
-        if order_request.get("price"):
-            parent_order.lmtPrice = order_request["price"]
-
-        parent_order.transmit = True
-
-        self.brokerclient.place_order(order_contract, parent_order)
-
     def _place_order(self, order_request):
         logger.debug("Order Received: %s", order_request)
 
@@ -232,23 +170,23 @@ class BrokerProcess():
 
         logger.debug("Bracket Check: %s", bracket_check)
         if bracket_check:
-            self._create_braket_order(order_request)
+            self.data_response.create_braket_order(order_request)
         else:
-            self._create_order(order_request)
+            self.data_response.create_order(order_request)
 
     def _process_commands(self, cmd):
-        logger.debug("Processing Command: %s", cmd)
+        logger.debug3("Processing Command: %s", cmd)
         if cmd.get("set"):
             self._set_cmd(cmd["set"])
 
         if cmd.get("req"):
             self._req_cmd(cmd["req"])
 
-        # if cmd.get("place_order"):
-        #     self._place_order(cmd["place_order"])
+        if cmd.get("place_order"):
+            self._place_order(cmd["place_order"])
 
     def _req_cmd(self, subcommand):
-        logger.debug("Request Command: %s", subcommand)
+        logger.debug3("Request Command: %s", subcommand)
         if subcommand == "bar_history":
             self.data_response.request_bar_history()
         elif subcommand == "option_details":
@@ -263,17 +201,6 @@ class BrokerProcess():
             self.data_response.request_global_cancel()
         else:
             logger.error("Command Not Implemented: %s", subcommand)
-
-    # def _request_market_data(self):
-    #     for key in self.contracts.keys():
-    #         self.market_data[key] = marketdata.BrokerMarketData(
-    #             contract=self.contracts[key],
-    #             brokerclient=self.brokerclient,
-    #             data_queue=self.data_queue)
-    #         self.market_data[key].request_market_data()
-    #         self.market_data_thread[key] = threading.Thread(
-    #             target=self.market_data[key].run, daemon=True)
-    #         self.market_data_thread[key].start()
 
     # def _request_tick_by_tick_data(self):
     #     for key in self.contracts.keys():

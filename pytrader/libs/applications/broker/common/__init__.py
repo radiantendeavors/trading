@@ -31,6 +31,7 @@ import queue
 from abc import ABCMeta, abstractmethod
 
 # 3rd Party libraries
+from ibapi.contract import Contract
 
 # System Library Overrides
 from pytrader.libs.system import logging
@@ -67,14 +68,26 @@ class BrokerDataThread():
         ## Broker Thread Queue
         self.queue = None
 
+        ## Next Order Id
+        self.next_order_id = 0
+
     def run(self):
         broker_connection = True
         while broker_connection:
             response_data = self.queue.get()
+            #logger.debug("Response Data: %s", response_data)
             if response_data == "Disconnected":
                 broker_connection = False
             else:
                 self._parse_data(response_data)
+
+    @abstractmethod
+    def create_braket_order(self, order_request):
+        pass
+
+    @abstractmethod
+    def create_order(self, order_request):
+        pass
 
     @abstractmethod
     def request_bar_history(self):
@@ -119,11 +132,11 @@ class BrokerDataThread():
     def set_contracts(self, contracts):
         pass
 
-    def send_bars(self, contract, bar_type, bar_size, bars):
+    def send_bars(self, contract: Contract, bar_type, bar_size, bars):
         message = {bar_type: {contract.localSymbol: {bar_size: bars}}}
         self.data_queue.put(message)
 
-    def send_ticks(self, contract, tick):
+    def send_ticks(self, contract: Contract, tick):
         message = {"market_data": {contract.localSymbol: tick}}
         self.data_queue.put(message)
 
@@ -132,3 +145,8 @@ class BrokerDataThread():
             self.send_real_time_bars(response_data["real_time_bars"])
         elif response_data.get("market_data"):
             self.send_market_data_ticks(response_data["market_data"])
+        elif response_data.get("next_order_id"):
+            # We really only want to update the order id the first time we receive it.  Afterwards,
+            # we use our own tracking to ensure we do not make multiple orders with the same id.
+            if self.next_order_id == 0:
+                self.next_order_id = response_data["next_order_id"]

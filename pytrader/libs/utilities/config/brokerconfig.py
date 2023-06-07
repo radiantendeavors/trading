@@ -38,6 +38,7 @@ class BrokerConfig():
     def __init__(self, *args, **kwargs):
         self.brokerclient_address = "127.0.0.1"
         self.brokerclient_port = 7496
+        self.brokerclient_id = 2004
 
     def read_config(self, *args, **kwargs):
         config = kwargs["config"]

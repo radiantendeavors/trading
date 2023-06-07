@@ -68,6 +68,7 @@ class Strategy():
         self.data_queue = data_queue
 
         self.time_now = datetime.datetime.now()
+
         self.contracts = {}
         self.bars = {}
         self.ticks = {}
@@ -215,6 +216,17 @@ class Strategy():
         self._send_order(order)
         self.long_position.append(ticker)
 
+        logger.info("Buy %s order placed for %s", order_type,
+                    ticker.localSymbol)
+        logger.info("Quantity: %s", self.quantity)
+
+        if price:
+            logger.info("Price: %s", price)
+        if profit_target:
+            logger.info("Profit Target: %s", profit_target)
+        if stop_loss:
+            logger.info("Stop Loss: %s", stop_loss)
+
     def open_short_position(self,
                             ticker,
                             order_type,
@@ -259,36 +271,52 @@ class Strategy():
         else:
             logger.warning("Order Cancelation not implemented")
 
+    def select_options(self, ticker, tick):
+        if self.use_options:
+            if not self.strikes.get(ticker):
+                self.select_option_strikes(ticker, tick)
+                self._create_option_contracts(ticker)
+
+                # Re-send requests to get data for options as well
+                self._send_bar_sizes()
+                self._req_bar_history()
+                self._req_real_time_bars()
+                self._req_market_data()
+
     def select_option_strikes(self, ticker, price):
         x = 0
         y = 1
 
-        logger.debug("Price: %s", str(price))
-        price_f = float(price)
+        if ticker in self.security:
 
-        num_strikes = self.num_strikes // 2
+            logger.debug4("Price: %s", str(price))
+            price_f = float(price)
 
-        strikes_len = len(self.all_strikes[ticker])
+            num_strikes = self.num_strikes // 2
 
-        while y < strikes_len:
+            strikes_len = len(self.all_strikes[ticker])
 
-            lower_price = float(self.all_strikes[ticker][x])
-            upper_price = float(self.all_strikes[ticker][y])
+            while y < strikes_len:
 
-            if lower_price <= price_f <= upper_price:
-                begin_ = x - num_strikes
-                end_ = y + num_strikes
+                lower_price = float(self.all_strikes[ticker][x])
+                upper_price = float(self.all_strikes[ticker][y])
 
-                if begin_ < 0:
-                    begin_ = 0
-                logger.debug("All strikes for ticker: %s, %s", ticker,
-                             self.all_strikes[ticker])
-                self.strikes[ticker] = self.all_strikes[ticker][begin_:end_]
+                if lower_price <= price_f <= upper_price:
+                    begin_ = x - num_strikes
+                    end_ = y + num_strikes
 
-            x += 1
-            y += 1
+                    if begin_ < 0:
+                        begin_ = 0
+                    logger.debug4("All strikes for ticker: %s, %s", ticker,
+                                  self.all_strikes[ticker])
+                    self.strikes[ticker] = self.all_strikes[ticker][
+                        begin_:end_]
 
-        logger.debug("Strikes: %s", self.strikes[ticker])
+                x += 1
+                y += 1
+
+            logger.debug2("Selected Strikes for %s: %s", ticker,
+                          self.strikes[ticker])
 
     # ==============================================================================================
     #
@@ -333,21 +361,26 @@ class Strategy():
     def _create_option_contracts(self, ticker):
         contracts = {}
 
-        for strike in self.strikes[ticker]:
-            for right in ["CALL", "PUT"]:
-                strike_left = str(strike).split(".")[0]
-                strike_right = str(strike).split(".")[1]
+        if ticker in self.security:
+            for strike in self.strikes[ticker]:
+                for right in ["CALL", "PUT"]:
+                    contract_name = self._gen_option_contract_name(
+                        ticker, right, strike)
+                    contracts[contract_name] = self._create_contract(
+                        ticker, "OPT", "SMART", "USD",
+                        self.expirations[ticker], strike, right)
 
-                strike_str = strike_left.rjust(5, "0") + strike_right.ljust(
-                    3, "0")
-                local_symbol = ticker.ljust(6, " ")
-                contract_name = local_symbol + self.expirations[ticker][
-                    -6:] + right[0] + strike_str
-                contracts[contract_name] = self._create_contract(
-                    ticker, "OPT", "SMART", "USD", self.expirations[ticker],
-                    strike, right)
+            self._send_contracts(contracts)
 
-        self._send_contracts(contracts)
+    def _gen_option_contract_name(self, ticker, right, strike):
+        strike_left = str(strike).split(".")[0]
+        strike_right = str(strike).split(".")[1]
+
+        strike_str = strike_left.rjust(5, "0") + strike_right.ljust(3, "0")
+        local_symbol = ticker.ljust(6, " ")
+        option_name = local_symbol + self.expirations[ticker][-6:] + right[
+            0] + strike_str
+        return option_name
 
     def _process_5sec_rtb(self, bar_data):
         logger.debug3("Bar Data: %s", bar_data)
@@ -358,47 +391,45 @@ class Strategy():
 
             if new_bar:
                 self.bars[ticker][item].append_bar(new_bar)
+                self.bars[ticker][item].create_dataframe()
                 if item == self.bar_sizes[0]:
                     self.on_bar(ticker, item)
             else:
                 self.on_5sec_rtb(ticker, bar_data[ticker]["rtb"])
 
     def _process_bars(self, bar_data):
-        logger.debug10("Begin Function")
-
         # FIXME: There should only be the one key, I shouldn't need to loop this.
         ticker = None
         for ticker, bar_size_dict in bar_data.items():
-            logger.debug3("Ticker: %s", ticker)
             if ticker not in self.bars.keys():
                 self.bars[ticker] = {}
 
             # FIXME: Again there should only be one key.
             for bar_size, bar_list in bar_size_dict.items():
-                logger.debug3("Bar Size: %s", bar_size)
-                logger.debug4("Bar List: %s", bar_list)
+                if bar_size != "rtb":
+                    logger.debug2("%s Bars received for: %s", bar_size, ticker)
                 if bar_size in self.bars[ticker].keys():
                     self.bars[ticker][bar_size].append_bar(bar_list)
                 else:
-                    self.bars[ticker][bar_size] = bars.Bars(bar_size=bar_size,
+                    self.bars[ticker][bar_size] = bars.Bars(ticker,
+                                                            bar_size=bar_size,
                                                             bar_list=bar_list)
 
+                self.bars[ticker][bar_size].create_dataframe()
         return ticker, bar_size
 
-        logger.debug10("End Function")
-
-    def _process_data(self, data):
+    def _process_data(self, data: dict):
         if data.get("contracts"):
             self.contracts = data["contracts"]
-            logger.debug("Contracts: %s", self.contracts)
+            logger.debug3("Contracts: %s", self.contracts)
         if data.get("option_details"):
-            logger.debug("Processing Option Details")
+            logger.debug3("Processing Option Details")
             self._process_option_details(data["option_details"])
         if data.get("real_time_bars"):
-            logger.debug3("Processing Real Time Bars")
+            logger.debug3("Processing Real Time Bar")
             self._process_5sec_rtb(data["real_time_bars"])
         if data.get("bars"):
-            logger.debug3("Processing Bars")
+            logger.debug4("Processing Bars")
             self._process_bars(data["bars"])
         if data.get("tick"):
             logger.debug3("Processing Tick Data")
@@ -426,6 +457,14 @@ class Strategy():
                 self._process_mkt_tick_price(ticker, market_data)
 
     def _process_mkt_tick_price(self, ticker, market_data):
+        """!
+        Uses market data to select function to run.
+
+        @param ticker:
+        @param market_data:
+
+        @return None
+        """
         func_map = {
             1: self.on_bid,
             2: self.on_ask,
@@ -455,10 +494,9 @@ class Strategy():
             func = func_map.get(market_data[1])
             func(ticker, market_data[2])
         else:
-            logger.warning("Market Data Type Id #%s has not been implemented",
-                           market_data[1])
-            logger.warning("Market Data for Ticker %s: %s", ticker,
-                           market_data)
+            logger.warning(
+                "Market Data Type Id #%s has not been implemented.  Ticker %s, Data %s",
+                market_data[1], ticker, market_data)
 
     def _process_option_details(self, option_details):
         ticker = option_details["ticker"]
@@ -507,22 +545,23 @@ class Strategy():
         self.cmd_queue.put(message)
 
     def _select_expiration(self, ticker, expirations):
-        logger.debug("Expirations List: %s", expirations)
+        logger.debug4("Expirations List: %s", expirations)
         min_expiry = datetime.datetime.today() + datetime.timedelta(
             days=self.days_to_expiration)
 
         # We want to make sure we are checking based on midnight of the day
         min_expiry = datetime.datetime.combine(min_expiry,
                                                datetime.datetime.min.time())
-        logger.debug2("Earliest Expiry: %s", min_expiry)
+        logger.debug3("Earliest Expiry: %s", min_expiry)
 
         expiry_date = datetime.datetime(year=1970, month=1, day=1)
 
         while expiry_date < min_expiry:
             item = expirations.pop(0)
             expiry_date = datetime.datetime.strptime(item, "%Y%m%d")
-            logger.debug("Expiry: %s", expiry_date)
             self.expirations[ticker] = item
+
+        logger.debug2("Expiry for %s: %s", ticker, expiry_date)
 
     #def _select_strikes(self):
 

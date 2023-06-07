@@ -73,16 +73,21 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 ## Amount of time to sleep to avoid pacing violations.
-SLEEP_TIME = 15
+HISTORICAL_DATA_SLEEP_TIME = 1
 
 ##
-CONTRACT_DETAILS_SLEEP_TIME = 15
+CONTRACT_DETAILS_SLEEP_TIME = 1
+
+## Sleep time to avoid pacing violations
+SMALL_BAR_SLEEP_TIME = 15
+
+## Used to store bar sizes with pacing violations
+SMALL_BAR_SIZES = ["1 secs", "5 secs", "10 secs", "15 secs", "30 secs"]
 
 ## Used to store allowed intraday bar sizes
-INTRADAY_BAR_SIZES = [
-    "1 secs", "5 secs", "10 secs", "15 secs", "30 secs", "1 min", "2 mins",
-    "3 mins", "5 mins", "10 mins", "15 mins", "20 mins", "30 mins", "1 hour",
-    "2 hours", "3 hours", "4 hours", "8 hours"
+INTRADAY_BAR_SIZES = SMALL_BAR_SIZES + [
+    "1 min", "2 mins", "3 mins", "5 mins", "10 mins", "15 mins", "20 mins",
+    "30 mins", "1 hour", "2 hours", "3 hours", "4 hours", "8 hours"
 ]
 
 ## Used to store allowed bar sizes
@@ -123,6 +128,13 @@ class TwsApiClient(EWrapper, EClient):
         ## Used to track when the last contract details data request was made
         self.__contract_details_data_req_timestamp = datetime.datetime(
             year=1970, month=1, day=1, hour=0, minute=0, second=0)
+
+        self.__small_bar_data_req_timestamp = datetime.datetime(year=1970,
+                                                                month=1,
+                                                                day=1,
+                                                                hour=0,
+                                                                minute=0,
+                                                                second=0)
 
         ## Used to track the number of active historical data requests.
         self.__active_historical_data_requests = 0
@@ -370,7 +382,6 @@ class TwsApiClient(EWrapper, EClient):
         """
         self.req_id += 1
         self._contract_details_data_wait()
-        logger.debug2("Requesting Contract Details for contract: %s", contract)
         self.data_available[self.req_id] = threading.Event()
         self.reqContractDetails(self.req_id, contract)
         self.__contract_details_data_req_timestamp = datetime.datetime.now()
@@ -501,16 +512,16 @@ class TwsApiClient(EWrapper, EClient):
         if self.__active_historical_data_requests <= 50:
             self.__active_historical_data_requests += 1
 
-            logger.debug3("Contract: %s", contract)
-            logger.debug3("Bar Size: %s", bar_size_setting)
-            logger.debug3("End Date Time: %s", end_date_time)
-            logger.debug3("Duration: %s", duration_str)
-            logger.debug3("What to show: %s", what_to_show)
-            logger.debug3("Use Regular Trading Hours: %s",
+            logger.debug6("Contract: %s", contract)
+            logger.debug6("Bar Size: %s", bar_size_setting)
+            logger.debug6("End Date Time: %s", end_date_time)
+            logger.debug6("Duration: %s", duration_str)
+            logger.debug6("What to show: %s", what_to_show)
+            logger.debug6("Use Regular Trading Hours: %s",
                           use_regular_trading_hours)
-            logger.debug3("Format date: %s", format_date)
-            logger.debug3("Keep Up to Date: %s", keep_up_to_date)
-            logger.debug3("Chart Options: %s", chart_options)
+            logger.debug6("Format date: %s", format_date)
+            logger.debug6("Keep Up to Date: %s", keep_up_to_date)
+            logger.debug6("Chart Options: %s", chart_options)
             self.req_id += 1
 
             # if keep_up_to_date is true, end_date_time must be blank.
@@ -518,9 +529,13 @@ class TwsApiClient(EWrapper, EClient):
             if keep_up_to_date:
                 end_date_time = ""
 
-            self._historical_data_wait()
+            if bar_size_setting in SMALL_BAR_SIZES:
+                self._small_bar_data_wait()
+            else:
+                self._historical_data_wait()
 
-            logger.debug3("Requesting Historical Bars: %s", bar_size_setting)
+            logger.debug3("Requesting Historical Bars for: %s",
+                          contract.localSymbol)
 
             self.data_available[self.req_id] = threading.Event()
             self.reqHistoricalData(self.req_id, contract, end_date_time,
@@ -530,12 +545,12 @@ class TwsApiClient(EWrapper, EClient):
 
             # This is updated here, rather than in the _historical_data_wait function because we
             # want to actually make the request before setting a new timer.
-            self.__historical_data_req_timestamp = datetime.datetime.now()
+            if bar_size_setting in SMALL_BAR_SIZES:
+                self.__small_bar_data_req_timestamp = datetime.datetime.now()
+            else:
+                self.__historical_data_req_timestamp = datetime.datetime.now()
 
-            logger.debug4("Request Timestamp: %s",
-                          self.__historical_data_req_timestamp)
             self.data[self.req_id] = []
-            logger.debug4("Data: %s", self.data)
             return self.req_id
         else:
             raise Exception("Too many open historical data requests")
@@ -664,11 +679,11 @@ class TwsApiClient(EWrapper, EClient):
                 generic_tick_list += ", 100, 101, 105, 106, 165"
 
         ## TODO: Verify if pacing violations exist for market data
-        self._historical_data_wait()
+        #self._historical_data_wait()
         self.reqMktData(self.req_id, contract, generic_tick_list, snapshot,
                         regulatory_snapshot, market_data_options)
 
-        self.__historical_data_req_timestamp = datetime.datetime.now()
+        #self.__historical_data_req_timestamp = datetime.datetime.now()
         return self.req_id
 
     def req_real_time_bars(self,
@@ -709,9 +724,7 @@ class TwsApiClient(EWrapper, EClient):
 
         self.req_id += 1
 
-        self._historical_data_wait()
-
-        logger.debug5("Requesting Historical Bars: %s", bar_size_setting)
+        self._small_bar_data_wait()
 
         self.reqRealTimeBars(self.req_id, contract, bar_size_setting,
                              what_to_show, use_regular_trading_hours,
@@ -719,12 +732,7 @@ class TwsApiClient(EWrapper, EClient):
 
         # This is updated here, rather than in the _historical_data_wait function because we
         # want to actually make the request before setting a new timer.
-        self.__historical_data_req_timestamp = datetime.datetime.now()
-
-        logger.debug6("Request Timestamp: %s",
-                      self.__historical_data_req_timestamp)
-
-        #logger.debug("Data: %s", self.data)
+        self.__small_bar_data_req_timestamp = datetime.datetime.now()
         return self.req_id
 
     def req_sec_def_opt_params(self, contract: Contract):
@@ -760,8 +768,6 @@ class TwsApiClient(EWrapper, EClient):
 
         @return req_id: The request's identifier
         """
-        logger.debug("Begin Function")
-
         allowed_tick_types = ["Last", "AllLast", "BidAsk", "MidPoint"]
 
         if tick_type in allowed_tick_types:
@@ -1486,8 +1492,8 @@ class TwsApiClient(EWrapper, EClient):
             3: "Delayed",
             4: "Delayed and Frozen"
         }
-        logger.debug("Market Data type for req id %s currently set to '%s'",
-                     req_id, data_type_string[market_data_type])
+        logger.debug3("Market Data type for req id %s currently set to '%s'",
+                      req_id, data_type_string[market_data_type])
 
     @iswrapper
     def marketRule(self, market_rule_id: int, price_increments: list):
@@ -1557,9 +1563,14 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
+        # Do I need this here?
         super().nextValidId(order_id)
 
         self.next_order_id = order_id
+
+        msg = {"next_order_id": order_id}
+        self.queue.put(msg)
+
         self.next_valid_id_available.set()
 
     @iswrapper
@@ -1575,9 +1586,8 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        logger.info("Order status: %s", order_state.status)
-        logger.info("Commission charged: %s", order_state.commission)
-        logger.debug("End Function")
+        logger.debug("Order status: %s", order_state.status)
+        logger.debug("Commission charged: %s", order_state.commission)
 
     @iswrapper
     def openOrderEnd(self):
@@ -1648,19 +1658,17 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        logger.debug("Begin Function")
-        logger.info("Order Id: %s", order_id)
-        logger.info("Status: %s", status)
-        logger.info("Number of filled positions: %s", filled)
-        logger.info("Number of unfilled positions: %s", remaining)
-        logger.info("Average fill price: %s", avg_fill_price)
-        logger.info("TWS ID: %s", perm_id)
-        logger.info("Parent Id: %s", parent_id)
-        logger.info("Last Fill Price: %s", last_fill_price)
-        logger.info("Client Id: %s", client_id)
-        logger.info("Why Held: %s", why_held)
-        logger.info("Market Cap Price: %s", mkt_cap_price)
-        logger.debug("End Function")
+        logger.debug("Order Id: %s", order_id)
+        logger.debug("Status: %s", status)
+        logger.debug("Number of filled positions: %s", filled)
+        logger.debug("Number of unfilled positions: %s", remaining)
+        logger.debug("Average fill price: %s", avg_fill_price)
+        logger.debug("TWS ID: %s", perm_id)
+        logger.debug("Parent Id: %s", parent_id)
+        logger.debug("Last Fill Price: %s", last_fill_price)
+        logger.debug("Client Id: %s", client_id)
+        logger.debug("Why Held: %s", why_held)
+        logger.debug("Market Cap Price: %s", mkt_cap_price)
 
     @iswrapper
     def pnl(self, req_id: int, daily_pnl: float, unrealized_pnl: float,
@@ -1784,7 +1792,7 @@ class TwsApiClient(EWrapper, EClient):
             datetime, bar_open, bar_high, bar_low, bar_close, bar_volume,
             bar_wap, bar_count
         ]
-        msg = {"real_time_bar": {req_id: bar}}
+        msg = {"real_time_bars": {req_id: bar}}
         self.queue.put(msg)
 
     @iswrapper
@@ -2609,50 +2617,51 @@ class TwsApiClient(EWrapper, EClient):
     # Internal Helper Functions
     #
     # ==============================================================================================
+    def _data_wait(self, timestamp, sleep_time):
+        time_diff = datetime.datetime.now() - timestamp
+        while time_diff.total_seconds() < sleep_time:
+
+            logger.debug6("Now: %s", datetime.datetime.now())
+            logger.debug5("Last Request: %s", timestamp)
+            logger.debug5("Time Difference: %s seconds",
+                          time_diff.total_seconds())
+            remaining_sleep_time = sleep_time - time_diff.total_seconds()
+            logger.debug3("Sleep Time: %s", remaining_sleep_time)
+            time.sleep(sleep_time - time_diff.total_seconds())
+            time_diff = datetime.datetime.now() - timestamp
+
     def _historical_data_wait(self):
         """!
-        Ensure that we wait 15 seconds between historical data requests.
+        Ensure that we wait between historical data requests.
 
         @param self
 
         @return
         """
-        time_diff = datetime.datetime.now(
-        ) - self.__historical_data_req_timestamp
-        while time_diff.total_seconds() < SLEEP_TIME:
-            logger.debug6("Now: %s", datetime.datetime.now())
-            logger.debug5("Last Request: %s",
-                          self.__historical_data_req_timestamp)
-            logger.debug5("Time Difference: %s seconds",
-                          time_diff.total_seconds())
-            remaining_sleep_time = SLEEP_TIME - time_diff.total_seconds()
-            logger.debug3("Sleep Time: %s", remaining_sleep_time)
-            time.sleep(SLEEP_TIME - time_diff.total_seconds())
-            time_diff = datetime.datetime.now(
-            ) - self.__historical_data_req_timestamp
+        self._data_wait(self.__historical_data_req_timestamp,
+                        HISTORICAL_DATA_SLEEP_TIME)
+
+    def _small_bar_data_wait(self):
+        """!
+        Ensure that we wait between historical data requests.
+
+        @param self
+
+        @return
+        """
+        self._data_wait(self.__small_bar_data_req_timestamp,
+                        SMALL_BAR_SLEEP_TIME)
 
     def _contract_details_data_wait(self):
         """!
-        Ensure that we wait 15 seconds between historical data requests.
+        Ensure that we wait between historical data requests.
 
         @param self
 
         @return
         """
-        time_diff = datetime.datetime.now(
-        ) - self.__contract_details_data_req_timestamp
-        while time_diff.total_seconds() < CONTRACT_DETAILS_SLEEP_TIME:
-            logger.debug6("Now: %s", datetime.datetime.now())
-            logger.debug5("Last Request: %s",
-                          self.__historical_data_req_timestamp)
-            logger.debug5("Time Difference: %s seconds",
-                          time_diff.total_seconds())
-            remaining_sleep_time = CONTRACT_DETAILS_SLEEP_TIME - time_diff.total_seconds(
-            )
-            logger.debug3("Sleep Time: %s", remaining_sleep_time)
-            time.sleep(SLEEP_TIME - time_diff.total_seconds())
-            time_diff = datetime.datetime.now(
-            ) - self.__contract_details_data_req_timestamp
+        self._data_wait(self.__contract_details_data_req_timestamp,
+                        CONTRACT_DETAILS_SLEEP_TIME)
 
     def _calculate_deep_data_allotment(self):
         """!

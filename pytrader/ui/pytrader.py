@@ -79,14 +79,11 @@ def process_arguments(args, conf):
     @return None
     """
     # Create the client and connect to TWS or IB Gateway
-    logger.debug10("Begin Function")
-
     address = broker_address(args, conf)
     strategy_list = args.strategies
     broker = args.broker
-
     processed_args = (address, strategy_list, broker)
-    logger.debug10("End Function")
+
     return processed_args
 
 
@@ -123,6 +120,7 @@ def init(args):
                         choices=["twsapi"],
                         default="twsapi",
                         help="Broker")
+    parser.add_argument("-c", "--client-id", help="Broker Client Id")
 
     parser.set_defaults(debug=False, verbosity=0, loglevel='INFO')
 
@@ -142,8 +140,15 @@ def init(args):
         try:
             processed_args = process_arguments(args, conf)
             process_manager = trader.ProcessManager()
-            process_manager.run_processes(processed_args[0], processed_args[1],
-                                          processed_args[2])
+            if args.client_id:
+                process_manager.run_processes(processed_args[0],
+                                              processed_args[1],
+                                              processed_args[2],
+                                              args.client_id)
+            else:
+                process_manager.run_processes(processed_args[0],
+                                              processed_args[1],
+                                              processed_args[2])
         except Exception as msg:
             parser.print_help()
             logger.error('No command was given')
@@ -152,8 +157,12 @@ def init(args):
         logger.debug8("Starting Client")
         processed_args = process_arguments(args, conf)
         process_manager = trader.ProcessManager()
-        process_manager.run_processes(processed_args[0], processed_args[1],
-                                      processed_args[2])
+        if args.client_id:
+            process_manager.run_processes(processed_args[0], processed_args[1],
+                                          processed_args[2], args.client_id)
+        else:
+            process_manager.run_processes(processed_args[0], processed_args[1],
+                                          processed_args[2])
 
     return 0
 
