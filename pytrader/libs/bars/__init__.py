@@ -167,6 +167,7 @@ class BasicBars():
     def _bar_conversion(self, size):
         bar_conversion = {
             "5 secs": 1,
+            "15 secs": 3,
             "30 secs": 6,
             "1 min": 12,
             "5 mins": 60,
@@ -180,6 +181,7 @@ class BasicBars():
         bar_seconds = {
             "rtb": 5,
             "5 secs": 5,
+            "15 secs": 15,
             "30 secs": 30,
             "1 min": 60,
             "5 mins": 300,
@@ -194,12 +196,16 @@ class BasicBars():
 class Bars(BasicBars):
 
     def __init__(self, *args, **kwargs):
+        self.long_period = ""
+        self.short_period = ""
+        self.long_period_count = 0
         super().__init__(*args, **kwargs)
 
-    def calculate_ema(self, span, span_type):
+    def calculate_ema(self, span: int, span_type: str):
         col_name = str(span) + "EMA"
         if span_type == "long":
             self.long_period = col_name
+            self.long_period_count = span
         elif span_type == "short":
             self.short_period = col_name
         else:
@@ -211,7 +217,8 @@ class Bars(BasicBars):
         return self.bars["Close"].iloc[-1]
 
     def print_bar(self, ticker):
-        logger.debug2("DataFrame for %s:\n%s", ticker, self.bars.tail(10))
+        logger.debug3("DataFrame for %s:\n%s", ticker,
+                      self.bars.tail(self.long_period_count))
 
     def calculate_sma(self, span):
         name = str(span) + "SMA"

@@ -53,8 +53,8 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 class Strategy(strategies.Strategy):
 
-    def __init__(self, send_queue, recv_queue):
-
+    def __init__(self, send_queue, recv_queue, next_order_id):
+        super().__init__(send_queue, recv_queue, next_order_id)
         self.security = ["SPY", "QQQ", "IWM"]
         self.bar_sizes = ["5 mins"]
         self.short_period = 3
@@ -66,8 +66,6 @@ class Strategy(strategies.Strategy):
 
         self.endtime = datetime.datetime.combine(
             datetime.date.today(), datetime.time(hour=15, minute=55))
-
-        super().__init__(send_queue, recv_queue)
 
     def continue_strategy(self):
         """!
@@ -82,7 +80,7 @@ class Strategy(strategies.Strategy):
         condition1 = (cur_time < self.endtime)
         logger.debug4("Curent Time: %s", cur_time)
         logger.debug4("End Time: %s", self.endtime)
-        logger.debug3("Condition 1: %s", condition1)
+        logger.debug4("Condition 1: %s", condition1)
 
         if condition1:
             return True
@@ -92,13 +90,13 @@ class Strategy(strategies.Strategy):
     def on_5sec_rtb(self, ticker, bar):
         logger.debug10("Begin Function")
         logger.debug4("Run On 5sec RTB")
-        logger.debug3("Ticker: %s, Bar: %s", ticker, bar)
+        logger.debug4("Ticker: %s, Bar: %s", ticker, bar)
         logger.debug10("End Function")
 
     def on_ask(self, ticker, tick):
         logger.debug10("Begin Function")
         logger.debug4("Run On Ask")
-        logger.debug3("Ticker: %s, Ask: %s", ticker, tick)
+        logger.debug4("Ticker: %s, Ask: %s", ticker, tick)
         logger.debug10("End Function")
 
     def on_bar(self, ticker, bar_size):
@@ -136,7 +134,7 @@ class Strategy(strategies.Strategy):
     def on_bid(self, ticker, tick):
         logger.debug10("Begin Function")
         logger.debug4("Run On Bid")
-        logger.debug3("Ticker: %s, Bid: %s", ticker, tick)
+        logger.debug4("Ticker: %s, Bid: %s", ticker, tick)
         logger.debug10("End Function")
 
     def on_end(self):
@@ -150,29 +148,29 @@ class Strategy(strategies.Strategy):
     def on_high(self, ticker, tick):
         logger.debug10("Begin Function")
         logger.debug4("Run On High")
-        logger.debug3("Ticker: %s, High: %s", ticker, tick)
+        logger.debug4("Ticker: %s, High: %s", ticker, tick)
         logger.debug10("End Function")
 
     def on_last(self, ticker, tick):
         logger.debug10("Begin Function")
         logger.debug4("Run On Last")
-        logger.debug3("Ticker: %s, Last: %s", ticker, tick)
+        logger.debug4("Ticker: %s, Last: %s", ticker, tick)
         logger.debug10("End Function")
 
     def on_low(self, ticker, tick):
         logger.debug10("Begin Function")
         logger.debug4("Run On Low")
-        logger.debug3("Ticker: %s, Low: %s", ticker, tick)
+        logger.debug4("Ticker: %s, Low: %s", ticker, tick)
         logger.debug10("End Function")
 
     def on_open(self, ticker, tick):
         logger.debug10("Begin Function")
         logger.debug4("Run On Low")
-        logger.debug3("Ticker: %s, Low: %s", ticker, tick)
+        logger.debug4("Ticker: %s, Low: %s", ticker, tick)
         logger.debug10("End Function")
 
     def on_tick(self, ticker, tick):
         logger.debug10("Begin Function")
         logger.debug4("Run On Tick")
-        logger.debug3("Ticker: %s, Tick: %s", ticker, tick)
+        logger.debug4("Ticker: %s, Tick: %s", ticker, tick)
         logger.debug10("End Function")

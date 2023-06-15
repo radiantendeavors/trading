@@ -63,15 +63,9 @@ from pytrader.libs.system import logging
 DEBUG = True
 ## The default log level
 LOGLEVEL = 20
-"""! Logging Variables
 
-@var logger The base logger.
-
-@var consolehandler 
-
-@var consoleformatter 
-
-"""
+## Client ID
+CLIENT_ID = 2004
 
 ## An instance of the logging class
 logger = logging.getLogger(__name__)

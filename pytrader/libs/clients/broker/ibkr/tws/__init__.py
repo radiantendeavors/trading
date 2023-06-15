@@ -73,10 +73,10 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 ## Amount of time to sleep to avoid pacing violations.
-HISTORICAL_DATA_SLEEP_TIME = 1
+HISTORICAL_DATA_SLEEP_TIME = 0
 
 ##
-CONTRACT_DETAILS_SLEEP_TIME = 1
+CONTRACT_DETAILS_SLEEP_TIME = 0
 
 ## Sleep time to avoid pacing violations
 SMALL_BAR_SLEEP_TIME = 15
@@ -208,7 +208,7 @@ class TwsApiClient(EWrapper, EClient):
         """
         if req_id > 0:
             self.data_available[req_id].wait()
-            logger.debug5("Data: %s", self.data[req_id])
+            logger.debug6("Data: %s", self.data[req_id])
 
             # We pop this data to prevent the amount of data from constantly growing.
             return self.data.pop(req_id)
@@ -316,8 +316,19 @@ class TwsApiClient(EWrapper, EClient):
     def cancel_news_bulletin(self):
         self.cancelNewsBulletin()
 
-    def cancel_order(self, order_id: int, manual_order_cancel_time: str):
-        raise NotImplementedError
+    def cancel_order(self, order_id: int, manual_order_cancel_time: str = ""):
+        """!
+        Cancels an active order placed by from the same API client ID.
+        Note: API clients cannot cancel individual orders placed by other clients. Only
+        reqGlobalCancel is available.
+
+        @param order_id: The Order Id to cancel.
+        @param manual_order_cancel_time - IBAPI does not provide a definition.  IBAPI says to set
+               the value to an empty string.
+
+        @return None
+        """
+        self.cancelOrder(order_id, manual_order_cancel_time)
 
     def is_connected(self):
         """!
@@ -534,7 +545,7 @@ class TwsApiClient(EWrapper, EClient):
             else:
                 self._historical_data_wait()
 
-            logger.debug3("Requesting Historical Bars for: %s",
+            logger.debug6("Requesting Historical Bars for: %s",
                           contract.localSymbol)
 
             self.data_available[self.req_id] = threading.Event()
@@ -715,12 +726,12 @@ class TwsApiClient(EWrapper, EClient):
 
         @return req_id: The request's identifier
         """
-        logger.debug4("Contract: %s", contract)
-        logger.debug5("Bar Size: %s", bar_size_setting)
-        logger.debug4("What to show: %s", what_to_show)
-        logger.debug4("Use Regular Trading Hours: %s",
+        logger.debug6("Contract: %s", contract)
+        logger.debug6("Bar Size: %s", bar_size_setting)
+        logger.debug6("What to show: %s", what_to_show)
+        logger.debug6("Use Regular Trading Hours: %s",
                       use_regular_trading_hours)
-        logger.debug5("Real time bar options: %s", real_time_bar_options)
+        logger.debug6("Real time bar options: %s", real_time_bar_options)
 
         self.req_id += 1
 
@@ -1015,36 +1026,36 @@ class TwsApiClient(EWrapper, EClient):
         @return
         """
         logger.debug6("Contract Info Received")
-        logger.debug3("Contract ID: %s", details.contract.conId)
-        logger.debug3("Symbol: %s", details.contract.symbol)
-        logger.debug3("Security Type: %s", details.contract.secType)
-        logger.debug3("Exchange: %s", details.contract.exchange)
-        logger.debug3("Currency: %s", details.contract.currency)
-        logger.debug3("Local Symbol: %s", details.contract.localSymbol)
-        logger.debug3("Primary Exchange: %s", details.contract.primaryExchange)
-        logger.debug4("Trading Class: %s", details.contract.tradingClass)
-        logger.debug4("Security ID Type: %s", details.contract.secIdType)
-        logger.debug4("Security ID: %s", details.contract.secId)
+        logger.debug6("Contract ID: %s", details.contract.conId)
+        logger.debug6("Symbol: %s", details.contract.symbol)
+        logger.debug6("Security Type: %s", details.contract.secType)
+        logger.debug6("Exchange: %s", details.contract.exchange)
+        logger.debug6("Currency: %s", details.contract.currency)
+        logger.debug6("Local Symbol: %s", details.contract.localSymbol)
+        logger.debug6("Primary Exchange: %s", details.contract.primaryExchange)
+        logger.debug6("Trading Class: %s", details.contract.tradingClass)
+        logger.debug6("Security ID Type: %s", details.contract.secIdType)
+        logger.debug6("Security ID: %s", details.contract.secId)
         #logger.debug("Description: %s", details.contract.description)
 
-        logger.debug5("Contract Detail Info")
-        logger.debug5("Market name: %s", details.marketName)
-        logger.debug5("Min Tick: %s", details.minTick)
-        logger.debug5("OrderTypes: %s", details.orderTypes)
-        logger.debug5("Valid Exchanges: %s", details.validExchanges)
-        logger.debug5("Underlying Contract ID: %s", details.underConId)
-        logger.debug5("Long name: %s", details.longName)
-        logger.debug5("Industry: %s", details.industry)
-        logger.debug5("Category: %s", details.category)
-        logger.debug5("Subcategory: %s", details.subcategory)
-        logger.debug5("Time Zone: %s", details.timeZoneId)
-        logger.debug5("Trading Hours: %s", details.tradingHours)
-        logger.debug5("Liquid Hours: %s", details.liquidHours)
-        logger.debug5("SecIdList: %s", details.secIdList)
-        logger.debug5("Underlying Symbol: %s", details.underSymbol)
-        logger.debug5("Stock Type: %s", details.stockType)
-        logger.debug5("Next Option Date: %s", details.nextOptionDate)
-        logger.debug5("Details: %s", details)
+        logger.debug6("Contract Detail Info")
+        logger.debug6("Market name: %s", details.marketName)
+        logger.debug6("Min Tick: %s", details.minTick)
+        logger.debug6("OrderTypes: %s", details.orderTypes)
+        logger.debug6("Valid Exchanges: %s", details.validExchanges)
+        logger.debug6("Underlying Contract ID: %s", details.underConId)
+        logger.debug6("Long name: %s", details.longName)
+        logger.debug6("Industry: %s", details.industry)
+        logger.debug6("Category: %s", details.category)
+        logger.debug6("Subcategory: %s", details.subcategory)
+        logger.debug6("Time Zone: %s", details.timeZoneId)
+        logger.debug6("Trading Hours: %s", details.tradingHours)
+        logger.debug6("Liquid Hours: %s", details.liquidHours)
+        logger.debug6("SecIdList: %s", details.secIdList)
+        logger.debug6("Underlying Symbol: %s", details.underSymbol)
+        logger.debug6("Stock Type: %s", details.stockType)
+        logger.debug6("Next Option Date: %s", details.nextOptionDate)
+        logger.debug6("Details: %s", details)
 
         self.data[req_id] = details
         self.data_available[req_id].set()
@@ -1085,7 +1096,7 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        logger.debug4("Contract Details Received for request id: %s", req_id)
+        logger.debug6("Contract Details Received for request id: %s", req_id)
 
     @iswrapper
     def currentTime(self, current_time: int):
@@ -1239,8 +1250,8 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        msg = {"order_execution": {contract.localSymbol: execution}}
+        logger.debug(msg)
 
     @iswrapper
     def execDetailsEnd(self, req_id: int):
@@ -1320,14 +1331,14 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        logger.debug3("ReqID: %s", req_id)
-        logger.debug3("Bar: %s", bar)
+        logger.debug6("ReqID: %s", req_id)
+        logger.debug6("Bar: %s", bar)
 
         self.data[req_id].append(bar)
 
     @iswrapper
     def historicalDataEnd(self, req_id: int, start: str, end: str):
-        logger.debug4("Data Complete for ReqID: %s from: %s to: %s", req_id,
+        logger.debug6("Data Complete for ReqID: %s from: %s to: %s", req_id,
                       start, end)
         self.data_available[req_id].set()
         self.__active_historical_data_requests -= 1
@@ -1462,7 +1473,7 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        logger.debug5("Accounts: %s", accounts)
+        logger.debug6("Accounts: %s", accounts)
         self.accounts = accounts.split(",")
         self.accounts_available.set()
         logger.debug("Accounts: %s", self.accounts)
@@ -1492,7 +1503,7 @@ class TwsApiClient(EWrapper, EClient):
             3: "Delayed",
             4: "Delayed and Frozen"
         }
-        logger.debug3("Market Data type for req id %s currently set to '%s'",
+        logger.debug6("Market Data type for req id %s currently set to '%s'",
                       req_id, data_type_string[market_data_type])
 
     @iswrapper
@@ -1586,8 +1597,10 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        logger.debug("Order status: %s", order_state.status)
-        logger.debug("Commission charged: %s", order_state.commission)
+        logger.debug9("Order Id: %s", order_id)
+        logger.debug9("Contract: %s", contract.localSymbol)
+        logger.debug9("Order: %s", order)
+        logger.debug9("Order state: %s", order_state)
 
     @iswrapper
     def openOrderEnd(self):
@@ -1658,17 +1671,35 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        logger.debug("Order Id: %s", order_id)
-        logger.debug("Status: %s", status)
-        logger.debug("Number of filled positions: %s", filled)
-        logger.debug("Number of unfilled positions: %s", remaining)
-        logger.debug("Average fill price: %s", avg_fill_price)
-        logger.debug("TWS ID: %s", perm_id)
-        logger.debug("Parent Id: %s", parent_id)
-        logger.debug("Last Fill Price: %s", last_fill_price)
-        logger.debug("Client Id: %s", client_id)
-        logger.debug("Why Held: %s", why_held)
-        logger.debug("Market Cap Price: %s", mkt_cap_price)
+        logger.debug9("Order Id: %s", order_id)
+        logger.debug9("Status: %s", status)
+        logger.debug9("Number of filled positions: %s", filled)
+        logger.debug9("Number of unfilled positions: %s", remaining)
+        logger.debug9("Average fill price: %s", avg_fill_price)
+        logger.debug9("TWS ID: %s", perm_id)
+        logger.debug9("Parent Id: %s", parent_id)
+        logger.debug9("Last Fill Price: %s", last_fill_price)
+        logger.debug9("Client Id: %s", client_id)
+        logger.debug9("Why Held: %s", why_held)
+        logger.debug9("Market Cap Price: %s", mkt_cap_price)
+
+        msg = {
+            "order_status": {
+                order_id: {
+                    "status": status,
+                    "filled": filled,
+                    "remaining": remaining,
+                    "average_fill_price": avg_fill_price,
+                    "perm_id": perm_id,
+                    "parent_id": parent_id,
+                    "last_fill_price": last_fill_price,
+                    "client_id": client_id,
+                    "why_held": why_held,
+                    "market_cap_price": mkt_cap_price
+                }
+            }
+        }
+        self.queue.put(msg)
 
     @iswrapper
     def pnl(self, req_id: int, daily_pnl: float, unrealized_pnl: float,
@@ -1925,7 +1956,7 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        logger.debug4(
+        logger.debug6(
             "Security Definition Option Parameter:\nReqId: %s\nExchange: %s\nUnderlying conId: %s\nTrading Class: %s\nMultiplier: %s\nExpirations: %s\nStrikes: %s",
             req_id, exchange, underlying_con_id, tradingClass, multiplier,
             expirations, strikes)
@@ -1949,7 +1980,7 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        logger.debug5("SecurityDefinitionOptionParameterEnd. ReqId: %s",
+        logger.debug6("SecurityDefinitionOptionParameterEnd. ReqId: %s",
                       req_id)
         self.data_available[req_id].set()
 
@@ -2622,11 +2653,11 @@ class TwsApiClient(EWrapper, EClient):
         while time_diff.total_seconds() < sleep_time:
 
             logger.debug6("Now: %s", datetime.datetime.now())
-            logger.debug5("Last Request: %s", timestamp)
-            logger.debug5("Time Difference: %s seconds",
+            logger.debug6("Last Request: %s", timestamp)
+            logger.debug6("Time Difference: %s seconds",
                           time_diff.total_seconds())
             remaining_sleep_time = sleep_time - time_diff.total_seconds()
-            logger.debug3("Sleep Time: %s", remaining_sleep_time)
+            logger.debug6("Sleep Time: %s", remaining_sleep_time)
             time.sleep(sleep_time - time_diff.total_seconds())
             time_diff = datetime.datetime.now() - timestamp
 

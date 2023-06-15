@@ -37,7 +37,7 @@ from pytrader.libs.system import logging
 
 # Other Application Libraries
 from pytrader.libs.applications.broker.common import BrokerDataThread
-
+from pytrader.libs.applications.broker.common import orders
 # Conditional Libraries
 
 # ==================================================================================================
@@ -68,70 +68,15 @@ class TwsDataThread(BrokerDataThread):
 
         super().__init__(*args, **kwargs)
 
-    def create_braket_order(self, order_request):
-        # Fix bug caused by two tickers using the same order id if orders are triggered at the same
-        # time. Issue #56
-        self.next_order_id += 5
-
-        order_contract = order_request["ticker"]
-
-        parent_order = Order()
-        parent_order.orderId = self.next_order_id
-        parent_order.action = order_request["action"]
-        parent_order.orderType = "LMT"
-        parent_order.totalQuantity = order_request["quantity"]
-        parent_order.lmtPrice = order_request["price"]
-        parent_order.transmit = False
-
-        profit_order = Order()
-        profit_order.orderId = parent_order.orderId + 1
-        if order_request["action"] == "BUY":
-            profit_order.action = "SELL"
-        else:
-            profit_order.action = "BUY"
-        profit_order.orderType = "LMT"
-        profit_order.totalQuantity = order_request["quantity"]
-        profit_order.lmtPrice = order_request["profit_target"]
-        profit_order.parentId = parent_order.orderId
-        profit_order.transmit = False
-
-        stop_order = Order()
-        stop_order.orderId = parent_order.orderId + 2
-        if order_request["action"] == "BUY":
-            stop_order.action = "SELL"
-        else:
-            stop_order.action = "BUY"
-        stop_order.orderType = "STP"
-        stop_order.totalQuantity = order_request["quantity"]
-        stop_order.auxPrice = order_request["stop_loss"]
-        stop_order.parentId = parent_order.orderId
-        stop_order.transmit = True
-
-        self.brokerclient.place_order(order_contract, parent_order,
-                                      parent_order.orderId)
-        self.brokerclient.place_order(order_contract, profit_order,
-                                      profit_order.orderId)
-        self.brokerclient.place_order(order_contract, stop_order,
-                                      stop_order.orderId)
+    def cancel_order(self, order_id: int):
+        self.brokerclient.cancel_order(order_id)
 
     def create_order(self, order_request):
-        self.next_order_id += 5
+        order_contract = order_request["contract"]
+        new_order = order_request["order"]
 
-        order_contract = order_request["ticker"]
-
-        parent_order = Order()
-        parent_order.orderId = self.next_order_id
-        parent_order.action = order_request["action"]
-        parent_order.orderType = order_request["order_type"]
-        parent_order.quantity = order_request["quantity"]
-
-        if order_request.get("price"):
-            parent_order.lmtPrice = order_request["price"]
-
-        parent_order.transmit = True
-
-        self.brokerclient.place_order(order_contract, parent_order,
-                                      parent_order.orderId)
+        self.brokerclient.place_order(order_contract, new_order,
+                                      new_order.orderId)
 
     def request_bar_history(self):
         for ticker, contract_ in self.contracts.items():
@@ -151,7 +96,7 @@ class TwsDataThread(BrokerDataThread):
                     "details": option_details
                 }
             }
-            logger.debug4("Option Details: %s", message)
+            logger.debug9("Option Details: %s", message)
             self.data_queue.put(message)
 
     def request_real_time_bars(self):
@@ -175,6 +120,9 @@ class TwsDataThread(BrokerDataThread):
         ticker = self.rtmd_ids[req_id]
         contract_ = self.contracts[ticker]
         self.send_ticks(contract_, market_data[req_id])
+
+    def send_order_status(self, order_status: dict):
+        logger.debug("Order Status: %s", order_status)
 
     def send_real_time_bars(self, real_time_bar: dict):
         # There should really only be one key.
@@ -222,7 +170,7 @@ class TwsDataThread(BrokerDataThread):
                     self.contracts[new_contract.localSymbol] = new_contract
 
         msg = {"contracts": self.contracts}
-        logger.debug4("Sending New Contracts: %s", msg)
+        logger.debug9("Sending New Contracts: %s", msg)
         self.data_queue.put(msg)
 
     # ==============================================================================================
@@ -261,10 +209,10 @@ class TwsDataThread(BrokerDataThread):
             bar_list = self.brokerclient.get_data(req_id)
 
             # self.brokerclient.cancel_historical_data(req_id)
-            logger.debug3("Bar List: %s", bar_list)
+            logger.debug9("Bar List: %s", bar_list)
 
             for ohlc_bar in bar_list:
-                logger.debug5("Bar: %s", ohlc_bar)
+                logger.debug9("Bar: %s", ohlc_bar)
                 bar_date = ohlc_bar.date
                 bar_open = ohlc_bar.open
                 bar_high = ohlc_bar.high
@@ -298,8 +246,8 @@ class TwsDataThread(BrokerDataThread):
             duration = "10 D"
         elif size == "5 mins":
             duration = "4 D"
-        elif size == "1 min":
+        elif size in ["15 secs", "30 secs", "1 min"]:
             duration = "2 D"
-        logger.debug4("Duration Set to %s", duration)
+        logger.debug9("Duration Set to %s", duration)
 
         return duration

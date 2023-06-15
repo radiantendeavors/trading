@@ -16,7 +16,9 @@
 
 # System Overrides
 from pytrader.libs.system import logging
+
 # Other Application Libraries
+from pytrader import CLIENT_ID
 
 # ==================================================================================================
 #
@@ -38,7 +40,7 @@ class BrokerConfig():
     def __init__(self, *args, **kwargs):
         self.brokerclient_address = "127.0.0.1"
         self.brokerclient_port = 7496
-        self.brokerclient_id = 2004
+        self.brokerclient_id = CLIENT_ID
 
     def read_config(self, *args, **kwargs):
         config = kwargs["config"]

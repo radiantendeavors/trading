@@ -29,6 +29,7 @@ Provides the Base Class for a Strategy.
 import datetime
 
 from abc import ABCMeta, abstractmethod
+from multiprocessing import Queue
 
 # 3rd Party libraries
 from ibapi import contract
@@ -63,21 +64,30 @@ class Strategy():
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, cmd_queue, data_queue):
+    def __init__(self, cmd_queue: Queue, data_queue: Queue,
+                 next_order_id: int):
         self.cmd_queue = cmd_queue
         self.data_queue = data_queue
+        self.next_order_id = next_order_id
 
         self.time_now = datetime.datetime.now()
+
+        self.security = []
+        self.use_options = False
+        self.quantity = 0
+        self.num_strikes = 0
+        self.bar_sizes = []
+        self.days_to_expiration = 0
 
         self.contracts = {}
         self.bars = {}
         self.ticks = {}
+        self.market_data = {}
+        self.orders = {}
 
         self.expirations = {}
         self.all_strikes = {}
         self.strikes = {}
-
-        self.opening_prices = {}
 
         self.long_position = []
         self.short_position = []
@@ -94,7 +104,7 @@ class Strategy():
         pass
 
     @abstractmethod
-    def on_5sec_rtb(self):
+    def on_5sec_rtb(self, ticker, bar):
         pass
 
     @abstractmethod
@@ -102,7 +112,7 @@ class Strategy():
         pass
 
     @abstractmethod
-    def on_bar(self):
+    def on_bar(self, ticker, bar_size):
         pass
 
     @abstractmethod
@@ -142,7 +152,7 @@ class Strategy():
         pass
 
     @abstractmethod
-    def on_tick(self):
+    def on_tick(self, ticker, tick):
         pass
 
     def run(self):
@@ -154,7 +164,7 @@ class Strategy():
 
             self._send_bar_sizes()
 
-            logger.debug3("Use Options: %s", self.use_options)
+            logger.debug9("Use Options: %s", self.use_options)
             if self.use_options:
                 self._req_option_details()
 
@@ -174,96 +184,6 @@ class Strategy():
 
         finally:
             self.on_end()
-
-        logger.debug10("End Function")
-
-    def close_long_position(self, ticker, order_type=None, price=None):
-        order = {
-            "ticker": ticker,
-            "order_type": order_type,
-            "action": "SELL",
-            "quantity": self.quantity
-        }
-
-        if order_type is None:
-            order_type = "MKT"
-
-        if price:
-            order["price"] = price
-
-        self._send_order(order)
-
-    def open_long_position(self,
-                           ticker,
-                           order_type,
-                           price=None,
-                           profit_target=None,
-                           stop_loss=None):
-        order = {
-            "ticker": ticker,
-            "order_type": order_type,
-            "action": "BUY",
-            "quantity": self.quantity
-        }
-
-        if price:
-            order["price"] = price
-        if profit_target:
-            order["profit_target"] = profit_target
-        if stop_loss:
-            order["stop_loss"] = stop_loss
-
-        self._send_order(order)
-        self.long_position.append(ticker)
-
-        logger.info("Buy %s order placed for %s", order_type,
-                    ticker.localSymbol)
-        logger.info("Quantity: %s", self.quantity)
-
-        if price:
-            logger.info("Price: %s", price)
-        if profit_target:
-            logger.info("Profit Target: %s", profit_target)
-        if stop_loss:
-            logger.info("Stop Loss: %s", stop_loss)
-
-    def open_short_position(self,
-                            ticker,
-                            order_type,
-                            price=None,
-                            profit_target=None,
-                            stop_loss=None):
-        order = {
-            "ticker": ticker,
-            "order_type": order_type,
-            "action": "SELL",
-            "quantity": self.quantity
-        }
-
-        if price:
-            order["price"] = price
-        if profit_target:
-            order["profit_target"] = profit_target
-        if stop_loss:
-            order["stop_loss"] = stop_loss
-
-        self._send_order(order)
-        self.short_position.append(ticker)
-
-    def close_short_position(self, ticker, order_type=None, price=None):
-        order = {
-            "ticker": ticker,
-            "order_type": order_type,
-            "action": "BUY",
-            "quantity": self.quantity
-        }
-        if order_type is None:
-            order_type = "MKT"
-
-        if price:
-            order["price"] = price
-
-        self._send_order(order)
 
     def cancel_orders(self, order_id: int = 0):
         if order_id == 0:
@@ -289,7 +209,7 @@ class Strategy():
 
         if ticker in self.security:
 
-            logger.debug4("Price: %s", str(price))
+            logger.debug9("Price: %s", str(price))
             price_f = float(price)
 
             num_strikes = self.num_strikes // 2
@@ -305,9 +225,8 @@ class Strategy():
                     begin_ = x - num_strikes
                     end_ = y + num_strikes
 
-                    if begin_ < 0:
-                        begin_ = 0
-                    logger.debug4("All strikes for ticker: %s, %s", ticker,
+                    begin_ = max(begin_, 0)
+                    logger.debug9("All strikes for ticker: %s, %s", ticker,
                                   self.all_strikes[ticker])
                     self.strikes[ticker] = self.all_strikes[ticker][
                         begin_:end_]
@@ -355,8 +274,9 @@ class Strategy():
     def _create_contracts(self):
         for item in self.security:
             self.contracts[item] = self._create_contract(item)
+            self.orders[item] = {}
 
-        logger.debug5("Contracts: %s", self.contracts)
+        logger.debug9("Contracts: %s", self.contracts)
 
     def _create_option_contracts(self, ticker):
         contracts = {}
@@ -383,7 +303,7 @@ class Strategy():
         return option_name
 
     def _process_5sec_rtb(self, bar_data):
-        logger.debug3("Bar Data: %s", bar_data)
+        logger.debug9("Bar Data: %s", bar_data)
         ticker, bar_size = self._process_bars(bar_data)
 
         for item in self.bar_sizes:
@@ -418,38 +338,54 @@ class Strategy():
                 self.bars[ticker][bar_size].create_dataframe()
         return ticker, bar_size
 
+    def _process_contracts(self, contracts):
+        self.contracts = contracts
+        logger.debug9("Contracts: %s", self.contracts)
+
+        for item in list(self.contracts.keys()):
+            self.market_data[item] = {
+                "bid": 0,
+                "ask": 0,
+                "last": 0,
+                "open": 0,
+                "high": 0,
+                "low": 0,
+                "close": 0,
+                "mark": 0
+            }
+
     def _process_data(self, data: dict):
         if data.get("contracts"):
-            self.contracts = data["contracts"]
-            logger.debug3("Contracts: %s", self.contracts)
+            self._process_contracts(data["contracts"])
         if data.get("option_details"):
-            logger.debug3("Processing Option Details")
+            logger.debug9("Processing Option Details")
             self._process_option_details(data["option_details"])
         if data.get("real_time_bars"):
-            logger.debug3("Processing Real Time Bar")
+            logger.debug9("Processing Real Time Bar")
             self._process_5sec_rtb(data["real_time_bars"])
         if data.get("bars"):
-            logger.debug4("Processing Bars")
+            logger.debug9("Processing Bars")
             self._process_bars(data["bars"])
         if data.get("tick"):
-            logger.debug3("Processing Tick Data")
+            logger.debug9("Processing Tick Data")
             self._process_ticks(data["tick"])
         if data.get("market_data"):
-            logger.debug3("Processing Market Data")
+            logger.debug9("Processing Market Data")
             self._process_market_data(data["market_data"])
+        if data.get("order_status"):
+            logger.debug("Processing Order Status")
+            self._process_order_status(data["order_status"])
 
     def _process_message(self, message):
 
-        logger.debug4("Message: %s", message)
+        logger.debug9("Message: %s", message)
         if isinstance(message, dict):
             self._process_data(message)
         else:
             # We have an informational message
-            logger.debug5("Informational Message exists: %s", message)
+            logger.debug9("Informational Message exists: %s", message)
 
     def _process_market_data(self, new_market_data):
-        logger.debug10("Begin Function")
-
         ticker = None
 
         for ticker, market_data in new_market_data.items():
@@ -475,24 +411,37 @@ class Strategy():
             14: self.on_open,
             37: self.on_mark
         }
-        logger.debug6("Func Map: %s", func_map)
-        logger.debug5("Tick Type ID: %s", market_data[1])
-        logger.debug4("Broker Function: %s", func_map.get(market_data[1]))
+        data_map = {
+            1: "bid",
+            2: "ask",
+            4: "last",
+            6: "high",
+            7: "low",
+            9: "close",
+            14: "open",
+            37: "mark"
+        }
+
+        logger.debug9("Func Map: %s", func_map)
+        logger.debug9("Tick Type ID: %s", market_data[1])
+        logger.debug9("Broker Function: %s", func_map.get(market_data[1]))
 
         # Until we have all tick types defined at:
         # https://interactivebrokers.github.io/tws-api/tick_types.html
         # we will need this 'if' statement.
         if market_data[1] == 14:
-            # We really only want to run this one time.
-            if ticker not in self.opening_prices.keys():
-                #self._select_strikes()
-
-                self.opening_prices[ticker] = market_data
+            # We really only want to run 'on_open' function one time, while we may received the data
+            # multiple times.
+            if self.market_data[ticker]["open"] == 0:
+                self.market_data[ticker]["open"] = market_data[2]
                 func = func_map.get(market_data[1])
                 func(ticker, market_data[2])
         elif market_data[1] in func_map.keys():
             func = func_map.get(market_data[1])
             func(ticker, market_data[2])
+            self.market_data[ticker][data_map[market_data[1]]] = market_data[2]
+            logger.debug9("Market Data for ticker %s: %s", ticker,
+                          self.market_data[ticker])
         else:
             logger.warning(
                 "Market Data Type Id #%s has not been implemented.  Ticker %s, Data %s",
@@ -508,8 +457,10 @@ class Strategy():
         self._select_expiration(ticker, expirations)
         self.all_strikes[ticker] = strikes
 
+    def _process_order_status(self, order_status):
+        logger.debug("Order Status: %s", order_status)
+
     def _process_ticks(self, new_ticks):
-        logger.debug10("Begin Function")
         ticker = None
         for ticker, tick in new_ticks.items():
             if ticker not in self.ticks.keys():
@@ -545,14 +496,14 @@ class Strategy():
         self.cmd_queue.put(message)
 
     def _select_expiration(self, ticker, expirations):
-        logger.debug4("Expirations List: %s", expirations)
+        logger.debug9("Expirations List: %s", expirations)
         min_expiry = datetime.datetime.today() + datetime.timedelta(
             days=self.days_to_expiration)
 
         # We want to make sure we are checking based on midnight of the day
         min_expiry = datetime.datetime.combine(min_expiry,
                                                datetime.datetime.min.time())
-        logger.debug3("Earliest Expiry: %s", min_expiry)
+        logger.debug9("Earliest Expiry: %s", min_expiry)
 
         expiry_date = datetime.datetime(year=1970, month=1, day=1)
 
@@ -562,12 +513,6 @@ class Strategy():
             self.expirations[ticker] = item
 
         logger.debug2("Expiry for %s: %s", ticker, expiry_date)
-
-    #def _select_strikes(self):
-
-    def _send_order(self, order):
-        message = {"place_order": order}
-        self.cmd_queue.put(message)
 
     def _send_bar_sizes(self):
         message = {"set": {"bar_sizes": self.bar_sizes}}

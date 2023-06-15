@@ -38,6 +38,7 @@ from ibapi import order
 from pytrader.libs.system import logging
 
 # Other Application Libraries
+from pytrader import CLIENT_ID
 from pytrader.libs.applications.broker.ibkr.tws import TwsDataThread
 from pytrader.libs.clients.broker.ibkr.tws import TwsApiClient
 
@@ -71,7 +72,7 @@ class BrokerProcess():
                  data_queue: Queue,
                  address: str = "127.0.0.1",
                  broker_id: str = "twsapi",
-                 client_id: int = 2004):
+                 client_id: int = CLIENT_ID):
         """!
         Creates an instance of the BrokerProcess.
         """
@@ -114,6 +115,9 @@ class BrokerProcess():
     # Private Functions
     #
     # ==============================================================================================
+    def _cancel_order(self, order_id: int):
+        self.data_response.cancel_order(order_id)
+
     def _check_if_ports_available(self, port):
         """!
         Checks if a given port is available
@@ -164,18 +168,10 @@ class BrokerProcess():
 
     def _place_order(self, order_request):
         logger.debug("Order Received: %s", order_request)
-
-        bracket_check = (order_request.get("profit_target")
-                         and order_request.get("stop_loss"))
-
-        logger.debug("Bracket Check: %s", bracket_check)
-        if bracket_check:
-            self.data_response.create_braket_order(order_request)
-        else:
-            self.data_response.create_order(order_request)
+        self.data_response.create_order(order_request)
 
     def _process_commands(self, cmd):
-        logger.debug3("Processing Command: %s", cmd)
+        logger.debug4("Processing Command: %s", cmd)
         if cmd.get("set"):
             self._set_cmd(cmd["set"])
 
@@ -185,8 +181,11 @@ class BrokerProcess():
         if cmd.get("place_order"):
             self._place_order(cmd["place_order"])
 
+        if cmd.get("cancel_order"):
+            self._cancel_order(cmd["cancel_order"])
+
     def _req_cmd(self, subcommand):
-        logger.debug3("Request Command: %s", subcommand)
+        logger.debug4("Request Command: %s", subcommand)
         if subcommand == "bar_history":
             self.data_response.request_bar_history()
         elif subcommand == "option_details":
@@ -220,13 +219,13 @@ class BrokerProcess():
         #     if self._check_if_ports_available(int(port)):
         #         self.available_ports.append(int(port))
         self.available_ports.append(int(7497))
-        logger.debug4("Available ports: %s", self.available_ports)
+        logger.debug9("Available ports: %s", self.available_ports)
 
     def _set_cmd(self, subcommand):
         """!
         Processes any subcommand from the 'set' command received from the strategy process.
         """
-        logger.debug3("Subcommand received: %s", subcommand)
+        logger.debug4("Subcommand received: %s", subcommand)
         if subcommand.get("tickers"):
             self.data_response.set_contracts(subcommand["tickers"])
             self.data_queue.put("Contracts Created")
@@ -244,7 +243,7 @@ class BrokerProcess():
         # TODO: Configure to connect to multiple available clients
         self.brokerclient.connect(self.address, self.available_ports[0],
                                   self.client_id)
-        logger.debug4("BrokerClient connected")
+        logger.debug9("BrokerClient connected")
 
         self.brokerclient.start_thread(self.broker_queue)
         self.data_thread.start()

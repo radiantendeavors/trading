@@ -131,8 +131,8 @@ def init(args):
     conf.set_loglevel(args)
 
     logger.debug2('Configuration set')
-    logger.debug3('Configuration Settings: ' + str(conf))
-    logger.debug4('Arguments: ' + str(args))
+    logger.debug8('Configuration Settings: ' + str(conf))
+    logger.debug9('Arguments: ' + str(args))
 
     # 'application' code
     if DEBUG is False:

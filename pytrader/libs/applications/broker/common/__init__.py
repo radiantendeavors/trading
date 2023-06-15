@@ -1,11 +1,10 @@
 """!
-@package pytrader.libs.bars
+@package pytrader.libs.applications.broker.common
 
 Provides Bar Data
 
 @author G. S. Derber
-@version HEAD
-@date 2022
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -22,7 +21,7 @@ Provides Bar Data
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file pytrader/libs/bars/__init__.py
+@file pytrader/libs/applications/broker/common/__init__.py
 """
 # Standard libraries
 import datetime
@@ -116,6 +115,14 @@ class BrokerDataThread():
     def send_market_data_ticks(self, market_data: dict):
         pass
 
+    def send_order_id(self):
+        message = {"next_order_id": self.next_order_id}
+        self.data_queue.put(message)
+
+    @abstractmethod
+    def send_order_status(self, order_status: dict):
+        self.data_queue.put(order_status)
+
     def set_attributes(self, brokerclient, data_queue, broker_queue):
         self.brokerclient = brokerclient
         self.data_queue = data_queue
@@ -140,6 +147,11 @@ class BrokerDataThread():
         message = {"market_data": {contract.localSymbol: tick}}
         self.data_queue.put(message)
 
+    # ==============================================================================================
+    #
+    # Begin Private Functions
+    #
+    # ==============================================================================================
     def _parse_data(self, response_data):
         if response_data.get("real_time_bars"):
             self.send_real_time_bars(response_data["real_time_bars"])
@@ -150,3 +162,6 @@ class BrokerDataThread():
             # we use our own tracking to ensure we do not make multiple orders with the same id.
             if self.next_order_id == 0:
                 self.next_order_id = response_data["next_order_id"]
+                self.send_order_id()
+        elif response_data.get("order_status"):
+            self.send_order_status(response_data)

@@ -69,7 +69,7 @@ class ProcessManager():
         address = args[0]
         strategy_list = []
 
-        logger.debug8("Length args: %s", len(args))
+        logger.debug9("Length args: %s", len(args))
         if len(args) > 1:
             strategy_list = args[1]
 
@@ -77,13 +77,19 @@ class ProcessManager():
             broker_id = args[2]
 
         try:
-            logger.debug4("Address: %s", address)
-            logger.debug3("Strategy List: %s", strategy_list)
+            logger.debug9("Address: %s", address)
+            logger.debug9("Strategy List: %s", strategy_list)
             broker_client = broker.BrokerProcess(self.cmd_queue,
                                                  self.data_queue, address,
                                                  broker_id)
             broker_process = multiprocessing.Process(target=broker_client.run)
             broker_process.start()
+
+            next_order_id = 0
+            while next_order_id == 0:
+                message = self.data_queue.get()
+                if message.get("next_order_id"):
+                    next_order_id = message["next_order_id"]
 
             if kwargs.get("downloader"):
                 if kwargs.get("asset_classes"):
@@ -103,7 +109,8 @@ class ProcessManager():
                 # downloader_process.start()
             elif len(strategy_list) > 0:
                 strat = strategy.StrategyProcess(self.cmd_queue,
-                                                 self.data_queue)
+                                                 self.data_queue,
+                                                 next_order_id)
                 strategy_process = multiprocessing.Process(
                     target=strat.run, args=(strategy_list, ))
                 strategy_process.start()
