@@ -71,6 +71,11 @@ class BrokerDataThread():
         self.next_order_id = 0
 
     def run(self):
+        """!
+        Provides the run loop for the data thread.
+
+        @return None
+        """
         broker_connection = True
         while broker_connection:
             response_data = self.queue.get()
@@ -81,11 +86,10 @@ class BrokerDataThread():
                 self._parse_data(response_data)
 
     @abstractmethod
-    def create_braket_order(self, order_request):
-        pass
-
-    @abstractmethod
     def create_order(self, order_request):
+        """!
+        Creates an order from an order request.
+        """
         pass
 
     @abstractmethod
