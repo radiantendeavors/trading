@@ -116,6 +116,9 @@ class BrokerProcess():
     #
     # ==============================================================================================
     def _cancel_order(self, order_id: int):
+        """!
+        Send Cancel Order to data_response thread.
+        """
         self.data_response.cancel_order(order_id)
 
     def _check_if_ports_available(self, port):
@@ -129,46 +132,11 @@ class BrokerProcess():
         tws_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         return tws_socket.connect_ex((self.address, port)) == 0
 
-    def _create_contract(self,
-                         ticker,
-                         sec_type: str = "STK",
-                         exchange: str = "SMART",
-                         currency: str = "USD",
-                         strike: float = 0.0,
-                         right: str = ""):
-        """!
-        Creates a contract
-        """
-        contract_ = contract.Contract()
-        contract_.symbol = ticker
-        contract_.secType = sec_type
-        contract_.exchange = exchange
-        contract_.currency = currency
-
-        if strike > 0.0:
-            contract_.strike = strike
-
-        if right != "":
-            contract_.right = right
-        self.contracts[ticker] = self._set_contract_details(contract_)
-
-    def _create_contracts(self, tickers):
-        """!
-        Takes a list of tickers, and creates contracts for them.
-
-        @param tickers: The list of tickers
-
-        @return None
-        """
-        for item in tickers:
-            if not self.contracts.get(item):
-                logger.debug("Creating contract for %s", item)
-                self._create_contract(item)
-            # TODO: Remove if no longer used.
-            # self.bars[item] = {}
-
     def _place_order(self, order_request):
-        logger.debug("Order Received: %s", order_request)
+        """!
+        Send place order to data_response thread.
+        """
+        logger.debug9("Order Received: %s", order_request)
         self.data_response.create_order(order_request)
 
     def _process_commands(self, cmd):
