@@ -141,9 +141,9 @@ class BrokerProcess():
         """
         contract_ = contract.Contract()
         contract_.symbol = ticker
-        contract_.secType = "STK"
-        contract_.exchange = "SMART"
-        contract_.currency = "USD"
+        contract_.secType = sec_type
+        contract_.exchange = exchange
+        contract_.currency = currency
 
         if strike > 0.0:
             contract_.strike = strike
@@ -164,7 +164,8 @@ class BrokerProcess():
             if not self.contracts.get(item):
                 logger.debug("Creating contract for %s", item)
                 self._create_contract(item)
-            self.bars[item] = {}
+            # TODO: Remove if no longer used.
+            # self.bars[item] = {}
 
     def _place_order(self, order_request):
         logger.debug("Order Received: %s", order_request)
