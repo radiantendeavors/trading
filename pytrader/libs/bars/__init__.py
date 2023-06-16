@@ -28,6 +28,8 @@ Provides Bar Data
 import datetime
 import time
 
+from statistics import mean
+
 # 3rd Party libraries
 import pandas
 
@@ -63,6 +65,8 @@ class BasicBars():
 
         @return None
         """
+        ## Ticker for Bar
+        self.ticker = args[0]
 
         ## Data Frame used to hold bar history.
         self.bars = None
@@ -93,19 +97,11 @@ class BasicBars():
             if len(self.bar_list) == 0:
                 return f'Bar(Size: "{self.bar_size}", Empty)'
             else:
-                self.create_dataframe(self)
+                self.create_dataframe()
 
             return f'Bar(Size: "{self.bar_size}", "Bars: "{self.bars})'
 
     def append_bar(self, bar: list):
-        # FIXME: If length < list_length, the following changes should be made:
-        #
-        # Open = last row self.bar_list open
-        # High = max rdb_high, last row self.bar_list high
-        # Low = min rdb_low, last row self.bar_list low
-        #
-        # Finally, the last row should be modified, rather than a new row appended
-
         self.bar_list.append(bar)
 
     def create_dataframe(self):
@@ -117,12 +113,12 @@ class BasicBars():
             datetime_str = "DateTime"
             datetime_fmt = "%Y%m%d %H:%M:%S %Z"
 
-        logger.debug3("Bar List: %s", self.bar_list)
+        logger.debug9("Bar List: %s", self.bar_list)
 
         self.bars = pandas.DataFrame(self.bar_list,
                                      columns=[
                                          datetime_str, "Open", "High", "Low",
-                                         "Close", "Volume", "Count"
+                                         "Close", "Volume", "WAP", "Count"
                                      ])
         self.bars[datetime_str] = pandas.to_datetime(self.bars[datetime_str],
                                                      format=datetime_fmt)
@@ -133,6 +129,7 @@ class BasicBars():
         bar_datetime = datetime.datetime.strptime(self.bar_list[-1][0],
                                                   "%Y%m%d %H:%M:%S %Z")
         unixtime = int(time.mktime(bar_datetime.timetuple()))
+        #unixtime = self.bar_list[-1][0]
 
         # We use '55' here because we are converting 5 second bars, and the timestamp is from the
         # open of the bar (Open = 11:09:55 Close = 11:10:00)
@@ -149,11 +146,12 @@ class BasicBars():
             rtb_low = min(l[3] for l in bar_list)
             rtb_close = bar_list[-1][4]
             rtb_volumn = sum(l[5] for l in bar_list)
-            rtb_count = sum(l[6] for l in bar_list)
+            rtb_wap = mean(l[6] for l in bar_list)
+            rtb_count = sum(l[7] for l in bar_list)
 
             new_bar = [
                 rtb_date, rtb_open, rtb_high, rtb_low, rtb_close, rtb_volumn,
-                rtb_count
+                rtb_wap, rtb_count
             ]
 
             return new_bar
@@ -169,6 +167,7 @@ class BasicBars():
     def _bar_conversion(self, size):
         bar_conversion = {
             "5 secs": 1,
+            "15 secs": 3,
             "30 secs": 6,
             "1 min": 12,
             "5 mins": 60,
@@ -182,6 +181,7 @@ class BasicBars():
         bar_seconds = {
             "rtb": 5,
             "5 secs": 5,
+            "15 secs": 15,
             "30 secs": 30,
             "1 min": 60,
             "5 mins": 300,
@@ -196,25 +196,29 @@ class BasicBars():
 class Bars(BasicBars):
 
     def __init__(self, *args, **kwargs):
+        self.long_period = ""
+        self.short_period = ""
+        self.long_period_count = 0
         super().__init__(*args, **kwargs)
 
-    def calculate_ema(self, span, span_type):
-        name = str(span) + "EMA"
-
+    def calculate_ema(self, span: int, span_type: str):
+        col_name = str(span) + "EMA"
         if span_type == "long":
-            self.long_period = name
+            self.long_period = col_name
+            self.long_period_count = span
         elif span_type == "short":
-            self.short_period = name
+            self.short_period = col_name
         else:
             logger.error("Invalid Span Type: %s", span_type)
-        self.bars[name] = self.bars["Close"].ewm(span=span,
-                                                 adjust=False).mean()
+        self.bars[col_name] = self.bars["Close"].ewm(span=span,
+                                                     adjust=False).mean()
 
     def get_last_close(self):
         return self.bars["Close"].iloc[-1]
 
     def print_bar(self, ticker):
-        logger.debug2("DataFrame for %s:\n%s", ticker, self.bars.tail(10))
+        logger.debug3("DataFrame for %s:\n%s", ticker,
+                      self.bars.tail(self.long_period_count))
 
     def calculate_sma(self, span):
         name = str(span) + "SMA"

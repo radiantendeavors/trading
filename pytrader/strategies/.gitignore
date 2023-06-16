@@ -1,4 +1,5 @@
 strategy*
+pystrategy*
 stable
 testing
 development

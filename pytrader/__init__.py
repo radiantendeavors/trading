@@ -3,7 +3,7 @@
 
 Contains global variables for the pyTrader program.
 
-@author Geoff S. Derber
+@author G S Derber
 @version HEAD
 @date 2022-2023
 @copyright GNU Affero General Public License
@@ -33,10 +33,10 @@ __all__ = [
 
 __author__ = 'G S Derber'
 __contact__ = 'gd.github@radiantendeavors.com'
-__copyright__ = 2022
+__copyright__ = 2023
 __license__ = 'AGPL'
 __status__ = 'Prototype'
-__version__ = '0.2.2'
+__version__ = '0.3.0'
 
 # ==================================================================================================
 #
@@ -63,15 +63,9 @@ from pytrader.libs.system import logging
 DEBUG = True
 ## The default log level
 LOGLEVEL = 20
-"""! Logging Variables
 
-@var logger The base logger.
-
-@var consolehandler 
-
-@var consoleformatter 
-
-"""
+## Client ID
+CLIENT_ID = 2004
 
 ## An instance of the logging class
 logger = logging.getLogger(__name__)
