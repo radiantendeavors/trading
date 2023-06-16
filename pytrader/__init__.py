@@ -65,7 +65,7 @@ DEBUG = True
 LOGLEVEL = 20
 
 ## Client ID
-CLIENT_ID = 2004
+CLIENT_ID = 2005
 
 ## An instance of the logging class
 logger = logging.getLogger(__name__)
