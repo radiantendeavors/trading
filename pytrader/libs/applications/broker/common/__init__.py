@@ -121,7 +121,7 @@ class BrokerDataThread():
 
     @abstractmethod
     def send_order_status(self, order_status: dict):
-        self.data_queue.put(order_status)
+        pass
 
     def set_attributes(self, brokerclient, data_queue, broker_queue):
         self.brokerclient = brokerclient

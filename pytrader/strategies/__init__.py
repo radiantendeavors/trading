@@ -84,6 +84,8 @@ class Strategy():
         self.ticks = {}
         self.market_data = {}
         self.orders = {}
+        self.order_ids = {}
+        self.order_prices = {}
 
         self.expirations = {}
         self.all_strikes = {}
@@ -321,14 +323,14 @@ class Strategy():
         # FIXME: There should only be the one key, I shouldn't need to loop this.
         ticker = None
         for ticker, bar_size_dict in bar_data.items():
-            if ticker not in self.bars.keys():
+            if ticker not in list(self.bars.keys()):
                 self.bars[ticker] = {}
 
             # FIXME: Again there should only be one key.
             for bar_size, bar_list in bar_size_dict.items():
                 if bar_size != "rtb":
                     logger.debug2("%s Bars received for: %s", bar_size, ticker)
-                if bar_size in self.bars[ticker].keys():
+                if bar_size in list(self.bars[ticker].keys()):
                     self.bars[ticker][bar_size].append_bar(bar_list)
                 else:
                     self.bars[ticker][bar_size] = bars.Bars(ticker,
@@ -373,7 +375,7 @@ class Strategy():
             logger.debug9("Processing Market Data")
             self._process_market_data(data["market_data"])
         if data.get("order_status"):
-            logger.debug("Processing Order Status")
+            logger.debug9("Processing Order Status")
             self._process_order_status(data["order_status"])
 
     def _process_message(self, message):
@@ -436,7 +438,7 @@ class Strategy():
                 self.market_data[ticker]["open"] = market_data[2]
                 func = func_map.get(market_data[1])
                 func(ticker, market_data[2])
-        elif market_data[1] in func_map.keys():
+        elif market_data[1] in list(func_map.keys()):
             func = func_map.get(market_data[1])
             func(ticker, market_data[2])
             self.market_data[ticker][data_map[market_data[1]]] = market_data[2]
@@ -458,12 +460,31 @@ class Strategy():
         self.all_strikes[ticker] = strikes
 
     def _process_order_status(self, order_status):
-        logger.debug("Order Status: %s", order_status)
+        logger.debug9("Order Status: %s", order_status)
+        order_id = list(order_status.keys())[0]
+
+        if order_id in list(self.order_ids.keys()):
+            local_symbol = self.order_ids[order_id]
+            status = order_status[order_id]["status"]
+
+            if status in ["Filled", "Cancelled"]:
+                logger.debug9("Order %s to be removed", order_id)
+                self.orders[local_symbol].pop(order_id, None)
+            else:
+                if order_id in list(self.orders[local_symbol].keys()):
+                    self.orders[local_symbol][order_id].set_status(status)
+                    logger.debug9(
+                        "Order Status: %s",
+                        self.orders[local_symbol][order_id].get_status())
+
+                else:
+                    logger.debug9("Orders for %s", local_symbol)
+                    logger.debug9("Orders: %s", self.orders[local_symbol])
 
     def _process_ticks(self, new_ticks):
         ticker = None
         for ticker, tick in new_ticks.items():
-            if ticker not in self.ticks.keys():
+            if ticker not in list(self.ticks.keys()):
                 self.ticks[ticker] = ticks.Ticks()
 
             self.ticks[ticker].append_tick(tick)

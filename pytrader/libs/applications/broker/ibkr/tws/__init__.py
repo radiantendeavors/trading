@@ -122,7 +122,8 @@ class TwsDataThread(BrokerDataThread):
         self.send_ticks(contract_, market_data[req_id])
 
     def send_order_status(self, order_status: dict):
-        logger.debug("Order Status: %s", order_status)
+        logger.debug9("Order Status: %s", order_status)
+        self.data_queue.put(order_status)
 
     def send_real_time_bars(self, real_time_bar: dict):
         # There should really only be one key.

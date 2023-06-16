@@ -76,10 +76,14 @@ class BaseOrder():
         self.order.transmit = transmit
 
     def set_limit_order_price(self, price: float):
+        price = round(price, 2)
         self.order.lmtPrice = price
 
     def set_order_id(self, order_id: int):
         self.order.orderId = order_id
+
+    def set_order_type(self, order_type: str):
+        self.order.orderType = order_type
 
     def set_parent_order_id(self, order_id: int):
         self.order.parentId = order_id
@@ -88,6 +92,7 @@ class BaseOrder():
         self.status = status
 
     def set_stop_price(self, price: float):
+        price = round(price, 2)
         self.order.auxPrice = price
 
 
