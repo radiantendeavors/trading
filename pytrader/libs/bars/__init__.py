@@ -234,7 +234,7 @@ class Bars(BasicBars):
         current_short = self.bars[self.short_period].iloc[-1]
         current_long = self.bars[self.long_period].iloc[-1]
 
-        return ((current_short >= current_long) & (previous_short <= previous_long))
+        return (current_short >= current_long) & (previous_short <= previous_long)
 
     def is_cross_down(self):
         previous_short = self.bars[self.short_period].iloc[-2]
@@ -243,7 +243,7 @@ class Bars(BasicBars):
         current_short = self.bars[self.short_period].iloc[-1]
         current_long = self.bars[self.long_period].iloc[-1]
 
-        return ((current_short <= current_long) & (previous_short >= previous_long))
+        return (current_short <= current_long) & (previous_short >= previous_long)
 
     def print_bar(self, ticker):
         logger.debug3("DataFrame for %s:\n%s", ticker, self.bars.tail(self.long_period_count))
