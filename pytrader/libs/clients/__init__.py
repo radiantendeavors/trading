@@ -3,8 +3,7 @@
 
 Provides the libraries for interacting with various outside services
 
-@author Geoff S. Derber
-@version HEAD
+@author G. S. Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 

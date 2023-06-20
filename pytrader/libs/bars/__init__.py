@@ -3,9 +3,8 @@
 
 Provides Bar Data
 
-@author Geoff S. derber
-@version HEAD
-@date 2022
+@author G. S. Derber
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -115,21 +114,16 @@ class BasicBars():
 
         logger.debug9("Bar List: %s", self.bar_list)
 
-        self.bars = pandas.DataFrame(self.bar_list,
-                                     columns=[
-                                         datetime_str, "Open", "High", "Low",
-                                         "Close", "Volume", "WAP", "Count"
-                                     ])
-        self.bars[datetime_str] = pandas.to_datetime(self.bars[datetime_str],
-                                                     format=datetime_fmt)
+        self.bars = pandas.DataFrame(
+            self.bar_list,
+            columns=[datetime_str, "Open", "High", "Low", "Close", "Volume", "WAP", "Count"])
+        self.bars[datetime_str] = pandas.to_datetime(self.bars[datetime_str], format=datetime_fmt)
         logger.debug10("End Function")
 
     def rescale(self, size):
         seconds = self._bar_seconds(size)
-        bar_datetime = datetime.datetime.strptime(self.bar_list[-1][0],
-                                                  "%Y%m%d %H:%M:%S %Z")
+        bar_datetime = datetime.datetime.strptime(self.bar_list[-1][0], "%Y%m%d %H:%M:%S %Z")
         unixtime = int(time.mktime(bar_datetime.timetuple()))
-        #unixtime = self.bar_list[-1][0]
 
         # We use '55' here because we are converting 5 second bars, and the timestamp is from the
         # open of the bar (Open = 11:09:55 Close = 11:10:00)
@@ -150,8 +144,7 @@ class BasicBars():
             rtb_count = sum(l[7] for l in bar_list)
 
             new_bar = [
-                rtb_date, rtb_open, rtb_high, rtb_low, rtb_close, rtb_volumn,
-                rtb_wap, rtb_count
+                rtb_date, rtb_open, rtb_high, rtb_low, rtb_close, rtb_volumn, rtb_wap, rtb_count
             ]
 
             return new_bar
@@ -210,19 +203,29 @@ class Bars(BasicBars):
             self.short_period = col_name
         else:
             logger.error("Invalid Span Type: %s", span_type)
-        self.bars[col_name] = self.bars["Close"].ewm(span=span,
-                                                     adjust=False).mean()
+        self.bars[col_name] = self.bars["Close"].ewm(span=span, adjust=False).mean()
 
-    def get_last_close(self):
-        return self.bars["Close"].iloc[-1]
+    def calculate_ema_short_long_delta(self):
+        col_name = "EMA_SHORT_LONG_DELTA"
+        self.bars[col_name] = self.bars[self.short_period] - self.bars[self.long_period]
+        return self.bars[col_name].iloc[-1]
 
-    def print_bar(self, ticker):
-        logger.debug3("DataFrame for %s:\n%s", ticker,
-                      self.bars.tail(self.long_period_count))
+    def calculate_ema_short_delta(self):
+        col_name = self.short_period + "_DELTA"
+        self.bars[col_name] = self.bars[self.short_period].diff()
+        return self.bars[col_name].iloc[-1]
+
+    def calculate_ema_long_delta(self):
+        col_name = self.long_period + "_DELTA"
+        self.bars[col_name] = self.bars[self.long_period].diff()
+        return self.bars[col_name].iloc[-1]
 
     def calculate_sma(self, span):
         name = str(span) + "SMA"
         self.bars[name] = self.bars["Close"].rolling(span).mean()
+
+    def get_last_close(self):
+        return self.bars["Close"].iloc[-1]
 
     def is_cross_up(self):
         previous_short = self.bars[self.short_period].iloc[-2]
@@ -231,8 +234,7 @@ class Bars(BasicBars):
         current_short = self.bars[self.short_period].iloc[-1]
         current_long = self.bars[self.long_period].iloc[-1]
 
-        return ((current_short >= current_long) &
-                (previous_short <= previous_long))
+        return ((current_short >= current_long) & (previous_short <= previous_long))
 
     def is_cross_down(self):
         previous_short = self.bars[self.short_period].iloc[-2]
@@ -241,5 +243,7 @@ class Bars(BasicBars):
         current_short = self.bars[self.short_period].iloc[-1]
         current_long = self.bars[self.long_period].iloc[-1]
 
-        return ((current_short <= current_long) &
-                (previous_short >= previous_long))
+        return ((current_short <= current_long) & (previous_short >= previous_long))
+
+    def print_bar(self, ticker):
+        logger.debug3("DataFrame for %s:\n%s", ticker, self.bars.tail(self.long_period_count))

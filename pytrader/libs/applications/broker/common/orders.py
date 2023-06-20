@@ -1,7 +1,7 @@
 """!
-@package pytrader.libs.applications.broker.common
+@package pytrader.libs.applications.broker.common.orders
 
-Provides Bar Data
+Manages orders within the Broker Application.
 
 @author G. S. Derber
 @date 2022-2023
@@ -21,14 +21,11 @@ Provides Bar Data
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file pytrader/libs/applications/broker/common/__init__.py
+@file pytrader/libs/applications/broker/common/orders.py
 """
 # Standard libraries
-import datetime
-import queue
 
 # 3rd Party libraries
-from ibapi.contract import Contract
 
 # System Library Overrides
 from pytrader.libs.system import logging
@@ -53,4 +50,7 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class Order(orders.BaseOrder):
+    """!
+    Manages orders within the Broker application.
+    """
     pass

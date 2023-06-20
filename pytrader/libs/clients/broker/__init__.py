@@ -6,8 +6,7 @@ Creates a basic interface for interacting with a broker
 
 Creates a basic interface for interacting with a broker
 
-@author Geoff S. Derber
-@version HEAD
+@author G. S. Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -25,57 +24,3 @@ Creates a basic interface for interacting with a broker
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 """
-# # System libraries
-# import sys
-# import threading
-
-# # 3rd Party libraries
-
-# # System Library Overrides
-# from pytrader.libs.system import logging
-
-# # Application Libraries
-# from pytrader.libs.clients.broker import ibkrclient
-
-# # ==================================================================================================
-# #
-# # Global Variables
-# #
-# # ==================================================================================================
-# logger = logging.getLogger(__name__)
-
-# # ==================================================================================================
-# #
-# # Classes
-# #
-# # ==================================================================================================
-# class BrokerClient():
-#     """!
-#     Acts as a unifying class for various brokers.  Dynamically selects the correct broker at
-#     runtime.
-
-#     Currently, only supports Interactive Brokers
-#     """
-
-#     def __new__(cls, *args, **kwargs):
-#         """!
-#         Creates an instance of the BrokerClient Class.
-
-#         @param *args
-#         @param **kwargs
-
-#         @returun subclass: An instance of one of the potential broker clients.
-#         """
-#         subclass_map = {"ibkr": ibkrclient.IbkrClient}
-
-#         if args[0] in subclass_map:
-#             broker = args[0]
-#         else:
-#             raise Exception("Invalid Broker Selected")
-
-#         logger.debug3("Subclass Map: %s", subclass_map)
-#         logger.debug2("Broker: %s", broker)
-#         logger.debug2("Broker Subclass: %s", subclass_map.get(broker))
-
-#         subclass = subclass_map.get(broker)
-#         return subclass(*args, **kwargs)

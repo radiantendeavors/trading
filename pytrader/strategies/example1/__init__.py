@@ -3,9 +3,8 @@
 
 Provides an Example Strategy
 
-@author Geoff S. Derber
-@version HEAD
-@date 2022
+@author G. S. Derber
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -28,6 +27,8 @@ Provides an Example Strategy
 """
 # System libraries
 import datetime
+
+from multiprocessing import Queue
 
 # 3rd Party libraries
 
@@ -53,7 +54,7 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 class Strategy(strategies.Strategy):
 
-    def __init__(self, send_queue, recv_queue, next_order_id):
+    def __init__(self, send_queue: Queue, recv_queue: Queue, next_order_id: int):
         super().__init__(send_queue, recv_queue, next_order_id)
         self.security = ["SPY", "QQQ", "IWM"]
         self.bar_sizes = ["5 mins"]
@@ -64,8 +65,8 @@ class Strategy(strategies.Strategy):
         self.days_to_expiration = 1
         self.num_strikes = 14
 
-        self.endtime = datetime.datetime.combine(
-            datetime.date.today(), datetime.time(hour=15, minute=55))
+        self.endtime = datetime.datetime.combine(datetime.date.today(),
+                                                 datetime.time(hour=15, minute=55))
 
     def continue_strategy(self):
         """!
@@ -118,8 +119,7 @@ class Strategy(strategies.Strategy):
             profit_target = limit_price + 0.10
             stop_loss = limit_price - 0.20
 
-            self.open_long_position(ticker, "LMT", limit_price, profit_target,
-                                    stop_loss)
+            self.open_long_position(ticker, "LMT", limit_price, profit_target, stop_loss)
 
         if cross_down:
             logger.debug("EMA Cross Down for ticker: %s", ticker)
@@ -128,8 +128,7 @@ class Strategy(strategies.Strategy):
             profit_target = limit_price - 0.10
             stop_loss = limit_price + 0.20
 
-            self.open_short_position(ticker, "LMT", limit_price, profit_target,
-                                     stop_loss)
+            self.open_short_position(ticker, "LMT", limit_price, profit_target, stop_loss)
 
     def on_bid(self, ticker, tick):
         logger.debug10("Begin Function")

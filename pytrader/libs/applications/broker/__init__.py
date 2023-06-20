@@ -3,7 +3,6 @@
 The main user interface for the trading program.
 
 @author G. S. Derber
-@version HEAD
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -88,10 +87,8 @@ class BrokerProcess():
         self.data_response = broker_class.get(broker_id)
         self.broker_queue = queue.Queue()
 
-        self.data_response.set_attributes(self.brokerclient, self.data_queue,
-                                          self.broker_queue)
-        self.data_thread = threading.Thread(target=self.data_response.run,
-                                            daemon=True)
+        self.data_response.set_attributes(self.brokerclient, self.data_queue, self.broker_queue)
+        self.data_thread = threading.Thread(target=self.data_response.run, daemon=True)
 
     def run(self):
         """!
@@ -210,8 +207,7 @@ class BrokerProcess():
         @return None
         """
         # TODO: Configure to connect to multiple available clients
-        self.brokerclient.connect(self.address, self.available_ports[0],
-                                  self.client_id)
+        self.brokerclient.connect(self.address, self.available_ports[0], self.client_id)
         logger.debug9("BrokerClient connected")
 
         self.brokerclient.start_thread(self.broker_queue)

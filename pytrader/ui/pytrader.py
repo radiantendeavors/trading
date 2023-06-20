@@ -2,9 +2,8 @@
 
 The main user interface for the trading program.
 
-@author Geoff S. Derber
-@version HEAD
-@date 2022
+@author G. S. Derber
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -20,14 +19,11 @@ The main user interface for the trading program.
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file ui/pytrader.py
+@file pytrader/ui/pytrader.py
 
 """
 # System libraries
-import queue
-import random
 import sys
-import time
 
 # 3rd Party libraries
 
@@ -103,8 +99,7 @@ def init(args):
     Report bugs to ...
     """
 
-    parser = argparse.ArgParser(description="Automated trading system",
-                                epilog=epilog_text)
+    parser = argparse.ArgParser(description="Automated trading system", epilog=epilog_text)
 
     parser.add_version_option()
     parser.add_ibapi_connection_options()
@@ -115,11 +110,7 @@ def init(args):
                         nargs="+",
                         required=True,
                         help="One or more strategies to run.")
-    parser.add_argument("-b",
-                        "--broker",
-                        choices=["twsapi"],
-                        default="twsapi",
-                        help="Broker")
+    parser.add_argument("-b", "--broker", choices=["twsapi"], default="twsapi", help="Broker")
     parser.add_argument("-c", "--client-id", help="Broker Client Id")
 
     parser.set_defaults(debug=False, verbosity=0, loglevel='INFO')
@@ -141,13 +132,10 @@ def init(args):
             processed_args = process_arguments(args, conf)
             process_manager = trader.ProcessManager()
             if args.client_id:
-                process_manager.run_processes(processed_args[0],
-                                              processed_args[1],
-                                              processed_args[2],
-                                              args.client_id)
+                process_manager.run_processes(processed_args[0], processed_args[1],
+                                              processed_args[2], args.client_id)
             else:
-                process_manager.run_processes(processed_args[0],
-                                              processed_args[1],
+                process_manager.run_processes(processed_args[0], processed_args[1],
                                               processed_args[2])
         except Exception as msg:
             parser.print_help()
@@ -158,11 +146,10 @@ def init(args):
         processed_args = process_arguments(args, conf)
         process_manager = trader.ProcessManager()
         if args.client_id:
-            process_manager.run_processes(processed_args[0], processed_args[1],
-                                          processed_args[2], args.client_id)
+            process_manager.run_processes(processed_args[0], processed_args[1], processed_args[2],
+                                          args.client_id)
         else:
-            process_manager.run_processes(processed_args[0], processed_args[1],
-                                          processed_args[2])
+            process_manager.run_processes(processed_args[0], processed_args[1], processed_args[2])
 
     return 0
 

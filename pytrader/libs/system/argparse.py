@@ -1,13 +1,8 @@
-"""
-@file pytrader/libs/system/argparse.py
+"""!@package pytrader.libs.system.argparse
 
-Argparse:
-
-  Provides additional functionality to the Argparse library from
-  Python.
+Provides additional functionality to the Argparse library from Python.
 
 @author G. S. Derber
-@version HEAD
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -24,7 +19,7 @@ Argparse:
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
+@file pytrader/libs/system/argparse.py
 """
 
 # ==================================================================================================
@@ -50,6 +45,7 @@ from pytrader.libs.utilities import config
 #
 # ==================================================================================================
 
+
 # ==================================================================================================
 #
 # Classes
@@ -58,52 +54,23 @@ from pytrader.libs.utilities import config
 # ArgParser
 #
 # ==================================================================================================
-
-
-# ==================================================================================================
-#
-# Class CommonParser
-#
-# Inputs
-# ------
-#    @param: *args    - tuple
-#    @param: **kwargs - dictionary
-#
-# Returns
-# -------
-#    @param: None
-#
-# Raises
-# ------
-#    ...
-#
-# ==================================================================================================
 class CommonParser(ArgumentParser):
     """
     class CommonParser
 
-    Inputs
+    @param *args: tbd
+    @param **kwargs: tbd
 
-
+    @return None
     """
 
     def __init__(self, *args, **kwargs):
         super(CommonParser, self).__init__(*args, **kwargs)
-        return
 
     # ==============================================================================================
     #
     # Function create_subparsers
     #
-    # Creates the subparser for the subcommands of the program.
-    #
-    # Inputs
-    # ------
-    #    @param: self -
-    #
-    # Returns
-    # -------
-    #    @return: self.subparser -
     #
     # Raises
     # ------
@@ -111,6 +78,13 @@ class CommonParser(ArgumentParser):
     #
     # ==============================================================================================
     def create_subparsers(self):
+        """!
+        Creates the subparser for the subcommands of the program.
+
+        @param: self
+
+        @return: self.subparser: tbd
+        """
         self.subparser = self.add_subparsers(title='commands',
                                              metavar='Command',
                                              help='Description')
@@ -173,11 +147,10 @@ class CommonParser(ArgumentParser):
 
         default_address = conf.get_brokerclient_address()
         default_port = conf.get_brokerclient_port()
-        self.add_argument(
-            '-a',
-            '--address',
-            default=default_address,
-            help="TWS / IB Gateway Address (Default is localhost)")
+        self.add_argument('-a',
+                          '--address',
+                          default=default_address,
+                          help="TWS / IB Gateway Address (Default is localhost)")
         self.add_argument('-p',
                           '--port',
                           default=default_port,
@@ -211,8 +184,8 @@ class CommonParser(ArgumentParser):
         loglevel_help = 'Specify output level'
         debug_help = 'Maximize output level'
         loglevel_choices = [
-            'debug', 'info', 'warning', 'error', 'critical', 'DEBUG', 'INFO',
-            'WARNING', 'ERROR', 'CRITICAL'
+            'debug', 'info', 'warning', 'error', 'critical', 'DEBUG', 'INFO', 'WARNING', 'ERROR',
+            'CRITICAL'
         ]
 
         # Create Parent Parser
@@ -224,11 +197,7 @@ class CommonParser(ArgumentParser):
         self.logging = self.add_argument_group('Logging Options')
 
         # Quiet Settings
-        self.logging.add_argument('-q',
-                                  '--quiet',
-                                  action='count',
-                                  default=0,
-                                  help=quiet_help)
+        self.logging.add_argument('-q', '--quiet', action='count', default=0, help=quiet_help)
         # self.parent_logging.add_argument('-q',
         #                                  '--quiet',
         #                                  action='count',
@@ -236,11 +205,7 @@ class CommonParser(ArgumentParser):
         #                                  help=quiet_help)
 
         # Verbose Options
-        self.logging.add_argument('-v',
-                                  '--verbosity',
-                                  action='count',
-                                  default=0,
-                                  help=verbose_help)
+        self.logging.add_argument('-v', '--verbosity', action='count', default=0, help=verbose_help)
 
         # self.parent_logging.add_argument('-v',
         #                                  '--verbosity',
@@ -256,9 +221,7 @@ class CommonParser(ArgumentParser):
                                       default='INFO',
                                       help=loglevel_help)
             # Maximize logging
-            self.logging.add_argument('--debug',
-                                      action='store_true',
-                                      help=debug_help)
+            self.logging.add_argument('--debug', action='store_true', help=debug_help)
 
             # # Set Loglevel
             # self.parent_logging.add_argument('--loglevel',

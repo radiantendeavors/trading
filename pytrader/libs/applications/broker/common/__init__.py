@@ -1,7 +1,7 @@
 """!
 @package pytrader.libs.applications.broker.common
 
-Provides Bar Data
+Provides a baseline BrokerDataThread common to all brokers.
 
 @author G. S. Derber
 @date 2022-2023
@@ -28,6 +28,7 @@ import datetime
 import queue
 
 from abc import ABCMeta, abstractmethod
+from multiprocessing import Queue
 
 # 3rd Party libraries
 from ibapi.contract import Contract
@@ -53,11 +54,14 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 class BrokerDataThread():
     """!
-    Contains bar history for a security
+    Provides the Broker Data Response thread.
     """
     __metaclass__ = ABCMeta
 
     def __init__(self, *args, **kwargs):
+        """!
+        Initializes the Broker Data Thread.
+        """
         ## Broker Client
         self.brokerclient = None
 
@@ -94,40 +98,78 @@ class BrokerDataThread():
 
     @abstractmethod
     def request_bar_history(self):
+        """!
+        Abstract method to request bar history.
+        """
         pass
 
     def request_global_cancel(self):
+        """!
+        Request to cancel all open orders.
+        """
         self.brokerclient.req_global_cancel()
 
     @abstractmethod
     def request_option_details(self):
+        """!
+        Abstract method to request for option details.
+        """
         pass
 
     @abstractmethod
     def request_market_data(self):
+        """!
+        Abstract method to request streaming market data.
+        """
         pass
 
     @abstractmethod
     def request_real_time_bars(self):
-        pass
-
-    @abstractmethod
-    def send_real_time_bars(self, real_time_bar: dict):
+        """!
+        Abstract method to request real time bars.
+        """
         pass
 
     @abstractmethod
     def send_market_data_ticks(self, market_data: dict):
+        """!
+        Abstract method to send streaming market data to the strategies.
+
+        @param market_data: The market data to send.
+        """
         pass
 
     def send_order_id(self):
+        """!
+        Sends the next order id to the strategy.
+        """
         message = {"next_order_id": self.next_order_id}
         self.data_queue.put(message)
 
     @abstractmethod
     def send_order_status(self, order_status: dict):
+        """!
+        Sends the current order status to the strategy.
+
+        @param order_status: The current order status.
+        """
         pass
 
-    def set_attributes(self, brokerclient, data_queue, broker_queue):
+    @abstractmethod
+    def send_real_time_bars(self, real_time_bar: dict):
+        """!
+        Abstract method to send real time bars to the strategies.
+
+        @param real_time_bar: The real time bar to send to the strategies.
+
+        @return None
+        """
+        pass
+
+    def set_attributes(self, brokerclient, data_queue: Queue, broker_queue: Queue):
+        """!
+        Sets class attributes.
+        """
         self.brokerclient = brokerclient
         self.data_queue = data_queue
         self.queue = broker_queue
@@ -141,13 +183,34 @@ class BrokerDataThread():
 
     @abstractmethod
     def set_contracts(self, contracts):
+        """!
+        Abstract method to set the contracts.
+        """
         pass
 
-    def send_bars(self, contract: Contract, bar_type, bar_size, bars):
-        message = {bar_type: {contract.localSymbol: {bar_size: bars}}}
+    def send_bars(self, contract: Contract, bar_type, bar_size, bars_):
+        """!
+        Sends bars to the strategies.
+
+        @param contract: The contract for the bar to send.
+        @param bar_type: The type of bar to send.
+        @param bar_size: The time period size for the bar.
+        @param bars: The bars to send.
+
+        @return None
+        """
+        message = {bar_type: {contract.localSymbol: {bar_size: bars_}}}
         self.data_queue.put(message)
 
     def send_ticks(self, contract: Contract, tick):
+        """!
+        Sends tick data to the strategies.
+
+        @param contract: The contract for the bar to send.
+        @param tick: The tick data to send.
+
+        @return None
+        """
         message = {"market_data": {contract.localSymbol: tick}}
         self.data_queue.put(message)
 
@@ -156,7 +219,14 @@ class BrokerDataThread():
     # Begin Private Functions
     #
     # ==============================================================================================
-    def _parse_data(self, response_data):
+    def _parse_data(self, response_data: dict):
+        """!
+        Parses data from the broker client.
+
+        @param response_data: The data response from the broker client.
+
+        @return None
+        """
         if response_data.get("real_time_bars"):
             self.send_real_time_bars(response_data["real_time_bars"])
         elif response_data.get("market_data"):

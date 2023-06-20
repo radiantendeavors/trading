@@ -1,13 +1,10 @@
-"""!@file pytrader/libs/system/logging.py
+"""!@package pytrader.libs.system.logging
 
-logging:
+Provides additional functionality to the logging library from
+Python.
 
-  Provides additional functionality to the logging library from
-  Python.
-
-@author Geoff S. Derber
-@version HEAD
-@date 2022
+@author G. S. Derber
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -23,7 +20,7 @@ logging:
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
+@file pytrader/libs/system/logging.py
 """
 
 # ==================================================================================================
@@ -1067,9 +1064,7 @@ class ColorizingStreamHandler(logging.StreamHandler, text.ConsoleText):
             if not self.is_tty:
                 stream.write(message)
             else:
-                message = colortext.colorize(message, "none",
-                                             self._colors[record.levelno],
-                                             "black")
+                message = colortext.colorize(message, "none", self._colors[record.levelno], "black")
                 stream.write(message)
 
             stream.write(getattr(self, 'terminator', '\n'))

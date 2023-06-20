@@ -2,8 +2,7 @@
 
 Provides console text formatting capabilities.
 
-@author G S Derber
-@version HEAD
+@author G. S. Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -93,11 +92,7 @@ class ConsoleText():
             "white": 47
         }
 
-    def colorize(self,
-                 text,
-                 attribute="none",
-                 fgcolor="white",
-                 bgcolor="black"):
+    def colorize(self, text, attribute="none", fgcolor="white", bgcolor="black"):
         if attribute in self.attributes:
             begincolor = self.escape + str(self.attributes[attribute])
         else:

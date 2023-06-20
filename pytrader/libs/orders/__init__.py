@@ -1,10 +1,9 @@
-"""!@package pytrader.libs.applications.broker.tws
+"""!@package pytrader.libs.orders
 
-The main user interface for the trading program.
+Provides order management.
 
-@author Geoff S. Derber
-@version HEAD
-@date 2022
+@author G. S. Derber
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -20,7 +19,7 @@ The main user interface for the trading program.
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file pytrader/libs/applications/broker/tws.py
+@file pytrader/libs/orders/__init__.py
 """
 # System Libraries
 from multiprocessing import Queue
@@ -68,8 +67,7 @@ class BaseOrder():
     def get_parent_id(self):
         return self.order.parentId
 
-    def set_order(self, action: str, order_type: str, quantity: int,
-                  transmit: bool):
+    def set_order(self, action: str, order_type: str, quantity: int, transmit: bool):
         self.order.action = action
         self.order.orderType = order_type
         self.order.totalQuantity = quantity
@@ -99,12 +97,7 @@ class BaseOrder():
 class Order(BaseOrder):
 
     def send_order(self):
-        message = {
-            "place_order": {
-                "order": self.order,
-                "contract": self.contract
-            }
-        }
+        message = {"place_order": {"order": self.order, "contract": self.contract}}
         logger.debug("Sending order message: %s", message)
         self.data_queue.put(message)
 

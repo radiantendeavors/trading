@@ -2,8 +2,7 @@
 
 Provides the Base Class for a Strategy.
 
-@author G S derber
-@version HEAD
+@author G. S. derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -64,8 +63,7 @@ class Strategy():
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, cmd_queue: Queue, data_queue: Queue,
-                 next_order_id: int):
+    def __init__(self, cmd_queue: Queue, data_queue: Queue, next_order_id: int):
         self.cmd_queue = cmd_queue
         self.data_queue = data_queue
         self.next_order_id = next_order_id
@@ -230,14 +228,12 @@ class Strategy():
                     begin_ = max(begin_, 0)
                     logger.debug9("All strikes for ticker: %s, %s", ticker,
                                   self.all_strikes[ticker])
-                    self.strikes[ticker] = self.all_strikes[ticker][
-                        begin_:end_]
+                    self.strikes[ticker] = self.all_strikes[ticker][begin_:end_]
 
                 x += 1
                 y += 1
 
-            logger.debug2("Selected Strikes for %s: %s", ticker,
-                          self.strikes[ticker])
+            logger.debug2("Selected Strikes for %s: %s", ticker, self.strikes[ticker])
 
     # ==============================================================================================
     #
@@ -286,11 +282,10 @@ class Strategy():
         if ticker in self.security:
             for strike in self.strikes[ticker]:
                 for right in ["CALL", "PUT"]:
-                    contract_name = self._gen_option_contract_name(
-                        ticker, right, strike)
-                    contracts[contract_name] = self._create_contract(
-                        ticker, "OPT", "SMART", "USD",
-                        self.expirations[ticker], strike, right)
+                    contract_name = self._gen_option_contract_name(ticker, right, strike)
+                    contracts[contract_name] = self._create_contract(ticker, "OPT", "SMART", "USD",
+                                                                     self.expirations[ticker],
+                                                                     strike, right)
 
             self._send_contracts(contracts)
 
@@ -300,8 +295,7 @@ class Strategy():
 
         strike_str = strike_left.rjust(5, "0") + strike_right.ljust(3, "0")
         local_symbol = ticker.ljust(6, " ")
-        option_name = local_symbol + self.expirations[ticker][-6:] + right[
-            0] + strike_str
+        option_name = local_symbol + self.expirations[ticker][-6:] + right[0] + strike_str
         return option_name
 
     def _process_5sec_rtb(self, bar_data):
@@ -442,12 +436,10 @@ class Strategy():
             func = func_map.get(market_data[1])
             func(ticker, market_data[2])
             self.market_data[ticker][data_map[market_data[1]]] = market_data[2]
-            logger.debug9("Market Data for ticker %s: %s", ticker,
-                          self.market_data[ticker])
+            logger.debug9("Market Data for ticker %s: %s", ticker, self.market_data[ticker])
         else:
-            logger.warning(
-                "Market Data Type Id #%s has not been implemented.  Ticker %s, Data %s",
-                market_data[1], ticker, market_data)
+            logger.warning("Market Data Type Id #%s has not been implemented.  Ticker %s, Data %s",
+                           market_data[1], ticker, market_data)
 
     def _process_option_details(self, option_details):
         ticker = option_details["ticker"]
@@ -473,9 +465,8 @@ class Strategy():
             else:
                 if order_id in list(self.orders[local_symbol].keys()):
                     self.orders[local_symbol][order_id].set_status(status)
-                    logger.debug9(
-                        "Order Status: %s",
-                        self.orders[local_symbol][order_id].get_status())
+                    logger.debug9("Order Status: %s",
+                                  self.orders[local_symbol][order_id].get_status())
 
                 else:
                     logger.debug9("Orders for %s", local_symbol)
@@ -518,12 +509,10 @@ class Strategy():
 
     def _select_expiration(self, ticker, expirations):
         logger.debug9("Expirations List: %s", expirations)
-        min_expiry = datetime.datetime.today() + datetime.timedelta(
-            days=self.days_to_expiration)
+        min_expiry = datetime.datetime.today() + datetime.timedelta(days=self.days_to_expiration)
 
         # We want to make sure we are checking based on midnight of the day
-        min_expiry = datetime.datetime.combine(min_expiry,
-                                               datetime.datetime.min.time())
+        min_expiry = datetime.datetime.combine(min_expiry, datetime.datetime.min.time())
         logger.debug9("Earliest Expiry: %s", min_expiry)
 
         expiry_date = datetime.datetime(year=1970, month=1, day=1)

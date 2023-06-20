@@ -2,9 +2,8 @@
 
 The main user interface for the trading program.
 
-@author Geoff S. Derber
-@version HEAD
-@date 2022
+@author G. S. Derber
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -32,6 +31,7 @@ import multiprocessing
 from pytrader.libs.system import logging
 
 # Application Libraries
+from pytrader import CLIENT_ID
 from pytrader.libs.applications import broker
 from pytrader.libs.applications import strategy
 
@@ -75,12 +75,13 @@ class ProcessManager():
 
         if len(args) > 2:
             broker_id = args[2]
+        else:
+            broker_id = CLIENT_ID
 
         try:
             logger.debug9("Address: %s", address)
             logger.debug9("Strategy List: %s", strategy_list)
-            broker_client = broker.BrokerProcess(self.cmd_queue,
-                                                 self.data_queue, address,
+            broker_client = broker.BrokerProcess(self.cmd_queue, self.data_queue, address,
                                                  broker_id)
             broker_process = multiprocessing.Process(target=broker_client.run)
             broker_process.start()
@@ -108,11 +109,8 @@ class ProcessManager():
                 #     args=(asset_classes, securities_list))
                 # downloader_process.start()
             elif len(strategy_list) > 0:
-                strat = strategy.StrategyProcess(self.cmd_queue,
-                                                 self.data_queue,
-                                                 next_order_id)
-                strategy_process = multiprocessing.Process(
-                    target=strat.run, args=(strategy_list, ))
+                strat = strategy.StrategyProcess(self.cmd_queue, self.data_queue, next_order_id)
+                strategy_process = multiprocessing.Process(target=strat.run, args=(strategy_list, ))
                 strategy_process.start()
         except KeyboardInterrupt as msg:
             logger.critical("Keyboard Interrupt, Closing Application: %s", msg)

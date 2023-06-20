@@ -4,7 +4,7 @@
 Contains global variables for the pyTrader program.
 
 @author G S Derber
-@version HEAD
+@version 0.3.0
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -27,8 +27,8 @@ Contains global variables for the pyTrader program.
 
 """
 __all__ = [
-    '__author__', '__contact__', '__copyright__', '__license__', '__status__',
-    '__version__', 'DEBUG'
+    '__author__', '__contact__', '__copyright__', '__license__', '__status__', '__version__',
+    'DEBUG'
 ]
 
 __author__ = 'G S Derber'
