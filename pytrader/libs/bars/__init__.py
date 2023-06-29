@@ -25,6 +25,8 @@ Provides Bar Data
 """
 # Standard libraries
 import datetime
+import os
+import pathlib
 import time
 
 from statistics import mean
@@ -59,8 +61,8 @@ class BasicBars():
         """!
         Initializes the class
 
-        @param args -
-        @param kwargs -
+        @param args:
+        @param kwargs:
 
         @return None
         """
@@ -92,13 +94,21 @@ class BasicBars():
         logger.debug10("End Function")
 
     def __repr__(self):
+        class_name = type(self).__name__
         if self.bars is None:
             if len(self.bar_list) == 0:
-                return f'Bar(Size: "{self.bar_size}", Empty)'
+                message = f"{class_name}({self.bar_size} bars for {self.ticker} is empty)"
             else:
                 self.create_dataframe()
+                message = f"{class_name}" \
+                    f"{self.bar_size} for {self.ticker}:" \
+                    f"{self.bars}"
+        else:
+            message = f"{class_name}" \
+                f"{self.bar_size} for {self.ticker}:" \
+                f"{self.bars}"
 
-            return f'Bar(Size: "{self.bar_size}", "Bars: "{self.bars})'
+        return message
 
     def append_bar(self, bar: list):
         self.bar_list.append(bar)
@@ -189,61 +199,198 @@ class BasicBars():
 class Bars(BasicBars):
 
     def __init__(self, *args, **kwargs):
-        self.long_period = ""
-        self.short_period = ""
-        self.long_period_count = 0
+        self.long_period = {}
+        self.long_period_count = {}
+        self.medium_period = {}
+        self.medium_period_count = {}
+        self.short_period = {}
+        self.short_period_count = {}
+        self.print_columns = ["DateTime", "Open", "High", "Low", "Close", "Volume", "WAP", "Count"]
         super().__init__(*args, **kwargs)
+
+    def __repr__(self):
+        class_name = type(self).__name__
+        if self.bars is None:
+            if len(self.bar_list) == 0:
+                message = f"{class_name}({self.bar_size} bars for {self.ticker} is empty)"
+            else:
+                self.create_dataframe()
+                message = f"{class_name}\n" \
+                    f"{self.bar_size} bars for {self.ticker}:\n" \
+                    f"{self.bars}"
+        else:
+            message = f"{class_name}\n" \
+                f"{self.bar_size} for bars {self.ticker}:\n" \
+                f"{self.bars[self.print_columns].tail(self.long_period_count['EMA'])}"
+
+        return message
+
+    def calculate_atr(self, span: int = 14):
+        self.bars["TR1"] = abs(self.bars["High"] - self.bars["Low"])
+        self.bars["TR2"] = abs(self.bars["High"] - self.bars["Close"].shift())
+        self.bars["TR3"] = abs(self.bars["Low"] - self.bars["Close"].shift())
+        self.bars["TrueRange"] = self.bars[["TR1", "TR2", "TR3"]].max(axis=1)
+        self.bars["AveTrueRange"] = self.bars["TrueRange"].rolling(span).mean()
+
+        if "AveTrueRange" not in self.print_columns:
+            self.print_columns.append("AveTrueRange")
+
+        return self.bars["AveTrueRange"].iloc[-1]
+
+    def calculate_bbands(self, span: int = 20, stddev: int = 2, moving_average: str = "sma"):
+        self.bars["Typical_Price"] = (self.bars["High"] + self.bars["Low"] + self.bars["Close"]) / 3
+        self.bars["StdDev"] = self.bars["Typical_Price"].rolling(span).std(ddof=0)
+        if moving_average == "ema":
+            self.bars["BBands_MA"] = self.bars["Typical_Price"].ewm(span=span, adjust=False).mean()
+        else:
+            self.bars["BBands_MA"] = self.bars["Typical_Price"].rolling(span).mean()
+        bband_upper_name = "BBandU_" + str(stddev) + "σ"
+        bband_lower_name = "BBandL_" + str(stddev) + "σ"
+        self.bars[bband_upper_name] = self.bars["BBands_MA"] + stddev * self.bars["StdDev"]
+        self.bars[bband_lower_name] = self.bars["BBands_MA"] - stddev * self.bars["StdDev"]
+
+        # if "BBands_MA" not in self.print_columns:
+        #     self.print_columns.append("BBands_MA")
+        # if bband_upper_name not in self.print_columns:
+        #     self.print_columns.append(bband_upper_name)
+        # if bband_lower_name not in self.print_columns:
+        #     self.print_columns.append(bband_lower_name)
+
+    def calculate_donchain_channel(self, span: int):
+        self.bars["DC_Upper"] = self.bars["High"].rolling(span).max()
+        self.bars["DC_Lower"] = self.bars["Low"].rolling(span).min()
+        self.bars["DC_Middle"] = (self.bars["DC_Upper"] + self.bars["DC_Lower"]) / 2
+
+        if "DC_Upper" not in self.print_columns:
+            self.print_columns.append("DC_Upper")
+        if "DC_Middle" not in self.print_columns:
+            self.print_columns.append("DC_Middle")
+        if "DC_Lower" not in self.print_columns:
+            self.print_columns.append("DC_Lower")
 
     def calculate_ema(self, span: int, span_type: str):
         col_name = str(span) + "EMA"
         if span_type == "long":
-            self.long_period = col_name
-            self.long_period_count = span
+            self.long_period["EMA"] = col_name
+            self.long_period_count["EMA"] = span
+        elif span_type == "medium":
+            self.medium_period["EMA"] = col_name
+            self.medium_period_count["EMA"] = span
         elif span_type == "short":
-            self.short_period = col_name
+            self.short_period["EMA"] = col_name
+            self.short_period_count["EMA"] = span
         else:
             logger.error("Invalid Span Type: %s", span_type)
         self.bars[col_name] = self.bars["Close"].ewm(span=span, adjust=False).mean()
 
-    def calculate_ema_short_long_delta(self):
-        col_name = "EMA_SHORT_LONG_DELTA"
-        self.bars[col_name] = self.bars[self.short_period] - self.bars[self.long_period]
-        return self.bars[col_name].iloc[-1]
+        if col_name not in self.print_columns:
+            self.print_columns.append(col_name)
 
-    def calculate_ema_short_delta(self):
-        col_name = self.short_period + "_DELTA"
-        self.bars[col_name] = self.bars[self.short_period].diff()
-        return self.bars[col_name].iloc[-1]
+    def calculate_sma(self, span: int, span_type: str):
+        col_name = str(span) + "SMA"
+        if span_type == "long":
+            self.long_period["SMA"] = col_name
+            self.long_period_count["SMA"] = span
+        elif span_type == "medium":
+            self.medium_period["SMA"] = col_name
+            self.medium_period_count["SMA"] = span
+        elif span_type == "short":
+            self.short_period["SMA"] = col_name
+            self.short_period_count["SMA"] = span
+        else:
+            logger.error("Invalid Span Type: %s", span_type)
+        self.bars[col_name] = self.bars["Close"].rolling(span).mean()
 
-    def calculate_ema_long_delta(self):
-        col_name = self.long_period + "_DELTA"
-        self.bars[col_name] = self.bars[self.long_period].diff()
-        return self.bars[col_name].iloc[-1]
-
-    def calculate_sma(self, span):
-        name = str(span) + "SMA"
-        self.bars[name] = self.bars["Close"].rolling(span).mean()
+        if col_name not in self.print_columns:
+            self.print_columns.append(col_name)
 
     def get_last_close(self):
         return self.bars["Close"].iloc[-1]
 
-    def is_cross_up(self):
-        previous_short = self.bars[self.short_period].iloc[-2]
-        previous_long = self.bars[self.long_period].iloc[-2]
+    def get_last_atr(self):
+        return self.bars["AveTrueRange"].iloc[-1]
 
-        current_short = self.bars[self.short_period].iloc[-1]
-        current_long = self.bars[self.long_period].iloc[-1]
+    def is_cross_up(self, moving_ave_name: str):
+        previous_short = self.bars[self.short_period[moving_ave_name]].iloc[-2]
+        previous_long = self.bars[self.long_period[moving_ave_name]].iloc[-2]
+
+        current_short = self.bars[self.short_period[moving_ave_name]].iloc[-1]
+        current_long = self.bars[self.long_period[moving_ave_name]].iloc[-1]
 
         return (current_short >= current_long) & (previous_short <= previous_long)
 
-    def is_cross_down(self):
-        previous_short = self.bars[self.short_period].iloc[-2]
-        previous_long = self.bars[self.long_period].iloc[-2]
+    def is_cross_down(self, moving_ave_name: str):
+        previous_short = self.bars[self.short_period[moving_ave_name]].iloc[-2]
+        previous_long = self.bars[self.long_period[moving_ave_name]].iloc[-2]
 
-        current_short = self.bars[self.short_period].iloc[-1]
-        current_long = self.bars[self.long_period].iloc[-1]
+        current_short = self.bars[self.short_period[moving_ave_name]].iloc[-1]
+        current_long = self.bars[self.long_period[moving_ave_name]].iloc[-1]
 
         return (current_short <= current_long) & (previous_short >= previous_long)
 
-    def print_bar(self, ticker):
-        logger.debug3("DataFrame for %s:\n%s", ticker, self.bars.tail(self.long_period_count))
+    def save_dataframe(self):
+        home = os.path.expanduser("~") + "/"
+        today_date = str(datetime.date.today())
+        directory = home + "Documents/investing/" + today_date + "/" + self.bar_size + "/"
+        pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
+        filename = directory + self.ticker + ".csv"
+        self.bars.to_csv(filename, encoding="utf-8")
+
+    def calculate_ma_short_long_delta(self, moving_ave_name: str):
+        col_name = str(self.short_period_count[moving_ave_name]) + "/" + str(
+            self.long_period_count[moving_ave_name]) + moving_ave_name + "Δ"
+        self.bars[col_name] = self.bars[self.short_period[moving_ave_name]] - self.bars[
+            self.long_period[moving_ave_name]]
+
+        if col_name not in self.print_columns:
+            self.print_columns.append(col_name)
+
+        return self.bars[col_name].iloc[-1]
+
+    def calculate_ma_delta(self, moving_ave_name: str, span_type: str):
+        if span_type == "long":
+            col_name = self.long_period[moving_ave_name] + "Δ"
+            self.bars[col_name] = self.bars[self.long_period[moving_ave_name]].diff()
+        elif span_type == "medium":
+            col_name = self.medium_period[moving_ave_name] + "Δ"
+            self.bars[col_name] = self.bars[self.medium_period[moving_ave_name]].diff()
+        elif span_type == "short":
+            col_name = self.short_period[moving_ave_name] + "Δ"
+            self.bars[col_name] = self.bars[self.short_period[moving_ave_name]].diff()
+        else:
+            logger.error("Invalid Span Type: %s", span_type)
+
+        if col_name not in self.print_columns:
+            self.print_columns.append(col_name)
+
+        return self.bars[col_name].iloc[-1]
+
+    def calculate_open_close_delta(self):
+        col_name = "Open/CloseΔ"
+        self.bars[col_name] = self.bars["Close"] - self.bars["Open"]
+        if col_name not in self.print_columns:
+            self.print_columns.append(col_name)
+
+    def calculate_ocd_atr_delta(self):
+        col_name = "OCD/ATRΔ"
+        self.bars[col_name] = abs(self.bars["Open/CloseΔ"]) - self.bars["AveTrueRange"]
+        if col_name not in self.print_columns:
+            self.print_columns.append(col_name)
+
+    def calculate_dcupper_close_delta(self):
+        self.bars["DC Upper - Close Δ"] = abs(self.bars["DC_Upper"] - self.bars["Close"])
+        self.bars["DC Lower - Close Δ"] = abs(self.bars["DC_Lower"] - self.bars["Close"])
+
+    def filter_dc_upper(self):
+        self.bars["DC Upper as Multiple of ATR"] = self.bars[
+            "(DC Upper - Close Δ) / ATR"] = self.bars["DC Upper - Close Δ"] / self.bars[
+                "AveTrueRange"]
+        if self.bars["DC Upper as Multiple of ATR"].iloc[-1] > 2:
+            return True
+
+    def filter_dc_lower(self):
+        self.bars["DC Lower as Multiple of ATR"] = self.bars[
+            "(DC Lower - Close Δ) / ATR"] = self.bars["DC Lower - Close Δ"] / self.bars[
+                "AveTrueRange"]
+        if self.bars["DC Lower as Multiple of ATR"].iloc[-1] > 2:
+            return True

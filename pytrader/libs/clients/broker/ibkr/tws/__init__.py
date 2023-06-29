@@ -924,6 +924,7 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("Value: %s", value)
         logger.debug("Currency: %s", currency)
 
+    @iswrapper
     def accountUpdateMultiEnd(self, req_id: int):
         """!
         Indicates all the account updates have been transmitted.
