@@ -226,10 +226,7 @@ class Bars(BasicBars):
         return message
 
     def calculate_atr(self, span: int = 14):
-        self.bars["TR1"] = abs(self.bars["High"] - self.bars["Low"])
-        self.bars["TR2"] = abs(self.bars["High"] - self.bars["Close"].shift())
-        self.bars["TR3"] = abs(self.bars["Low"] - self.bars["Close"].shift())
-        self.bars["TrueRange"] = self.bars[["TR1", "TR2", "TR3"]].max(axis=1)
+        self.calculate_true_range()
         self.bars["AveTrueRange"] = self.bars["TrueRange"].rolling(span).mean()
 
         if "AveTrueRange" not in self.print_columns:
@@ -303,6 +300,12 @@ class Bars(BasicBars):
 
         if col_name not in self.print_columns:
             self.print_columns.append(col_name)
+
+    def calculate_true_range(self):
+        self.bars["TR1"] = abs(self.bars["High"] - self.bars["Low"])
+        self.bars["TR2"] = abs(self.bars["High"] - self.bars["Close"].shift())
+        self.bars["TR3"] = abs(self.bars["Low"] - self.bars["Close"].shift())
+        self.bars["TrueRange"] = self.bars[["TR1", "TR2", "TR3"]].max(axis=1)
 
     def get_last_close(self):
         return self.bars["Close"].iloc[-1]
