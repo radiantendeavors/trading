@@ -31,7 +31,7 @@ import multiprocessing
 from pytrader.libs.system import logging
 
 # Application Libraries
-from pytrader import CLIENT_ID
+from pytrader import BROKER_ID, CLIENT_ID
 from pytrader.libs.applications import broker
 from pytrader.libs.applications import strategy
 
@@ -76,13 +76,22 @@ class ProcessManager():
         if len(args) > 2:
             broker_id = args[2]
         else:
-            broker_id = CLIENT_ID
+            broker_id = BROKER_ID
+
+        if len(args) > 3:
+            client_id = args[3]
+        else:
+            client_id = CLIENT_ID
+
+        logger.debug("Args: %s", args)
+        logger.debug("Broker ID: %s", broker_id)
+        logger.debug("Client ID: %s", client_id)
 
         try:
             logger.debug9("Address: %s", address)
             logger.debug9("Strategy List: %s", strategy_list)
             broker_client = broker.BrokerProcess(self.cmd_queue, self.data_queue, address,
-                                                 broker_id)
+                                                 broker_id, client_id)
             broker_process = multiprocessing.Process(target=broker_client.run)
             broker_process.start()
 

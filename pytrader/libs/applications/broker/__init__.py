@@ -207,6 +207,7 @@ class BrokerProcess():
         @return None
         """
         # TODO: Configure to connect to multiple available clients
+        logger.debug("Client Id: %s", self.client_id)
         self.brokerclient.connect(self.address, self.available_ports[0], self.client_id)
         logger.debug9("BrokerClient connected")
 

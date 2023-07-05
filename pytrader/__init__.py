@@ -64,6 +64,9 @@ DEBUG = True
 ## The default log level
 LOGLEVEL = 20
 
+## Broker ID
+BROKER_ID = "twsapi"
+
 ## Client ID
 CLIENT_ID = 2005
 
