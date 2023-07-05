@@ -29,8 +29,6 @@ import threading
 from multiprocessing import Queue
 
 # 3rd Party Libraries
-from ibapi import contract
-from ibapi import order
 
 # Application Libraries
 # System Library Overrides
