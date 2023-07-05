@@ -4,9 +4,8 @@
 Defines the database schema, and creates the database tables for Interactive Brokers related
 information.
 
-@author Geoff S. Derber
-@version HEAD
-@date 2022
+@author G. S. Derber
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -29,11 +28,9 @@ information.
 # System Libraries
 from datetime import date, datetime
 
-from sqlalchemy import (BigInteger, Boolean, Date, DateTime, FetchedValue,
-                        Float, ForeignKey, Integer, MetaData, String, Time,
-                        select)
-from sqlalchemy.orm import (DeclarativeBase, Mapped, mapped_column,
-                            relationship)
+from sqlalchemy import (BigInteger, Boolean, Date, DateTime, FetchedValue, Float, ForeignKey,
+                        Integer, MetaData, String, Time, select)
+from sqlalchemy.orm import (DeclarativeBase, Mapped, mapped_column, relationship)
 from sqlalchemy.sql import func
 #from typing import Annotated
 
@@ -80,25 +77,99 @@ class Base(DeclarativeBase):
     pass
 
 
+class IbkrETFContracts(Base):
+    __tablename__ = "z_ibkr_etf_contracts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    contract_id: Mapped[int] = mapped_column(index=True, unique=True)
+    ticker_symbol: Mapped[str] = mapped_column(String(6), index=True, unique=True)
+    security_type: Mapped[str] = mapped_column(String(6))
+    exchange: Mapped[str] = mapped_column(String(12), nullable=False, default="SMART")
+    currency: Mapped[str] = mapped_column(String(32), nullable=False)
+    local_symbol: Mapped[str] = mapped_column(String(6), index=True, unique=True)
+    primary_exchange: Mapped[str] = mapped_column(String(32), nullable=False)
+    trading_class: Mapped[str] = mapped_column(String(6))
+    last_updated: Mapped[date] = mapped_column(server_default=func.current_timestamp())
+
+    def __repr__(self) -> str:
+        repr_str = f"""
+        IbkrETFContracts(
+            id={self.id!r},
+            contract_id={self.contract_id!r},
+            ticker_symbol={self.ticker_symbol!r},
+            exchange={self.exchange!r},
+            primary_exchange{self.primary_exchange!r}
+        )
+        """
+        return repr_str
+
+    def query_contract(self, db_session, local_symbol):
+        logger.debug10("Begin Funtion")
+        query = select(IbkrStockContracts).where(IbkrETFContracts.local_symbol == local_symbol)
+
+        results = db_session.execute(query).one()
+
+        logger.debug("Results: %s", results)
+        logger.debug10("End Function")
+        return results
+
+    def query_contracts(self, db_session):
+        logger.debug10("Begin Funtion")
+        query = select(IbkrETFContracts)
+        results = db_session.execute(query).all()
+
+        logger.debug("Results: %s", results)
+        logger.debug10("End Function")
+        return results
+
+    def row_exists(self, db_session, local_symbol):
+        ticker_list = self.query_contract(db_session, local_symbol)
+
+        if len(ticker_list) == 0:
+            return False
+        else:
+            return True
+
+    def insert(self, db_session, contract_id, ticker_symbol, security_type, exchange, currency,
+               local_symbol, primary_exchange, trading_class):
+        self.contract_id = contract_id
+        self.ticker_symbol = ticker_symbol
+        self.security_type = security_type
+        self.exchange = exchange
+        self.currency = currency
+        self.local_symbol = local_symbol
+        self.primary_exchange = primary_exchange
+        self.trading_class = trading_class
+
+        row_exists = self.row_exists(db_session, ticker_symbol)
+
+        if not row_exists:
+            try:
+                db_session.add(self)
+            except Exception as msg:
+                logger.error("Exception: %s", msg)
+                print("Error Adding Ticker:", self.ticker)
+
+            try:
+                db_session.commit()
+            except Exception as msg:
+                logger.error("Exception: %s", msg)
+                print("Error committing ticker:", self.ticker)
+
+        return None
+
+
 class IbkrStockContracts(Base):
     __tablename__ = "z_ibkr_stock_contracts"
     id: Mapped[int] = mapped_column(primary_key=True)
     contract_id: Mapped[int] = mapped_column(index=True, unique=True)
-    ticker_symbol: Mapped[str] = mapped_column(String(6),
-                                               index=True,
-                                               unique=True)
+    ticker_symbol: Mapped[str] = mapped_column(String(6), index=True, unique=True)
     security_type: Mapped[str] = mapped_column(String(6))
-    exchange: Mapped[str] = mapped_column(String(12),
-                                          nullable=False,
-                                          default="SMART")
+    exchange: Mapped[str] = mapped_column(String(12), nullable=False, default="SMART")
     currency: Mapped[str] = mapped_column(String(32), nullable=False)
-    local_symbol: Mapped[str] = mapped_column(String(6),
-                                              index=True,
-                                              unique=True)
+    local_symbol: Mapped[str] = mapped_column(String(6), index=True, unique=True)
     primary_exchange: Mapped[str] = mapped_column(String(32), nullable=False)
     trading_class: Mapped[str] = mapped_column(String(6))
-    last_updated: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
+    last_updated: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
     def __repr__(self) -> str:
         repr_str = f"""
@@ -112,8 +183,7 @@ class IbkrStockContracts(Base):
 
     def query_contract(self, db_session, local_symbol):
         logger.debug10("Begin Funtion")
-        query = select(IbkrStockContracts).where(
-            IbkrStockContracts.local_symbol == local_symbol)
+        query = select(IbkrStockContracts).where(IbkrStockContracts.local_symbol == local_symbol)
 
         results = db_session.execute(query).one()
 
@@ -138,9 +208,8 @@ class IbkrStockContracts(Base):
         else:
             return True
 
-    def insert(self, db_session, contract_id, ticker_symbol, security_type,
-               exchange, currency, local_symbol, primary_exchange,
-               trading_class):
+    def insert(self, db_session, contract_id, ticker_symbol, security_type, exchange, currency,
+               local_symbol, primary_exchange, trading_class):
         self.contract_id = contract_id
         self.ticker_symbol = ticker_symbol
         self.security_type = security_type
@@ -171,12 +240,10 @@ class IbkrStockContracts(Base):
 class IbkrStockHistoryBeginDate(Base):
     __tablename__ = "z_ibkr_stock_history_begin_date"
     id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_contract_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_stock_contracts.id"))
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_stock_contracts.id"))
     ibkr_contract: Mapped["IbkrStockContracts"] = relationship()
     oldest_datetime: Mapped[datetime]
-    last_updated: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
+    last_updated: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
     def __repr__(self) -> str:
         repr_str = f"""
@@ -231,8 +298,7 @@ class IbkrStockHistoryBeginDate(Base):
 class IbkrEtfBar1MinTrades(Base):
     __tablename__ = "z_ibkr_etf_bar_1min_trades"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    ibkr_contract_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_contracts.id"))
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_contracts.id"))
     ibkr_contract: Mapped["IbkrContracts"] = relationship()
     date_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     bar_open: Mapped[float]
@@ -242,8 +308,7 @@ class IbkrEtfBar1MinTrades(Base):
     bar_volume: Mapped[int]
     bar_count: Mapped[float]
     outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
+    date_downloaded: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
 
 # class IbkrEtfBar1MinBids(Base):
@@ -321,8 +386,7 @@ class IbkrEtfBar1MinTrades(Base):
 class IbkrEtfBar5SecTrades(Base):
     __tablename__ = "z_ibkr_etf_bar_5sec_trades"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    ibkr_contract_id: Mapped[int] = mapped_column(
-        ForeignKey("z_ibkr_contracts.id"))
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_contracts.id"))
     ibkr_contract: Mapped["IbkrContracts"] = relationship()
     date_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     bar_open: Mapped[float]
@@ -332,8 +396,7 @@ class IbkrEtfBar5SecTrades(Base):
     bar_volume: Mapped[int]
     bar_count: Mapped[float]
     outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(
-        server_default=func.current_timestamp())
+    date_downloaded: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
 
 # class IbkrEtfBar5minTrades(Base):
