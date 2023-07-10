@@ -49,6 +49,3 @@ class BrokerConfig():
 
     def get_brokerclient_address(self):
         return self.brokerclient_address
-
-    def get_brokerclient_port(self):
-        return self.brokerclient_port
