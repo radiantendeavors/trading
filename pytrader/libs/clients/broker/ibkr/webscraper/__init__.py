@@ -28,6 +28,8 @@ Creates a basic interface for interacting with a broker
 import re
 import requests
 
+from requests.exceptions import ReadTimeout
+
 # 3rd Party Libraries
 import pandas
 
@@ -124,28 +126,29 @@ class IbkrWebScraper():
 
         for exchange, asset_classes in self.exchange_assets.items():
             for asset_class in asset_classes:
-                exchange_url = exchange + asset_class
+                if asset_class not in ["BILL", "BOND", "FUTGRP", "OPTGRP", "WAR"]:
+                    exchange_url = exchange + asset_class
 
-                response = requests.get(exchange_url, headers=requests_headers, timeout=10)
+                    response = requests.get(exchange_url, headers=requests_headers, timeout=10)
 
-                soup = BeautifulSoup(response.content, 'lxml')
-                text = soup.find_all('a', href=re.compile('page='))
+                    soup = BeautifulSoup(response.content, 'lxml')
+                    text = soup.find_all('a', href=re.compile('page='))
 
-                pages = []
+                    pages = []
 
-                if text:
-                    for anchor in text:
-                        anchor_text = anchor['href']
-                        pages.append(int(anchor_text.split("=")[8]))
-                        logger.debug9("URL: %s, Pages: %s", exchange_url, pages)
+                    if text:
+                        for anchor in text:
+                            anchor_text = anchor['href']
+                            pages.append(int(anchor_text.split("=")[8]))
+                            logger.debug9("URL: %s, Pages: %s", exchange_url, pages)
 
-                    page = max(pages)
-                    logger.debug8("URL: %s, Pages: %s", exchange_url, page)
-                    self.exchange_assets_pages[exchange_url] = page
-                    self.exchange_asset_page_assets[exchange_url] = asset_class
-                else:
-                    self.exchange_assets_pages[exchange_url] = 0
-                    self.exchange_asset_page_assets[exchange_url] = asset_class
+                        page = max(pages)
+                        logger.debug8("URL: %s, Pages: %s", exchange_url, page)
+                        self.exchange_assets_pages[exchange_url] = page
+                        self.exchange_asset_page_assets[exchange_url] = asset_class
+                    else:
+                        self.exchange_assets_pages[exchange_url] = 0
+                        self.exchange_asset_page_assets[exchange_url] = asset_class
 
         for key, value in self.exchange_assets_pages.items():
             logger.debug9("URL: %s, Pages: %s", key, value)
@@ -158,36 +161,40 @@ class IbkrWebScraper():
 
         Returns df
         """
-        response = requests.get(asset_url, headers=requests_headers, timeout=30)
-        logger.debug('\nDownloading URL: %s', response.url)
-        if response.status_code != 200:
-            logger.warning('The Status Code from Requests: %s', response.status_code)
-        else:
-            logger.debug9('The Status Code from Requests: %s', response.status_code)
-        soup = BeautifulSoup(response.content, 'lxml')
-
-        table = soup.find_all('table')[2]
-        df = pandas.DataFrame(columns=range(0, 4), index=[0])
-
-        for row_marker, row in enumerate(table.find_all('tr')):
-
-            if data is True:
-                columns = row.find_all(['td'])  # Capture only the Table Data Cells.
+        try:
+            response = requests.get(asset_url, headers=requests_headers, timeout=30)
+            logger.debug('\nDownloading URL: %s', response.url)
+            if response.status_code != 200:
+                logger.warning('The Status Code from Requests: %s', response.status_code)
             else:
-                columns = row.find_all(['th'])  # Capture only the Table Header Cells.
-            try:
-                df.loc[row_marker] = [column.get_text() for column in columns]
-            except ValueError:
-                # It's a safe way to handle when [column.get_text() for column in columns] is empty list.
-                continue
+                logger.debug9('The Status Code from Requests: %s', response.status_code)
 
-        df["Asset Class"] = asset_class
-        if data is True:
-            df["Asset Class Sort"] = IBKR_ASSET_CLASS_SORT[asset_class]
-        else:
-            df["Asset Class Sort"] = "Asset Class Sort"
+            soup = BeautifulSoup(response.content, 'lxml')
 
-        return df
+            table = soup.find_all('table')[2]
+            df = pandas.DataFrame(columns=range(0, 4), index=[0])
+
+            for row_marker, row in enumerate(table.find_all('tr')):
+
+                if data is True:
+                    columns = row.find_all(['td'])  # Capture only the Table Data Cells.
+                else:
+                    columns = row.find_all(['th'])  # Capture only the Table Header Cells.
+                try:
+                    df.loc[row_marker] = [column.get_text() for column in columns]
+                except ValueError:
+                    # It's a safe way to handle when [column.get_text() for column in columns] is empty list.
+                    continue
+
+            df["Asset Class"] = asset_class
+            # if data is True:
+            #     df["Asset Class Sort"] = IBKR_ASSET_CLASS_SORT[asset_class]
+            # else:
+            #     df["Asset Class Sort"] = "Asset Class Sort"
+
+            return df
+        except ReadTimeout as msg:
+            logger.critical("Timout Reached for %s", asset_url)
 
     def get_assets(self, currency: str = "USD"):
         header_url = list(self.exchange_assets_pages.keys())[0]
@@ -216,7 +223,7 @@ class IbkrWebScraper():
         df = df.dropna()  # Drop rows where atleast one element is missing
         df = df[df.Symbol != 'Symbol']  # if there is row with text 'symbol', exclude that
         df = df[df.Currency == currency]
-        df = df.sort_values(by=["IB Symbol", "Asset Class Sort"], ascending=[True, False])
+        df = df.sort_values(by=["IB Symbol"], ascending=[True])
         df = df.drop_duplicates("IB Symbol")
         #df = df[df.Symbol != 'NIFTY'] # If there is row with 'NIFTY50', exclude that
         #df = df[df.Symbol != 'BANKNIFTY'] # If there is row with 'BANKNIFTY', exclude that
@@ -226,4 +233,4 @@ class IbkrWebScraper():
         #df = df[df.Symbol != 'JPYINR'] # If there is row with 'JPYINR', exclude that
         df = df.reset_index(drop=True)
         logger.debug("Dataframe:\n%s", df)
-        df.to_csv('scraped_data.csv', index=False)  # dont write row names
+        df.to_csv('scraped_data.csv', index=False)
