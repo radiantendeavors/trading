@@ -1,7 +1,7 @@
 """!
-@package pytrader.libs
+@package pytrader.libs.applications.broker.ibkr
 
-Provides the internal libraries for pytrader
+Interactive Brokers
 
 @author G. S. Derber
 @date 2022-2023
@@ -20,7 +20,6 @@ Provides the internal libraries for pytrader
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file pytrader/libs/__init__.py
 
-Provides the internal libraries for pytrader
+@file pytrader/libs/applications/broker/ibkr/__init__.py
 """

@@ -39,7 +39,6 @@ class BrokerConfig():
 
     def __init__(self, *args, **kwargs):
         self.brokerclient_address = "127.0.0.1"
-        self.brokerclient_port = 7496
         self.brokerclient_id = CLIENT_ID
 
     def read_config(self, *args, **kwargs):
@@ -48,11 +47,5 @@ class BrokerConfig():
         if "brokerclient_address" in config:
             self.brokerclient_address = config["brokerclient_address"]
 
-        if "brokerclient_port" in config:
-            self.brokerclient_port = config["brokerclient_port"]
-
     def get_brokerclient_address(self):
         return self.brokerclient_address
-
-    def get_brokerclient_port(self):
-        return self.brokerclient_port

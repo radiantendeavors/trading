@@ -1,10 +1,8 @@
-"""!
-@package pytrader.libs.marketdata
+"""!@package pytrader.libs.marketdata
 
 Provides real-time market data
 
 @author G. S. Derber
-@version HEAD
 @date 2022-2023
 @copyright GNU Affero General Public License
 

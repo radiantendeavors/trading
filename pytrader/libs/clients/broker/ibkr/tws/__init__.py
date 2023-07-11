@@ -3,8 +3,7 @@
 
 Provides the client for Interactive Brokers
 
-@author Geoff S. Derber
-@version HEAD
+@author G. S. Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -38,8 +37,7 @@ from queue import Queue
 # 3rd Party Libraries
 from ibapi.client import EClient
 from ibapi.commission_report import CommissionReport
-from ibapi.common import (BarData, TickAttribLast, TickAttribBidAsk,
-                          TickAttrib)
+from ibapi.common import (BarData, TickAttribLast, TickAttribBidAsk, TickAttrib)
 from ibapi.contract import Contract, ContractDetails, DeltaNeutralContract
 from ibapi.execution import Execution
 from ibapi.order import Order
@@ -86,8 +84,8 @@ SMALL_BAR_SIZES = ["1 secs", "5 secs", "10 secs", "15 secs", "30 secs"]
 
 ## Used to store allowed intraday bar sizes
 INTRADAY_BAR_SIZES = SMALL_BAR_SIZES + [
-    "1 min", "2 mins", "3 mins", "5 mins", "10 mins", "15 mins", "20 mins",
-    "30 mins", "1 hour", "2 hours", "3 hours", "4 hours", "8 hours"
+    "1 min", "2 mins", "3 mins", "5 mins", "10 mins", "15 mins", "20 mins", "30 mins", "1 hour",
+    "2 hours", "3 hours", "4 hours", "8 hours"
 ]
 
 ## Used to store allowed bar sizes
@@ -126,8 +124,12 @@ class TwsApiClient(EWrapper, EClient):
                                                                  second=0)
 
         ## Used to track when the last contract details data request was made
-        self.__contract_details_data_req_timestamp = datetime.datetime(
-            year=1970, month=1, day=1, hour=0, minute=0, second=0)
+        self.__contract_details_data_req_timestamp = datetime.datetime(year=1970,
+                                                                       month=1,
+                                                                       day=1,
+                                                                       hour=0,
+                                                                       minute=0,
+                                                                       second=0)
 
         self.__small_bar_data_req_timestamp = datetime.datetime(year=1970,
                                                                 month=1,
@@ -236,12 +238,11 @@ class TwsApiClient(EWrapper, EClient):
     # All functions in alphabetical order.
     #
     # ==============================================================================================
-    def calculate_implied_volatility(
-            self,
-            contract: Contract,
-            option_price: float,
-            under_price: float,
-            implied_option_volatility_options: list = []):
+    def calculate_implied_volatility(self,
+                                     contract: Contract,
+                                     option_price: float,
+                                     under_price: float,
+                                     implied_option_volatility_options: list = []):
         """!
         Calculate the volatility for an option.
         Request the calculation of the implied volatility based on hypothetical option and its
@@ -431,8 +432,8 @@ class TwsApiClient(EWrapper, EClient):
         self._historical_data_wait()
 
         self.data_available[self.req_id] = threading.Event()
-        self.reqHeadTimeStamp(self.req_id, contract, what_to_show,
-                              use_regular_trading_hours, format_date)
+        self.reqHeadTimeStamp(self.req_id, contract, what_to_show, use_regular_trading_hours,
+                              format_date)
 
         # This is updated here, rather than in the _historical_data_wait function because we want
         # to actually make the request before setting a new timer.
@@ -528,8 +529,7 @@ class TwsApiClient(EWrapper, EClient):
             logger.debug6("End Date Time: %s", end_date_time)
             logger.debug6("Duration: %s", duration_str)
             logger.debug6("What to show: %s", what_to_show)
-            logger.debug6("Use Regular Trading Hours: %s",
-                          use_regular_trading_hours)
+            logger.debug6("Use Regular Trading Hours: %s", use_regular_trading_hours)
             logger.debug6("Format date: %s", format_date)
             logger.debug6("Keep Up to Date: %s", keep_up_to_date)
             logger.debug6("Chart Options: %s", chart_options)
@@ -545,13 +545,11 @@ class TwsApiClient(EWrapper, EClient):
             else:
                 self._historical_data_wait()
 
-            logger.debug6("Requesting Historical Bars for: %s",
-                          contract.localSymbol)
+            logger.debug6("Requesting Historical Bars for: %s", contract.localSymbol)
 
             self.data_available[self.req_id] = threading.Event()
-            self.reqHistoricalData(self.req_id, contract, end_date_time,
-                                   duration_str, bar_size_setting,
-                                   what_to_show, use_regular_trading_hours,
+            self.reqHistoricalData(self.req_id, contract, end_date_time, duration_str,
+                                   bar_size_setting, what_to_show, use_regular_trading_hours,
                                    format_date, keep_up_to_date, chart_options)
 
             # This is updated here, rather than in the _historical_data_wait function because we
@@ -597,10 +595,9 @@ class TwsApiClient(EWrapper, EClient):
         if number_of_ticks > 1000:
             number_of_ticks = 1000
 
-        self.reqHistoricalTicks(self.req_id, contract, start_date_time,
-                                end_date_time, number_of_ticks, what_to_show,
-                                use_regular_trading_hours, ignore_size,
-                                misc_options)
+        self.reqHistoricalTicks(self.req_id, contract, start_date_time, end_date_time,
+                                number_of_ticks, what_to_show, use_regular_trading_hours,
+                                ignore_size, misc_options)
         return self.req_id
 
     def req_ids(self):
@@ -691,8 +688,8 @@ class TwsApiClient(EWrapper, EClient):
 
         ## TODO: Verify if pacing violations exist for market data
         #self._historical_data_wait()
-        self.reqMktData(self.req_id, contract, generic_tick_list, snapshot,
-                        regulatory_snapshot, market_data_options)
+        self.reqMktData(self.req_id, contract, generic_tick_list, snapshot, regulatory_snapshot,
+                        market_data_options)
 
         #self.__historical_data_req_timestamp = datetime.datetime.now()
         return self.req_id
@@ -729,17 +726,15 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug6("Contract: %s", contract)
         logger.debug6("Bar Size: %s", bar_size_setting)
         logger.debug6("What to show: %s", what_to_show)
-        logger.debug6("Use Regular Trading Hours: %s",
-                      use_regular_trading_hours)
+        logger.debug6("Use Regular Trading Hours: %s", use_regular_trading_hours)
         logger.debug6("Real time bar options: %s", real_time_bar_options)
 
         self.req_id += 1
 
         self._small_bar_data_wait()
 
-        self.reqRealTimeBars(self.req_id, contract, bar_size_setting,
-                             what_to_show, use_regular_trading_hours,
-                             real_time_bar_options)
+        self.reqRealTimeBars(self.req_id, contract, bar_size_setting, what_to_show,
+                             use_regular_trading_hours, real_time_bar_options)
 
         # This is updated here, rather than in the _historical_data_wait function because we
         # want to actually make the request before setting a new timer.
@@ -759,8 +754,7 @@ class TwsApiClient(EWrapper, EClient):
 
         # The 3rd parameter, futFopExchange, is set to "" which the API uses to select
         # ALL exchanges.
-        self.reqSecDefOptParams(self.req_id, contract.symbol, "",
-                                contract.secType, contract.conId)
+        self.reqSecDefOptParams(self.req_id, contract.symbol, "", contract.secType, contract.conId)
         return self.req_id
 
     def req_tick_by_tick_data(self,
@@ -787,8 +781,7 @@ class TwsApiClient(EWrapper, EClient):
 
             self.tick_queue[self.req_id] = tick_queue
 
-            self.reqTickByTickData(self.req_id, contract, tick_type,
-                                   number_of_ticks, ignore_size)
+            self.reqTickByTickData(self.req_id, contract, tick_type, number_of_ticks, ignore_size)
             self.__historical_data_req_timestamp = datetime.datetime.now()
             logger.debug("End Function")
             return self.req_id
@@ -832,8 +825,7 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("Account Download Complete for Account: %s", account)
 
     @iswrapper
-    def accountSummary(self, req_id: int, account: str, tag: str, value: str,
-                       currency: str):
+    def accountSummary(self, req_id: int, account: str, tag: str, value: str, currency: str):
         """!
         Receives the account information. This method will receive the account information just as
         it appears in the TWS' Account Summary Window.
@@ -894,17 +886,11 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        self.data[req_id] = {
-            "account": account,
-            "tag": tag,
-            "value": value,
-            "currency": currency
-        }
+        self.data[req_id] = {"account": account, "tag": tag, "value": value, "currency": currency}
         self.data_available[req_id].set()
 
-        logger.debug(
-            "Account Summary. ReqId: %s\nAccount: %s, Tag: %s, Value: %s, Currency: %s",
-            req_id, account, tag, value, currency)
+        logger.debug("Account Summary. ReqId: %s\nAccount: %s, Tag: %s, Value: %s, Currency: %s",
+                     req_id, account, tag, value, currency)
 
     @iswrapper
     def accountSummaryEnd(self, req_id: int):
@@ -918,8 +904,8 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("Account Summary Completed.  ReqId: %s", req_id)
 
     @iswrapper
-    def accountUpdateMulti(self, req_id: int, account: str, model_code: str,
-                           key: str, value: str, currency: str):
+    def accountUpdateMulti(self, req_id: int, account: str, model_code: str, key: str, value: str,
+                           currency: str):
         """!
         Provides the account updates.
 
@@ -938,6 +924,7 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("Value: %s", value)
         logger.debug("Currency: %s", currency)
 
+    @iswrapper
     def accountUpdateMultiEnd(self, req_id: int):
         """!
         Indicates all the account updates have been transmitted.
@@ -972,8 +959,7 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("Commission Report: %s", commission_report)
 
     @iswrapper
-    def completedOrder(self, contract: Contract, order: Order,
-                       order_state: OrderState):
+    def completedOrder(self, contract: Contract, order: Order, order_state: OrderState):
         """!
         Feeds in completed orders.
 
@@ -983,8 +969,7 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        logger.debug("Completed Order for %s\n\%s\n%s", contract, order,
-                     order_state)
+        logger.debug("Completed Order for %s\n\%s\n%s", contract, order, order_state)
 
     @iswrapper
     def completedOrdersEnd(self):
@@ -1111,8 +1096,7 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug6("Current time: %s", time_now)
 
     @iswrapper
-    def deltaNeutralValidation(self, req_id: int,
-                               delta_neutral_contract: DeltaNeutralContract):
+    def deltaNeutralValidation(self, req_id: int, delta_neutral_contract: DeltaNeutralContract):
         """!
         Upon accepting a Delta-Neutral DN RFQ(request for quote), the server sends a
         deltaNeutralValidation() message with the DeltaNeutralContract structure. If the delta and
@@ -1160,11 +1144,7 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def error(self,
-              req_id: int,
-              code: int,
-              msg: str,
-              advanced_order_rejection: str = ""):
+    def error(self, req_id: int, code: int, msg: str, advanced_order_rejection: str = ""):
         """!
         Errors sent by the TWS are received here.
 
@@ -1181,10 +1161,9 @@ class TwsApiClient(EWrapper, EClient):
         """
         critical_codes = [1300]
         error_codes = [
-            100, 102, 103, 104, 105, 106, 107, 109, 110, 111, 113, 116, 117,
-            118, 119, 120, 121, 122, 123, 124, 125, 126, 129, 131, 132, 162,
-            200, 320, 321, 502, 503, 504, 1101, 2100, 2101, 2102, 2103, 2168,
-            2169, 10038
+            100, 102, 103, 104, 105, 106, 107, 109, 110, 111, 113, 116, 117, 118, 119, 120, 121,
+            122, 123, 124, 125, 126, 129, 131, 132, 162, 200, 320, 321, 502, 503, 504, 1101, 2100,
+            2101, 2102, 2103, 2168, 2169, 10038
         ]
         warning_codes = [101, 501, 1100, 2105, 2107, 2108, 2109, 2110, 2137]
         info_codes = [1102]
@@ -1192,16 +1171,14 @@ class TwsApiClient(EWrapper, EClient):
 
         if code in critical_codes:
             if advanced_order_rejection:
-                logger.critical(
-                    "ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s",
-                    req_id, code, msg, advanced_order_rejection)
+                logger.critical("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id,
+                                code, msg, advanced_order_rejection)
             else:
                 logger.critical("ReqID# %s, Code: %s (%s)", req_id, code, msg)
         elif code in error_codes:
             if advanced_order_rejection:
-                logger.error(
-                    "ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s",
-                    req_id, code, msg, advanced_order_rejection)
+                logger.error("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id, code,
+                             msg, advanced_order_rejection)
             else:
                 logger.error("ReqID# %s, Code: %s (%s)", req_id, code, msg)
 
@@ -1211,36 +1188,31 @@ class TwsApiClient(EWrapper, EClient):
 
         elif code in warning_codes:
             if advanced_order_rejection:
-                logger.warning(
-                    "ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s",
-                    req_id, code, msg, advanced_order_rejection)
+                logger.warning("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id,
+                               code, msg, advanced_order_rejection)
             else:
                 logger.warning("ReqID# %s, Code: %s (%s)", req_id, code, msg)
         elif code in info_codes:
             if advanced_order_rejection:
-                logger.info(
-                    "ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s",
-                    req_id, code, msg, advanced_order_rejection)
+                logger.info("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id, code,
+                            msg, advanced_order_rejection)
             else:
                 logger.info("ReqID# %s, Code: %s (%s)", req_id, code, msg)
         elif code in debug_codes:
             if advanced_order_rejection:
-                logger.debug(
-                    "ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s",
-                    req_id, code, msg, advanced_order_rejection)
+                logger.debug("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id, code,
+                             msg, advanced_order_rejection)
             else:
                 logger.debug("ReqID# %s, Code: %s (%s)", req_id, code, msg)
         else:
             if advanced_order_rejection:
-                logger.error(
-                    "ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s",
-                    req_id, code, msg, advanced_order_rejection)
+                logger.error("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id, code,
+                             msg, advanced_order_rejection)
             else:
                 logger.error("ReqID# %s, Code: %s (%s)", req_id, code, msg)
 
     @iswrapper
-    def execDetails(self, req_id: int, contract: Contract,
-                    execution: Execution):
+    def execDetails(self, req_id: int, contract: Contract, execution: Execution):
         """!
         Provides the executions which happened in the last 24 hours.
 
@@ -1338,8 +1310,7 @@ class TwsApiClient(EWrapper, EClient):
 
     @iswrapper
     def historicalDataEnd(self, req_id: int, start: str, end: str):
-        logger.debug6("Data Complete for ReqID: %s from: %s to: %s", req_id,
-                      start, end)
+        logger.debug6("Data Complete for ReqID: %s from: %s to: %s", req_id, start, end)
         self.data_available[req_id].set()
         self.__active_historical_data_requests -= 1
 
@@ -1370,8 +1341,8 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def historicalNews(self, req_id: int, time: str, provider_code: str,
-                       article_id: str, headline: str):
+    def historicalNews(self, req_id: int, time: str, provider_code: str, article_id: str,
+                       headline: str):
         """!
         Ruturns news headlines
 
@@ -1402,8 +1373,8 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def historicalSchedule(self, req_id: int, start_date_time: str,
-                           end_date_time: str, timezone: str, sessions: list):
+    def historicalSchedule(self, req_id: int, start_date_time: str, end_date_time: str,
+                           timezone: str, sessions: list):
         """!
         Returns historical Schedule when reqHistoricalData whatToShow="SCHEDULE"
 
@@ -1497,14 +1468,9 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        data_type_string = {
-            1: "Real Time",
-            2: "Frozen",
-            3: "Delayed",
-            4: "Delayed and Frozen"
-        }
-        logger.debug6("Market Data type for req id %s currently set to '%s'",
-                      req_id, data_type_string[market_data_type])
+        data_type_string = {1: "Real Time", 2: "Frozen", 3: "Delayed", 4: "Delayed and Frozen"}
+        logger.debug6("Market Data type for req id %s currently set to '%s'", req_id,
+                      data_type_string[market_data_type])
 
     @iswrapper
     def marketRule(self, market_rule_id: int, price_increments: list):
@@ -1585,8 +1551,7 @@ class TwsApiClient(EWrapper, EClient):
         self.next_valid_id_available.set()
 
     @iswrapper
-    def openOrder(self, order_id: int, contract: Contract, order: Order,
-                  order_state: OrderState):
+    def openOrder(self, order_id: int, contract: Contract, order: Order, order_state: OrderState):
         """!
         Called in response to the submitted order.
 
@@ -1627,10 +1592,9 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def orderStatus(self, order_id: int, status: str, filled: Decimal,
-                    remaining: Decimal, avg_fill_price: float, perm_id: int,
-                    parent_id: int, last_fill_price: float, client_id: int,
-                    why_held: str, mkt_cap_price: float):
+    def orderStatus(self, order_id: int, status: str, filled: Decimal, remaining: Decimal,
+                    avg_fill_price: float, perm_id: int, parent_id: int, last_fill_price: float,
+                    client_id: int, why_held: str, mkt_cap_price: float):
         """!
         Gives the up-to-date information of an order every time it changes. Often there are
         duplicate orderStatus messages.
@@ -1702,8 +1666,7 @@ class TwsApiClient(EWrapper, EClient):
         self.queue.put(msg)
 
     @iswrapper
-    def pnl(self, req_id: int, daily_pnl: float, unrealized_pnl: float,
-            realized_pnl: float):
+    def pnl(self, req_id: int, daily_pnl: float, unrealized_pnl: float, realized_pnl: float):
         """!
         Receives PnL updates in real time for the daily PnL and the total unrealized PnL for an
         account.
@@ -1721,8 +1684,8 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def pnlSingle(self, req_id: int, pos: Decimal, daily_pnl: float,
-                  unrealized_pnl: float, realized_pnl: float, value: float):
+    def pnlSingle(self, req_id: int, pos: Decimal, daily_pnl: float, unrealized_pnl: float,
+                  realized_pnl: float, value: float):
         """!
         Receives real time updates for single position daily PnL values.
 
@@ -1740,8 +1703,7 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def position(self, account: str, contract: Contract, pos: Decimal,
-                 avg_cost: float):
+    def position(self, account: str, contract: Contract, pos: Decimal, avg_cost: float):
         """!
         Provides the portfolio's open positions.
 
@@ -1770,8 +1732,8 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def positionMulti(self, req_id: int, account: str, model_code: str,
-                      contract: Contract, pos: Decimal, avg_cost: float):
+    def positionMulti(self, req_id: int, account: str, model_code: str, contract: Contract,
+                      pos: Decimal, avg_cost: float):
         """!
         provides the portfolio's open positions.
 
@@ -1800,9 +1762,9 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def realtimeBar(self, req_id: int, datetime: int, bar_open: float,
-                    bar_high: float, bar_low: float, bar_close: float,
-                    bar_volume: Decimal, bar_wap: Decimal, bar_count: int):
+    def realtimeBar(self, req_id: int, datetime: int, bar_open: float, bar_high: float,
+                    bar_low: float, bar_close: float, bar_volume: Decimal, bar_wap: Decimal,
+                    bar_count: int):
         """!
         Updates the real time 5 seconds bars
 
@@ -1819,10 +1781,7 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        bar = [
-            datetime, bar_open, bar_high, bar_low, bar_close, bar_volume,
-            bar_wap, bar_count
-        ]
+        bar = [datetime, bar_open, bar_high, bar_low, bar_close, bar_volume, bar_wap, bar_count]
         msg = {"real_time_bars": {req_id: bar}}
         self.queue.put(msg)
 
@@ -1891,8 +1850,7 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def scannerData(self, req_id: int, rank: int,
-                    contract_details: ContractDetails, distance: str,
+    def scannerData(self, req_id: int, rank: int, contract_details: ContractDetails, distance: str,
                     benchmark: str, projection: str, legs_str: str):
         """!
         provides the data resulting from the market scanner request.
@@ -1936,10 +1894,9 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def securityDefinitionOptionParameter(self, req_id: int, exchange: str,
-                                          underlying_con_id: int,
-                                          tradingClass: str, multiplier: str,
-                                          expirations: set, strikes: set):
+    def securityDefinitionOptionParameter(self, req_id: int, exchange: str, underlying_con_id: int,
+                                          tradingClass: str, multiplier: str, expirations: set,
+                                          strikes: set):
         """!
         Returns the option chain for an underlying on an exchange specified in reqSecDefOptParams
         There will be multiple callbacks to securityDefinitionOptionParameter if multiple exchanges
@@ -1958,8 +1915,7 @@ class TwsApiClient(EWrapper, EClient):
         """
         logger.debug6(
             "Security Definition Option Parameter:\nReqId: %s\nExchange: %s\nUnderlying conId: %s\nTrading Class: %s\nMultiplier: %s\nExpirations: %s\nStrikes: %s",
-            req_id, exchange, underlying_con_id, tradingClass, multiplier,
-            expirations, strikes)
+            req_id, exchange, underlying_con_id, tradingClass, multiplier, expirations, strikes)
 
         opt_params = {
             "exchange": exchange,
@@ -1980,8 +1936,7 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        logger.debug6("SecurityDefinitionOptionParameterEnd. ReqId: %s",
-                      req_id)
+        logger.debug6("SecurityDefinitionOptionParameterEnd. ReqId: %s", req_id)
         self.data_available[req_id].set()
 
     @iswrapper
@@ -2034,10 +1989,8 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def tickByTickAllLast(self, req_id: int, tick_type: int, time: int,
-                          price: float, size: Decimal,
-                          tick_attrib_last: TickAttribLast, exchange: str,
-                          special_conditions: str):
+    def tickByTickAllLast(self, req_id: int, tick_type: int, time: int, price: float, size: Decimal,
+                          tick_attrib_last: TickAttribLast, exchange: str, special_conditions: str):
         """!
         Returns "Last" or "AllLast" tick-by-tick real-time tick
 
@@ -2054,18 +2007,14 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        tick = [
-            tick_type, time, price, size, tick_attrib_last, exchange,
-            special_conditions
-        ]
+        tick = [tick_type, time, price, size, tick_attrib_last, exchange, special_conditions]
 
         msg = {"market_data": {req_id: tick}}
         self.queue.put(msg)
 
     @iswrapper
-    def tickByTickBidAsk(self, req_id: int, time: int, bid_price: float,
-                         ask_price: float, bid_size: Decimal,
-                         ask_size: Decimal,
+    def tickByTickBidAsk(self, req_id: int, time: int, bid_price: float, ask_price: float,
+                         bid_size: Decimal, ask_size: Decimal,
                          tick_attrib_bid_ask: TickAttribBidAsk):
         """!
         Returns "BidAsk" tick-by-tick real-time tick
@@ -2082,9 +2031,7 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        tick = [
-            time, bid_price, ask_price, bid_size, ask_size, tick_attrib_bid_ask
-        ]
+        tick = [time, bid_price, ask_price, bid_size, ask_size, tick_attrib_bid_ask]
 
         msg = {"market_data": {req_id: tick}}
         self.queue.put(msg)
@@ -2105,9 +2052,8 @@ class TwsApiClient(EWrapper, EClient):
         self.queue.put(msg)
 
     @iswrapper
-    def tickEFP(self, req_id: int, tick_type: int, basis_points: float,
-                formatted_basis_points: str, implied_future: float,
-                hold_days: int, future_last_trade_date: str,
+    def tickEFP(self, req_id: int, tick_type: int, basis_points: float, formatted_basis_points: str,
+                implied_future: float, hold_days: int, future_last_trade_date: str,
                 dividend_impact: float, dividends_to_last_trade_date: float):
         """!
         Exchange for Physicals.
@@ -2149,8 +2095,8 @@ class TwsApiClient(EWrapper, EClient):
         self.queue.put(msg)
 
     @iswrapper
-    def tickNews(self, req_id: int, timestamp: int, provider_code: str,
-                 article_id: str, headline: str, extra_data: str):
+    def tickNews(self, req_id: int, timestamp: int, provider_code: str, article_id: str,
+                 headline: str, extra_data: str):
         """!
         Ticks with news headlines
 
@@ -2165,18 +2111,14 @@ class TwsApiClient(EWrapper, EClient):
         @return
         """
         logger.debug("Begin Function")
-        tick = [
-            "tick_news", timestamp, provider_code, article_id, headline,
-            extra_data
-        ]
+        tick = ["tick_news", timestamp, provider_code, article_id, headline, extra_data]
         msg = {"market_data": {req_id: tick}}
         self.queue.put(msg)
 
     @iswrapper
     def tickOptionComputation(self, req_id: int, field: int, tick_attrib: int,
-                              implied_volatility: float, delta: float,
-                              opt_price: float, pv_dividend: float,
-                              gamma: float, vega: float, theta: float,
+                              implied_volatility: float, delta: float, opt_price: float,
+                              pv_dividend: float, gamma: float, vega: float, theta: float,
                               und_price: float):
         """!
         Receive's option specific market data. This method is called when the market in an option or
@@ -2204,15 +2146,14 @@ class TwsApiClient(EWrapper, EClient):
         @return
         """
         tick = [
-            "tick_option_computation", field, tick_attrib, implied_volatility,
-            delta, opt_price, pv_dividend, gamma, vega, theta, und_price
+            "tick_option_computation", field, tick_attrib, implied_volatility, delta, opt_price,
+            pv_dividend, gamma, vega, theta, und_price
         ]
         msg = {"market_data": {req_id: tick}}
         self.queue.put(msg)
 
     @iswrapper
-    def tickPrice(self, req_id: int, field: int, price: float,
-                  attrib: TickAttrib):
+    def tickPrice(self, req_id: int, field: int, price: float, attrib: TickAttrib):
         """!
         Market data tick price callback. Handles all price related ticks. Every tickPrice callback
         is followed by a tickSize. A tickPrice value of -1 or 0 followed by a tickSize of 0
@@ -2248,9 +2189,7 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        tick = [
-            "tick_req_params", min_tick, bbo_exchange, snapshot_permissions
-        ]
+        tick = ["tick_req_params", min_tick, bbo_exchange, snapshot_permissions]
         msg = {"market_data": {req_id: tick}}
         self.queue.put(msg)
 
@@ -2305,8 +2244,7 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def updateAccountValue(self, key: str, value: str, currency: str,
-                           account_name: str):
+    def updateAccountValue(self, key: str, value: str, currency: str, account_name: str):
         """!
         Receives the subscribed account's information. Only one account can be subscribed at a time.
         After the initial callback to updateAccountValue, callbacks only occur for values which have
@@ -2508,8 +2446,8 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def updateMktDepth(self, ticker_id: int, position: int, operation: int,
-                       side: int, price: float, size: Decimal):
+    def updateMktDepth(self, ticker_id: int, position: int, operation: int, side: int, price: float,
+                       size: Decimal):
         """!
         Returns the order book.
 
@@ -2531,9 +2469,8 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def updateMktDepthL2(self, ticker_id: int, position: int,
-                         market_maker: str, operation: int, side: int,
-                         price: float, size: Decimal, is_smart_depth: bool):
+    def updateMktDepthL2(self, ticker_id: int, position: int, market_maker: str, operation: int,
+                         side: int, price: float, size: Decimal, is_smart_depth: bool):
         """!
         Returns the order book.
 
@@ -2559,8 +2496,7 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def updateNewsBulletin(self, msg_id: int, msg_type: int, message: str,
-                           orig_exchange: str):
+    def updateNewsBulletin(self, msg_id: int, msg_type: int, message: str, orig_exchange: str):
         """!
         Provides IB's bulletins
 
@@ -2578,9 +2514,8 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def updatePortfolio(self, contract: Contract, position: float,
-                        market_price: float, market_value: float,
-                        average_cost: float, unrealized_pnl: float,
+    def updatePortfolio(self, contract: Contract, position: float, market_price: float,
+                        market_value: float, average_cost: float, unrealized_pnl: float,
                         realized_pnl: float, account_name: str):
         """!
         Receives the subscribed account's portfolio. This function will receive only the portfolio
@@ -2654,8 +2589,7 @@ class TwsApiClient(EWrapper, EClient):
 
             logger.debug6("Now: %s", datetime.datetime.now())
             logger.debug6("Last Request: %s", timestamp)
-            logger.debug6("Time Difference: %s seconds",
-                          time_diff.total_seconds())
+            logger.debug6("Time Difference: %s seconds", time_diff.total_seconds())
             remaining_sleep_time = sleep_time - time_diff.total_seconds()
             logger.debug6("Sleep Time: %s", remaining_sleep_time)
             time.sleep(sleep_time - time_diff.total_seconds())
@@ -2669,8 +2603,7 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        self._data_wait(self.__historical_data_req_timestamp,
-                        HISTORICAL_DATA_SLEEP_TIME)
+        self._data_wait(self.__historical_data_req_timestamp, HISTORICAL_DATA_SLEEP_TIME)
 
     def _small_bar_data_wait(self):
         """!
@@ -2680,8 +2613,7 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        self._data_wait(self.__small_bar_data_req_timestamp,
-                        SMALL_BAR_SLEEP_TIME)
+        self._data_wait(self.__small_bar_data_req_timestamp, SMALL_BAR_SLEEP_TIME)
 
     def _contract_details_data_wait(self):
         """!
@@ -2691,8 +2623,7 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        self._data_wait(self.__contract_details_data_req_timestamp,
-                        CONTRACT_DETAILS_SLEEP_TIME)
+        self._data_wait(self.__contract_details_data_req_timestamp, CONTRACT_DETAILS_SLEEP_TIME)
 
     def _calculate_deep_data_allotment(self):
         """!

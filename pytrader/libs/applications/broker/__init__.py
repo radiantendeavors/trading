@@ -3,7 +3,6 @@
 The main user interface for the trading program.
 
 @author G. S. Derber
-@version HEAD
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -30,8 +29,6 @@ import threading
 from multiprocessing import Queue
 
 # 3rd Party Libraries
-from ibapi import contract
-from ibapi import order
 
 # Application Libraries
 # System Library Overrides
@@ -88,10 +85,8 @@ class BrokerProcess():
         self.data_response = broker_class.get(broker_id)
         self.broker_queue = queue.Queue()
 
-        self.data_response.set_attributes(self.brokerclient, self.data_queue,
-                                          self.broker_queue)
-        self.data_thread = threading.Thread(target=self.data_response.run,
-                                            daemon=True)
+        self.data_response.set_attributes(self.brokerclient, self.data_queue, self.broker_queue)
+        self.data_thread = threading.Thread(target=self.data_response.run, daemon=True)
 
     def run(self):
         """!
@@ -116,9 +111,12 @@ class BrokerProcess():
     #
     # ==============================================================================================
     def _cancel_order(self, order_id: int):
+        """!
+        Send Cancel Order to data_response thread.
+        """
         self.data_response.cancel_order(order_id)
 
-    def _check_if_ports_available(self, port):
+    def _check_if_ports_available(self, port: int):
         """!
         Checks if a given port is available
 
@@ -129,45 +127,11 @@ class BrokerProcess():
         tws_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         return tws_socket.connect_ex((self.address, port)) == 0
 
-    def _create_contract(self,
-                         ticker,
-                         sec_type: str = "STK",
-                         exchange: str = "SMART",
-                         currency: str = "USD",
-                         strike: float = 0.0,
-                         right: str = ""):
-        """!
-        Creates a contract
-        """
-        contract_ = contract.Contract()
-        contract_.symbol = ticker
-        contract_.secType = "STK"
-        contract_.exchange = "SMART"
-        contract_.currency = "USD"
-
-        if strike > 0.0:
-            contract_.strike = strike
-
-        if right != "":
-            contract_.right = right
-        self.contracts[ticker] = self._set_contract_details(contract_)
-
-    def _create_contracts(self, tickers):
-        """!
-        Takes a list of tickers, and creates contracts for them.
-
-        @param tickers: The list of tickers
-
-        @return None
-        """
-        for item in tickers:
-            if not self.contracts.get(item):
-                logger.debug("Creating contract for %s", item)
-                self._create_contract(item)
-            self.bars[item] = {}
-
     def _place_order(self, order_request):
-        logger.debug("Order Received: %s", order_request)
+        """!
+        Send place order to data_response thread.
+        """
+        logger.debug9("Order Received: %s", order_request)
         self.data_response.create_order(order_request)
 
     def _process_commands(self, cmd):
@@ -215,10 +179,10 @@ class BrokerProcess():
         """!
         Creates a list of available ports to connect to the broker.
         """
-        # for port in ALLOWED_PORTS:
-        #     if self._check_if_ports_available(int(port)):
-        #         self.available_ports.append(int(port))
-        self.available_ports.append(int(7497))
+        for port in ALLOWED_PORTS:
+            if self._check_if_ports_available(int(port)):
+                self.available_ports.append(int(port))
+        #self.available_ports.append(int(7497))
         logger.debug9("Available ports: %s", self.available_ports)
 
     def _set_cmd(self, subcommand):
@@ -241,8 +205,8 @@ class BrokerProcess():
         @return None
         """
         # TODO: Configure to connect to multiple available clients
-        self.brokerclient.connect(self.address, self.available_ports[0],
-                                  self.client_id)
+        logger.debug("Client Id: %s", self.client_id)
+        self.brokerclient.connect(self.address, self.available_ports[0], self.client_id)
         logger.debug9("BrokerClient connected")
 
         self.brokerclient.start_thread(self.broker_queue)

@@ -4,7 +4,6 @@
 Provides Tick
 
 @author G. S. Derber
-@version HEAD
 @date 2022-2023
 @copyright GNU Affero General Public License
 

@@ -3,9 +3,8 @@
 
 Provides the user interfaces for pytrader
 
-@author Geoff S. derber
-@version HEAD
-@date 2022
+@author G. S. derber
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify

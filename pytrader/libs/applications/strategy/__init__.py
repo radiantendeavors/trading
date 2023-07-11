@@ -1,10 +1,9 @@
 """!@package pytrader.libs.applications.strategy
 
-The main user interface for the trading program.
+Provides the application process manager
 
-@author Geoff S. Derber
-@version HEAD
-@date 2022
+@author G. S. Derber
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -24,6 +23,7 @@ The main user interface for the trading program.
 """
 # Standard Libraries
 import importlib
+import multiprocessing
 import threading
 
 # 3rd Party Libraries
@@ -63,6 +63,7 @@ class StrategyProcess():
         self.cmd_queue = cmd_queue
         self.data_queue = data_queue
         self.next_order_id = next_order_id
+        self.strategy_process = {}
 
     def run(self, strategy_list):
         """!
@@ -70,12 +71,13 @@ class StrategyProcess():
         """
         for index, strategy_path in enumerate(strategy_list):
             order_id = self.next_order_id + (index * 1000)
-            logger.debug("Order Id for Strategy %s: %s", strategy_path,
-                         order_id)
+            logger.debug("Order Id for Strategy %s: %s", strategy_path, order_id)
             module_name = IMPORT_PATH + strategy_path
             module = importlib.import_module(module_name, __name__)
-            strategy = module.Strategy(self.cmd_queue, self.data_queue,
-                                       order_id)
-            strategy_thread = threading.Thread(target=strategy.run)
+            strategy = module.Strategy(self.cmd_queue, self.data_queue, order_id)
+            self.strategy_process[strategy_path] = multiprocessing.Process(target=strategy.run,
+                                                                           args=())
+            self.strategy_process[strategy_path].start()
 
-            strategy_thread.start()
+        for strategy in strategy_list:
+            self.strategy_process[strategy].join()

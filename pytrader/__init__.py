@@ -4,7 +4,7 @@
 Contains global variables for the pyTrader program.
 
 @author G S Derber
-@version HEAD
+@version 0.3.1
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -27,8 +27,8 @@ Contains global variables for the pyTrader program.
 
 """
 __all__ = [
-    '__author__', '__contact__', '__copyright__', '__license__', '__status__',
-    '__version__', 'DEBUG'
+    '__author__', '__contact__', '__copyright__', '__license__', '__status__', '__version__',
+    'DEBUG'
 ]
 
 __author__ = 'G S Derber'
@@ -36,7 +36,7 @@ __contact__ = 'gd.github@radiantendeavors.com'
 __copyright__ = 2023
 __license__ = 'AGPL'
 __status__ = 'Prototype'
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 
 # ==================================================================================================
 #
@@ -64,8 +64,11 @@ DEBUG = True
 ## The default log level
 LOGLEVEL = 20
 
+## Broker ID
+BROKER_ID = "twsapi"
+
 ## Client ID
-CLIENT_ID = 2004
+CLIENT_ID = 2005
 
 ## An instance of the logging class
 logger = logging.getLogger(__name__)
