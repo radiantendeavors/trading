@@ -116,7 +116,7 @@ class BrokerProcess():
         """
         self.data_response.cancel_order(order_id)
 
-    def _check_if_ports_available(self, port: int):
+    def _check_if_ports_available(self, port):
         """!
         Checks if a given port is available
 
@@ -179,10 +179,10 @@ class BrokerProcess():
         """!
         Creates a list of available ports to connect to the broker.
         """
-        for port in ALLOWED_PORTS:
-            if self._check_if_ports_available(int(port)):
-                self.available_ports.append(int(port))
-        #self.available_ports.append(int(7497))
+        # for port in ALLOWED_PORTS:
+        #     if self._check_if_ports_available(int(port)):
+        #         self.available_ports.append(int(port))
+        self.available_ports.append(int(7497))
         logger.debug9("Available ports: %s", self.available_ports)
 
     def _set_cmd(self, subcommand):
