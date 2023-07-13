@@ -342,6 +342,12 @@ class Bars(BasicBars):
         if "TrueRange" not in self.print_columns and print_column:
             self.print_columns.append("TrueRange")
 
+    def get_atr(self, span: int = 14):
+        if "AveTrueRange" not in self.bars.columns:
+            self.calculate_atr(span)
+
+        return self.bars["AveTrueRange"].iloc[-1]
+
     def get_last_close(self):
         return self.bars["Close"].iloc[-1]
 
@@ -440,12 +446,10 @@ class Bars(BasicBars):
         self.bars["DC Upper as Multiple of ATR"] = self.bars[
             "(DC Upper - Close Δ) / ATR"] = self.bars["DC Upper - Close Δ"] / self.bars[
                 "AveTrueRange"]
-        if self.bars["DC Upper as Multiple of ATR"].iloc[-1] > 2:
-            return True
+        return (self.bars["DC Upper as Multiple of ATR"].iloc[-1] > 2)
 
     def filter_dc_lower(self):
         self.bars["DC Lower as Multiple of ATR"] = self.bars[
             "(DC Lower - Close Δ) / ATR"] = self.bars["DC Lower - Close Δ"] / self.bars[
                 "AveTrueRange"]
-        if self.bars["DC Lower as Multiple of ATR"].iloc[-1] > 2:
-            return True
+        return (self.bars["DC Lower as Multiple of ATR"].iloc[-1] > 2)
