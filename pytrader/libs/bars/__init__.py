@@ -219,10 +219,14 @@ class Bars(BasicBars):
                     f"{self.bar_size} bars for {self.ticker}:\n" \
                     f"{self.bars}"
         else:
-            message = f"{class_name}\n" \
-                f"{self.bar_size} for bars {self.ticker}:\n" \
-                f"{self.bars[self.print_columns].tail(self.long_period_count['EMA'])}"
-
+            if "EMA" in self.long_period_count.keys():
+                message = f"{class_name}\n" \
+                    f"{self.bar_size} for bars {self.ticker}:\n" \
+                    f"{self.bars[self.print_columns].tail(self.long_period_count['EMA'])}"
+            else:
+                message = f"{class_name}\n" \
+                    f"{self.bar_size} for bars {self.ticker}:\n" \
+                    f"{self.bars[self.print_columns].tail(10)}"
         return message
 
     def calculate_atr(self, span: int = 14, print_column: bool = True):
