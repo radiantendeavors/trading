@@ -102,8 +102,11 @@ class BrokerProcess():
             cmd = self.cmd_queue.get()
             logger.debug4("Command: %s", cmd)
 
-            self._process_commands(cmd)
-            broker_connection = self.brokerclient.is_connected()
+            if cmd == "Quit":
+                broker_connection = False
+            else:
+                self._process_commands(cmd)
+                broker_connection = self.brokerclient.is_connected()
 
     # ==============================================================================================
     #

@@ -126,6 +126,7 @@ class ProcessManager():
         finally:
             if len(args) > 1:
                 strategy_process.join()
+                self.cmd_queue.put("Quit")
             # elif kwargs.get("downloader"):
             #     downloader_process.join()
             broker_process.join()
