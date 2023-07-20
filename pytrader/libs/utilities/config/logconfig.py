@@ -45,13 +45,7 @@ class LogConfig():
     def read_config(self, *args, **kwargs):
         config = kwargs["config"]
 
-        loglevels = {
-            'debug': 10,
-            'info': 20,
-            'warning': 30,
-            'error': 40,
-            'critical': 50
-        }
+        loglevels = {'debug': 10, 'info': 20, 'warning': 30, 'error': 40, 'critical': 50}
 
         if "logging" in config:
             if "loglevel" in config["logging"]:
