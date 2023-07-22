@@ -708,9 +708,9 @@ class Strategy():
         cur_time = datetime.datetime.now()
 
         if cur_time > market_close:
-            logger.critical("Market Data Type Id #%s")
+            logger.critical("Market Data Type Id #%s", market_data[1])
         elif cur_time > market_close_min1:
-            logger.warning("Market Data Type Id #%s")
+            logger.warning("Market Data Type Id #%s", market_data[1])
 
         # Until we have all tick types defined at:
         # https://interactivebrokers.github.io/tws-api/tick_types.html
