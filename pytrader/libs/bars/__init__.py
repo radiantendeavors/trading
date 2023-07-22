@@ -25,6 +25,7 @@ Provides Bar Data
 """
 # Standard libraries
 import datetime
+import math
 import os
 import pathlib
 import time
@@ -393,6 +394,106 @@ class Bars(BasicBars):
         if bband_lower_name not in self.print_columns and print_column:
             self.print_columns.append(bband_lower_name)
 
+    def calculate_cumsum(self, column: str):
+        col_name = column + "_CumSum"
+        self.bars[col_name] = self.bars[column].cumsum()
+
+    def calculate_squared(self, column: str):
+        col_name = column + "_Squared"
+        self.bars[col_name] = self.bars[column] * self.bars[column]
+
+    def calculate_correlation_cycle(self,
+                                    span: int = 20,
+                                    input_period: int = 20,
+                                    print_column: bool = True,
+                                    truncate: bool = False):
+        self.gen_index()
+        self.bars["CCY_Cosine"] = numpy.cos(360 * self.bars.index / span)
+        self.calculate_cumsum("Close")
+        self.calculate_cumsum("CCY_Cosine")
+        self.calculate_squared("Close")
+        self.calculate_squared("CCY_Cosine")
+        self.bars["CCY_Close_x_Cosine"] = self.bars["Close"] * self.bars["CCY_Cosine"]
+        self.calculate_cumsum("Close_Squared")
+        self.calculate_cumsum("CCY_Close_x_Cosine")
+        self.calculate_cumsum("CCY_Cosine_Squared")
+
+        self.bars["CCY_Var1"] = (self.bars["Index"] * self.bars["Close_Squared_CumSum"] -
+                                 self.bars["Close_CumSum"] * self.bars["Close_CumSum"])
+        self.bars["CCY_Var2"] = (self.bars["Index"] * self.bars["CCY_Cosine_Squared_CumSum"] -
+                                 self.bars["CCY_Cosine_CumSum"] * self.bars["CCY_Cosine_CumSum"])
+        self.bars["CCY_Var3"] = (self.bars["Index"] * self.bars["CCY_Close_x_Cosine_CumSum"] -
+                                 self.bars["Close_CumSum"] * self.bars["CCY_Cosine_CumSum"])
+
+        self.bars["CCY_Sqrt"] = numpy.emath.sqrt(self.bars["CCY_Var1"] * self.bars["CCY_Var2"])
+
+        self.bars["CCY"] = numpy.where((self.bars["CCY_Var1"] > 0) & (self.bars["CCY_Var2"] > 0),
+                                       self.bars["CCY_Var3"] / self.bars["CCY_Sqrt"], 0)
+
+        if "CCY" not in self.print_columns and print_column:
+            self.print_columns.append("CCY")
+
+    def calculate_correlation_cycle_rate_of_change(self,
+                                                   span: int = 20,
+                                                   input_period: int = 20,
+                                                   print_column: bool = True,
+                                                   truncate: bool = False):
+        self.calculate_correlation_cycle(span, input_period)
+        self.bars["SineCorr"] = -numpy.sin(360 * self.bars["Index"] / span)
+        self.calculate_cumsum("SineCorr")
+        self.calculate_squared("SineCorr")
+        self.bars["CloseSineCorr"] = self.bars["Close"] * self.bars["SinCorr"]
+        self.calculate_cumsum("CloseSineCorr")
+        self.calculate_cumsum("SineCorr_Squared")
+
+        self.bars["CCYROC_Var1"] = (self.bars["Index"] * self.bars["Close_Squared_CumSum"] -
+                                    self.bars["Close_CumSum"] * self.bars["Close_CumSum"])
+        self.bars["CCYROC_Var2"] = (self.bars["Index"] * self.bars["SineCorr_Squared_CumSum"] -
+                                    self.bars["SineCorr_CumSum"] * self.bars["SineCorr_CumSum"])
+        self.bars["CCYROC_Var3"] = (self.bars["Index"] * self.bars["CloseSineCorr_CumSum"] -
+                                    self.bars["Close_CumSum"] * self.bars["SineCorr_CumSum"])
+
+        self.bars["CCYROC_Sqrt"] = numpy.emath.sqrt(self.bars["CCYROC_Var1"] *
+                                                    self.bars["CCYROC_Var2"])
+
+        self.bars["CCYROC"] = numpy.where(
+            (self.bars["CCYROC_Var1"] > 0) & (self.bars["CCYROC_Var2"] > 0),
+            self.bars["CCYROC_Var3"] / self.bars["CCYROC_Sqrt"], 0)
+
+        if "CCYROC" not in self.print_columns and print_column:
+            self.print_columns.append("CCYROC")
+
+    def calculate_correlation_cycle_state(self,
+                                          span: int = 20,
+                                          input_period: int = 20,
+                                          threshold: int = 9,
+                                          print_column: bool = True,
+                                          truncate: bool = False):
+        self.calculate_correlation_cycle_rate_of_change(span, input_period, print_column, truncate)
+
+        self.bars["CCY_Arctan"] = numpy.arctan2(self.bars["CorrelationCycle"],
+                                                self.bars["CorrelationCycleRateofChange"])
+
+        self.bars["Angle"] = numpy.where(self.bars["CCYROC"] != 0, 90 + self.bars["CCY_Arctan"])
+        self.bars["Angle"] = numpy.where(self.bars["CCYROC"] > 0, self.bars["Angle"] - 180)
+
+        # FIXME: Something seems off with this function
+        if (self.bars["Angle"] - self.bars["Angle"].shift(-1) <
+                270) and (self.bars["Angle"].shift(-1) < self.bars["Angle"]):
+            self.bars["Angle"] = self.bars["Angle"].shift()
+
+        self.bars["Abs(AngleΔ)"] = abs(self.bars["Angle"] - self.bars["Angle"].shift())
+
+        if (self.bars["Abs(AngleΔ)"] < threshold) and (self.bars["Angle"] < 0):
+            self.bars["CCYState"] = -1
+        elif (self.bars["Abs(AngleΔ)"] < threshold) and (self.bars["Angle"] >= 0):
+            self.bars["CCYState"] = 1
+        else:
+            self.bars["CCYState"] = 0
+
+        if "CCYState" not in self.print_columns and print_column:
+            self.print_columns.append("CCYState")
+
     def calculate_close_delta(self, print_column: bool = True, truncate: bool = True):
         col_name = "CloseΔ"
         self.bars[col_name] = self.bars["Close"].diff()
@@ -543,6 +644,34 @@ class Bars(BasicBars):
             self.print_columns.append(col_name)
 
         return self.bars[col_name].iloc[-1]
+
+    def calculate_market_meanness_index(self,
+                                        span: int,
+                                        print_column: bool = True,
+                                        truncate: bool = False):
+        self.gen_index()
+        self.bars["MeannessMedian"] = self.bars["Close"].rolling(span).median()
+
+        if "NewHigh" not in self.bars.columns:
+            self.bars["NewHigh"] = 0
+
+        if "NewLow" not in self.bars.columns:
+            self.bars["NewLow"] = 0
+
+        self.bars["NewHigh"] = numpy.where((self.bars["Close"] > self.bars["MeannessMedian"]) &
+                                           (self.bars["Close"] > self.bars["Close"].shift(-1)),
+                                           self.bars["NewHigh"].shift(-1) + 1,
+                                           self.bars["NewHigh"].shift(-1))
+
+        self.bars["NewLow"] = numpy.where((self.bars["Close"] < self.bars["MeannessMedian"]) &
+                                          (self.bars["Close"] < self.bars["Close"].shift(-1)),
+                                          self.bars["NewLow"].shift(-1) + 1,
+                                          self.bars["NewLow"].shift(-1))
+
+        self.bars["MMI"] = 100 * (self.bars["NewHigh"] + self.bars["NewLow"]) / (self.bars["Index"])
+
+        if "MMI" not in self.print_columns and print_column:
+            self.print_columns.append("MMI")
 
     def calculate_open_close_delta(self, print_column: bool = True, truncate: bool = True):
         col_name = "Open/CloseΔ"
@@ -697,6 +826,9 @@ class Bars(BasicBars):
         if "TrueRange" not in self.print_columns and print_column:
             self.print_columns.append("TrueRange")
 
+    def gen_index(self):
+        self.bars["Index"] = range(len(self.bars))
+
     def get_last_row(self):
         return self.bars.tail(1).copy()
 
@@ -762,7 +894,7 @@ class Bars(BasicBars):
     def save_dataframe(self):
         home = os.path.expanduser("~") + "/"
         today_date = str(datetime.date.today())
-        directory = home + "Documents/investing/" + today_date + "/" + self.bar_size + "/"
+        directory = home + "Documents/investing/development/" + today_date + "/" + self.bar_size + "/"
         pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
         filename = directory + self.ticker + ".csv"
         logger.debug("Saving dataframe to '%s'", filename)
