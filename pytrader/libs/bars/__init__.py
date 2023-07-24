@@ -650,34 +650,6 @@ class Bars(BasicBars):
 
         return self.bars[col_name].iloc[-1]
 
-    def calculate_market_meanness_index(self,
-                                        span: int,
-                                        print_column: bool = True,
-                                        truncate: bool = False):
-        self.gen_index()
-        self.bars["MeannessMedian"] = self.bars["Close"].rolling(span).median()
-
-        if "NewHigh" not in self.bars.columns:
-            self.bars["NewHigh"] = 0
-
-        if "NewLow" not in self.bars.columns:
-            self.bars["NewLow"] = 0
-
-        self.bars["NewHigh"] = numpy.where(
-            (self.bars["Close"] > self.bars["MeannessMedian"]) &
-            (self.bars["Close"] > self.bars["Close"].shift(-1)) & (self.bars["Index"] >= span - 1),
-            self.bars["NewHigh"].shift(-1) + 1, self.bars["NewHigh"].shift(-1))
-
-        self.bars["NewLow"] = numpy.where(
-            (self.bars["Close"] < self.bars["MeannessMedian"]) &
-            (self.bars["Close"] < self.bars["Close"].shift(-1)) & (self.bars["Index"] >= span - 1),
-            self.bars["NewLow"].shift(-1) + 1, self.bars["NewLow"].shift(-1))
-
-        self.bars["MMI"] = 100 * (self.bars["NewHigh"] + self.bars["NewLow"]) / (self.bars["Index"])
-
-        if "MMI" not in self.print_columns and print_column:
-            self.print_columns.append("MMI")
-
     def calculate_open_close_delta(self, print_column: bool = True, truncate: bool = True):
         col_name = "Open/CloseΔ"
 
