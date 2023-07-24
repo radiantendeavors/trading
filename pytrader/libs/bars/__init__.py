@@ -418,11 +418,13 @@ class Bars(BasicBars):
         self.calculate_cumsum("CCY_Close_x_Cosine")
         self.calculate_cumsum("CCY_Cosine_Squared")
 
-        self.bars["CCY_Var1"] = (self.bars["Index"] * self.bars["Close_Squared_CumSum"] -
+        length = len(self.bars.index)
+
+        self.bars["CCY_Var1"] = (length * self.bars["Close_Squared_CumSum"] -
                                  self.bars["Close_CumSum"] * self.bars["Close_CumSum"])
-        self.bars["CCY_Var2"] = (self.bars["Index"] * self.bars["CCY_Cosine_Squared_CumSum"] -
+        self.bars["CCY_Var2"] = (length * self.bars["CCY_Cosine_Squared_CumSum"] -
                                  self.bars["CCY_Cosine_CumSum"] * self.bars["CCY_Cosine_CumSum"])
-        self.bars["CCY_Var3"] = (self.bars["Index"] * self.bars["CCY_Close_x_Cosine_CumSum"] -
+        self.bars["CCY_Var3"] = (length * self.bars["CCY_Close_x_Cosine_CumSum"] -
                                  self.bars["Close_CumSum"] * self.bars["CCY_Cosine_CumSum"])
 
         self.bars["CCY_Sqrt"] = numpy.emath.sqrt(self.bars["CCY_Var1"] * self.bars["CCY_Var2"])
@@ -439,18 +441,20 @@ class Bars(BasicBars):
                                                    print_column: bool = True,
                                                    truncate: bool = False):
         self.calculate_correlation_cycle(span, input_period)
-        self.bars["SineCorr"] = -numpy.sin(360 * self.bars["Index"] / span)
+        self.bars["SineCorr"] = -numpy.sin(360 * self.bars.index / span)
         self.calculate_cumsum("SineCorr")
         self.calculate_squared("SineCorr")
-        self.bars["CloseSineCorr"] = self.bars["Close"] * self.bars["SinCorr"]
+        self.bars["CloseSineCorr"] = self.bars["Close"] * self.bars["SineCorr"]
         self.calculate_cumsum("CloseSineCorr")
         self.calculate_cumsum("SineCorr_Squared")
 
-        self.bars["CCYROC_Var1"] = (self.bars["Index"] * self.bars["Close_Squared_CumSum"] -
+        length = len(self.bars.index)
+
+        self.bars["CCYROC_Var1"] = (length * self.bars["Close_Squared_CumSum"] -
                                     self.bars["Close_CumSum"] * self.bars["Close_CumSum"])
-        self.bars["CCYROC_Var2"] = (self.bars["Index"] * self.bars["SineCorr_Squared_CumSum"] -
+        self.bars["CCYROC_Var2"] = (length * self.bars["SineCorr_Squared_CumSum"] -
                                     self.bars["SineCorr_CumSum"] * self.bars["SineCorr_CumSum"])
-        self.bars["CCYROC_Var3"] = (self.bars["Index"] * self.bars["CloseSineCorr_CumSum"] -
+        self.bars["CCYROC_Var3"] = (length * self.bars["CloseSineCorr_CumSum"] -
                                     self.bars["Close_CumSum"] * self.bars["SineCorr_CumSum"])
 
         self.bars["CCYROC_Sqrt"] = numpy.emath.sqrt(self.bars["CCYROC_Var1"] *
@@ -469,29 +473,30 @@ class Bars(BasicBars):
                                           threshold: int = 9,
                                           print_column: bool = True,
                                           truncate: bool = False):
+        #col_name = str(threshold) + "CCYState"
+        col_name = "CCYState"
         self.calculate_correlation_cycle_rate_of_change(span, input_period, print_column, truncate)
 
-        self.bars["CCY_Arctan"] = numpy.arctan2(self.bars["CorrelationCycle"],
-                                                self.bars["CorrelationCycleRateofChange"])
+        self.bars["CCY_Arctan"] = numpy.arctan2(self.bars["CCY"], self.bars["CCYROC"])
 
-        self.bars["Angle"] = numpy.where(self.bars["CCYROC"] != 0, 90 + self.bars["CCY_Arctan"])
-        self.bars["Angle"] = numpy.where(self.bars["CCYROC"] > 0, self.bars["Angle"] - 180)
+        self.bars["CCY_Angle1"] = numpy.where(self.bars["CCYROC"] != 0,
+                                              90 + 180 / math.pi * self.bars["CCY_Arctan"], 0)
+        self.bars["CCY_Angle2"] = numpy.where(self.bars["CCYROC"] > 0,
+                                              self.bars["CCY_Angle1"] - 180,
+                                              self.bars["CCY_Angle1"])
 
         # FIXME: Something seems off with this function
-        if (self.bars["Angle"] - self.bars["Angle"].shift(-1) <
-                270) and (self.bars["Angle"].shift(-1) < self.bars["Angle"]):
-            self.bars["Angle"] = self.bars["Angle"].shift()
+        self.bars["CCY_Angle3"] = numpy.where(
+            ((self.bars["CCY_Angle2"].shift() - self.bars["CCY_Angle2"]) < 270) &
+            (self.bars["CCY_Angle2"] < self.bars["CCY_Angle2"].shift()),
+            self.bars["CCY_Angle2"].shift(), self.bars["CCY_Angle2"])
 
-        self.bars["Abs(AngleΔ)"] = abs(self.bars["Angle"] - self.bars["Angle"].shift())
+        self.bars["CCY_Abs(AngleΔ)"] = abs(self.bars["CCY_Angle3"] -
+                                           self.bars["CCY_Angle3"].shift())
+        self.bars[col_name] = numpy.where(self.bars["CCY_Abs(AngleΔ)"] < threshold,
+                                          numpy.where(self.bars["CCY_Angle3"] < 0, -1, 1), 0)
 
-        if (self.bars["Abs(AngleΔ)"] < threshold) and (self.bars["Angle"] < 0):
-            self.bars["CCYState"] = -1
-        elif (self.bars["Abs(AngleΔ)"] < threshold) and (self.bars["Angle"] >= 0):
-            self.bars["CCYState"] = 1
-        else:
-            self.bars["CCYState"] = 0
-
-        if "CCYState" not in self.print_columns and print_column:
+        if col_name not in self.print_columns and print_column:
             self.print_columns.append("CCYState")
 
     def calculate_close_delta(self, print_column: bool = True, truncate: bool = True):
@@ -658,15 +663,15 @@ class Bars(BasicBars):
         if "NewLow" not in self.bars.columns:
             self.bars["NewLow"] = 0
 
-        self.bars["NewHigh"] = numpy.where((self.bars["Close"] > self.bars["MeannessMedian"]) &
-                                           (self.bars["Close"] > self.bars["Close"].shift(-1)),
-                                           self.bars["NewHigh"].shift(-1) + 1,
-                                           self.bars["NewHigh"].shift(-1))
+        self.bars["NewHigh"] = numpy.where(
+            (self.bars["Close"] > self.bars["MeannessMedian"]) &
+            (self.bars["Close"] > self.bars["Close"].shift(-1)) & (self.bars["Index"] >= span - 1),
+            self.bars["NewHigh"].shift(-1) + 1, self.bars["NewHigh"].shift(-1))
 
-        self.bars["NewLow"] = numpy.where((self.bars["Close"] < self.bars["MeannessMedian"]) &
-                                          (self.bars["Close"] < self.bars["Close"].shift(-1)),
-                                          self.bars["NewLow"].shift(-1) + 1,
-                                          self.bars["NewLow"].shift(-1))
+        self.bars["NewLow"] = numpy.where(
+            (self.bars["Close"] < self.bars["MeannessMedian"]) &
+            (self.bars["Close"] < self.bars["Close"].shift(-1)) & (self.bars["Index"] >= span - 1),
+            self.bars["NewLow"].shift(-1) + 1, self.bars["NewLow"].shift(-1))
 
         self.bars["MMI"] = 100 * (self.bars["NewHigh"] + self.bars["NewLow"]) / (self.bars["Index"])
 
