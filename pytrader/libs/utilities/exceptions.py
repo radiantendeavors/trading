@@ -44,6 +44,12 @@ class BrokerNotConnectedError(BrokerError):
     """
 
 
+class BrokerNotAvailable(BrokerError):
+    """!
+    Used if the Broker Port is not available.
+    """
+
+
 class BrokerWarning(Warning):
     """!
     Used for Broker Related Warnings

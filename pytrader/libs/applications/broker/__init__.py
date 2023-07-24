@@ -38,6 +38,7 @@ from pytrader.libs.system import logging
 from pytrader import CLIENT_ID
 from pytrader.libs.applications.broker.ibkr.tws import TwsDataThread
 from pytrader.libs.clients.broker.ibkr.tws import TwsApiClient
+from pytrader.libs.utilities.exceptions import BrokerNotAvailable
 
 # Conditional Libraries
 
@@ -127,8 +128,15 @@ class BrokerProcess():
 
         @return bool: True if the port is available, False if it is not available.
         """
-        tws_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        return tws_socket.connect_ex((self.address, port)) == 0
+
+        try:
+            tws_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            connection = (tws_socket.connect_ex((self.address, port)) == 0)
+            tws_socket.shutdown()
+
+            return connection
+        except:
+            return False
 
     def _place_order(self, order_request):
         """!
@@ -209,11 +217,15 @@ class BrokerProcess():
         """
         # TODO: Configure to connect to multiple available clients
         logger.debug("Client Id: %s", self.client_id)
-        self.brokerclient.connect(self.address, self.available_ports[0], self.client_id)
-        logger.debug9("BrokerClient connected")
 
-        self.brokerclient.start_thread(self.broker_queue)
-        self.data_thread.start()
+        if len(self.available_ports) > 0:
+            self.brokerclient.connect(self.address, self.available_ports[0], self.client_id)
+            logger.debug9("BrokerClient connected")
+
+            self.brokerclient.start_thread(self.broker_queue)
+            self.data_thread.start()
+        else:
+            raise BrokerNotAvailable("No ports detected.")
 
     def _stop(self):
         """!
