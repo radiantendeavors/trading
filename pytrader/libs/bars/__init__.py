@@ -40,6 +40,7 @@ import pandas
 from pytrader.libs.system import logging
 
 # Other Application Libraries
+from pytrader import git_branch
 
 # ==================================================================================================
 #
@@ -774,7 +775,13 @@ class Bars(BasicBars):
     def save_dataframe(self):
         home = os.path.expanduser("~") + "/"
         today_date = str(datetime.date.today())
-        directory = home + "Documents/investing/development/" + today_date + "/" + self.bar_size + "/"
+
+        if git_branch == "develop":
+            directory = home + "Documents/investing/development/" + today_date + "/" + self.bar_size + "/"
+        elif git_branch.startswith("release"):
+            directory = home + "Documents/investing/release/" + today_date + "/" + self.bar_size + "/"
+        else:
+            directory = home + "Documents/investing/" + today_date + "/" + self.bar_size + "/"
         pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
         filename = directory + self.ticker + ".csv"
         logger.debug("Saving dataframe to '%s'", filename)

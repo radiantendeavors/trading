@@ -44,8 +44,10 @@ __version__ = '0.3.2'
 #
 # ==================================================================================================
 # Standard Libraries
+import os
 
 # 3rd Party Libraries
+import pygit2
 
 # Application Libraries
 # System Library Overrides
@@ -83,3 +85,7 @@ consoleformatter = logging.ConsoleLvlFormatter()
 consolehandler.setFormatter(consoleformatter)
 
 logger.addHandler(consolehandler)
+
+module_path = os.path.dirname(__file__)
+
+git_branch = pygit2.Repository(module_path).head.shorthand
