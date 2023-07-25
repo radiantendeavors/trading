@@ -710,49 +710,11 @@ class Bars(BasicBars):
     def gen_index(self):
         self.bars["Index"] = range(len(self.bars))
 
-    def get_last_row(self):
-        return self.bars.tail(1).copy()
-
-    def get_adx(self, span: int = 14):
-        #if "ADX" not in self.bars.columns:
-        self.calculate_adx(span, True, True)
-
-        return self.bars["ADX"].iloc[-1]
-
-    def get_atr(self, span: int = 14):
-        col_name = str(span) + "ATR"
-
-        #if col_name not in self.bars.columns:
-        self.calculate_atr(span)
-
-        return self.bars[col_name].iloc[-1]
-
-    def get_dx(self, span: int = 14):
-        #if "ADX" not in self.bars.columns:
-        self.calculate_adx(span, True, True)
-
-        return self.bars["DX"].iloc[-1]
-
-    def get_high_low_ave(self):
-        #if "H/L Ave" not in self.bars.columns:
-        self.calculate_high_low_ave()
-
-        return self.bars["H/L Ave"].iloc[-1]
-
-    def get_last_close(self):
-        return self.bars["Close"].iloc[-1]
-
-    def get_open_close_delta(self):
-        #if "Open/CloseΔ" not in self.bars.columns:
-        self.calculate_open_close_delta()
-
-        return self.bars["Open/CloseΔ"].iloc[-1]
-
-    def get_dmi(self, span: int = 14):
-        #if "ADX" not in self.bars.columns:
-        self.calculate_adx(span, True, True)
-
-        return [self.bars["+DMI"].iloc[-1], self.bars["-DMI"].iloc[-1]]
+    def get_last_row(self, column: str = ""):
+        if column:
+            return self.bars[column].iloc[-1]
+        else:
+            return self.bars.tail(1).copy()
 
     def is_cross_up(self, moving_ave_name: str):
         previous_short = self.bars[self.short_period[moving_ave_name]].iloc[-2]
