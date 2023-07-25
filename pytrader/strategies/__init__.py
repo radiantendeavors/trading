@@ -744,32 +744,34 @@ class Strategy():
     def _process_order_status(self, order_status):
         logger.debug8("Order Status: %s", order_status)
         order_id = list(order_status.keys())[0]
-        status = order_status[order_id]["status"]
-        local_symbol = self.order_ids[order_id]
 
-        func_map = {
-            "Filled": self.on_order_filled,
-            "Cancelled": self.on_order_cancelled,
-            "ApiCancelled": self.on_order_cancelled
-        }
+        if order_id in order_status.keys():
+            status = order_status[order_id]["status"]
+            local_symbol = self.order_ids[order_id]
 
-        if order_id in list(self.order_ids.keys()):
+            func_map = {
+                "Filled": self.on_order_filled,
+                "Cancelled": self.on_order_cancelled,
+                "ApiCancelled": self.on_order_cancelled
+            }
 
-            if status in ["Filled", "Cancelled", "ApiCancelled"]:
-                logger.debug9("Order %s to be removed", order_id)
-                self.orders[local_symbol].pop(order_id, None)
-            else:
-                if order_id in list(self.orders[local_symbol].keys()):
-                    self.orders[local_symbol][order_id].set_status(status)
-                    logger.debug9("Order Status: %s",
-                                  self.orders[local_symbol][order_id].get_status())
+            if order_id in list(self.order_ids.keys()):
 
+                if status in ["Filled", "Cancelled", "ApiCancelled"]:
+                    logger.debug9("Order %s to be removed", order_id)
+                    self.orders[local_symbol].pop(order_id, None)
                 else:
-                    logger.debug9("Orders for %s", local_symbol)
-                    logger.debug9("Orders: %s", self.orders[local_symbol])
+                    if order_id in list(self.orders[local_symbol].keys()):
+                        self.orders[local_symbol][order_id].set_status(status)
+                        logger.debug9("Order Status: %s",
+                                      self.orders[local_symbol][order_id].get_status())
 
-        #func = func_map.get(status)
-        #func(local_symbol, order_id, order_status[order_id])
+                    else:
+                        logger.debug9("Orders for %s", local_symbol)
+                        logger.debug9("Orders: %s", self.orders[local_symbol])
+
+            #func = func_map.get(status)
+            #func(local_symbol, order_id, order_status[order_id])
 
     def _process_ticks(self, new_ticks):
         ticker = None
