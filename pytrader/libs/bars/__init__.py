@@ -288,10 +288,10 @@ class Bars(BasicBars):
         #     self.print_columns.append("S+DM")
         # if "S-DM" not in self.print_columns and print_column:
         #     self.print_columns.append("S-DM")
-        if "+DMI" not in self.print_columns and print_column:
-            self.print_columns.append("+DMI")
-        if "-DMI" not in self.print_columns and print_column:
-            self.print_columns.append("-DMI")
+        # if "+DMI" not in self.print_columns and print_column:
+        #     self.print_columns.append("+DMI")
+        # if "-DMI" not in self.print_columns and print_column:
+        #     self.print_columns.append("-DMI")
         if "DX" not in self.print_columns and print_column:
             self.print_columns.append("DX")
         if "ADX" not in self.print_columns and print_column:
@@ -390,7 +390,7 @@ class Bars(BasicBars):
     def calculate_donchain_channel(self, span: int = 20, print_column: bool = True):
         dc_upper_name = str(span) + "DC_Upper"
         dc_lower_name = str(span) + "DC_Lower"
-        dc_middle_name = str(span) + "DC_Lower"
+        dc_middle_name = str(span) + "DC_Middle"
 
         self.bars[dc_upper_name] = self.bars["High"].rolling(span).max()
         self.bars[dc_lower_name] = self.bars["Low"].rolling(span).min()
