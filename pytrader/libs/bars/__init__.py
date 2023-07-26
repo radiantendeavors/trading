@@ -307,14 +307,6 @@ class Bars(BasicBars):
 
         col_name = str(span) + "ATR"
 
-        # if truncate:
-        #     slice_span = int(-(span * 2.5))
-        #     if moving_average == "smma":
-        #         self.bars[col_name] = self.bars["TrueRange"][slice_span:].ewm(alpha=alpha,
-        #                                                                       adjust=False).mean()
-        #     else:
-        #         self.bars[col_name] = self.bars["TrueRange"][slice_span:].rolling(span).mean()
-        # else:
         if moving_average == "smma":
             self.bars[col_name] = self.bars["TrueRange"].ewm(alpha=alpha, adjust=False).mean()
         else:
