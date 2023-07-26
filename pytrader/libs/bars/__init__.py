@@ -260,7 +260,7 @@ class Bars(BasicBars):
         alpha = 1.0 / span
 
         #if atr_col_name not in self.bars.columns:
-        self.calculate_atr(span, moving_average, alpha, False, False)
+        self.calculate_atr(span, moving_average, alpha, False)
 
         self.bars["H-pH"] = self.bars["High"] - self.bars["High"].shift(1)
         self.bars["pL-L"] = self.bars["Low"].shift(1) - self.bars["Low"]
@@ -453,8 +453,6 @@ class Bars(BasicBars):
         high_col_name = str(span) + "DC_Upper"
         low_col_name = str(span) + "DC_Lower"
 
-        self.bars[high_col_name] = self.bars["High"].rolling(span).max()
-        self.bars[low_col_name] = self.bars["Low"].rolling(span).min()
         self.bars["Fast Stochastic (%K)"] = (self.bars["Close"] - self.bars[low_col_name]) / (
             self.bars[high_col_name] - self.bars[low_col_name]) * 100
         if moving_average == "ema":
