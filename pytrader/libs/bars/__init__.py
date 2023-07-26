@@ -317,19 +317,6 @@ class Bars(BasicBars):
 
         return self.bars[col_name].iloc[-1]
 
-    def calculate_atr_stddev(self, span: int = 14, print_column: bool = True):
-
-        atr_col_name = str(span) + "ATR"
-
-        col_name = str(span) + "ATRσ"
-        #if atr_col_name not in self.bars.columns:
-        self.calculate_atr(span, print_column)
-
-        self.bars[col_name] = self.bars[atr_col_name].rolling(span).std(ddof=0)
-
-        if col_name not in self.print_columns and print_column:
-            self.print_columns.append("ATRσ")
-
     def calculate_bbands(self,
                          span: int = 20,
                          stddev: int = 2,
@@ -361,6 +348,13 @@ class Bars(BasicBars):
 
         if col_name not in self.print_columns and print_column:
             self.print_columns.append(col_name)
+
+    def calculate_column_stddev(self, column: str, print_column: bool = True):
+        col_name = column + "σ"
+        self.bars[col_name] = self.bars[column].rolling(span).std(ddof=0)
+
+        if col_name not in self.print_columns and print_column:
+            self.print_columns.append("ATRσ")
 
     def calculate_columns_ave(self, columns: list, print_column: bool = True):
         col_name = "("
@@ -421,15 +415,6 @@ class Bars(BasicBars):
             logger.error("Invalid Span Type: %s", span_type)
 
         self.bars[col_name] = self.bars["Close"].ewm(span=span, adjust=False).mean()
-
-        if col_name not in self.print_columns and print_column:
-            self.print_columns.append(col_name)
-
-    def calculate_ocd_atr_delta(self, span: int = 14, print_column: bool = True):
-        col_name = "OCD/ATRΔ"
-        atr_col_name = str(span) + "ATR"
-
-        self.bars[col_name] = abs(self.bars["Open/CloseΔ"]) - self.bars[atr_col_name]
 
         if col_name not in self.print_columns and print_column:
             self.print_columns.append(col_name)
