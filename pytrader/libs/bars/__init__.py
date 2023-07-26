@@ -254,7 +254,7 @@ class Bars(BasicBars):
                     f"{self.bars[self.print_columns].tail(10)}"
         return message
 
-    def calculate_adx(self, span: int = 14, print_column: bool = True, truncate: bool = True):
+    def calculate_adx(self, span: int = 14, print_column: bool = True):
         atr_col_name = str(span) + "ATR"
         moving_average = "smma"
         alpha = 1.0 / span
@@ -301,8 +301,7 @@ class Bars(BasicBars):
                       span: int = 14,
                       moving_average: str = "SMA",
                       alpha: float = 0.0,
-                      print_column: bool = True,
-                      truncate: bool = True):
+                      print_column: bool = True):
         #if "TrueRange" not in self.bars.columns:
         self.calculate_true_range(span, print_column, False)
 
@@ -326,21 +325,14 @@ class Bars(BasicBars):
 
         return self.bars[col_name].iloc[-1]
 
-    def calculate_atr_stddev(self,
-                             span: int = 14,
-                             print_column: bool = True,
-                             truncate: bool = True):
+    def calculate_atr_stddev(self, span: int = 14, print_column: bool = True):
 
         atr_col_name = str(span) + "ATR"
 
         col_name = str(span) + "ATRσ"
         #if atr_col_name not in self.bars.columns:
-        self.calculate_atr(span, print_column, truncate)
+        self.calculate_atr(span, print_column)
 
-        # if truncate:
-        #     slice_span = int(-(span * 2.5))
-        #     self.bars[col_name] = self.bars[atr_col_name][slice_span:].rolling(span).std(ddof=0)
-        # else:
         self.bars[col_name] = self.bars[atr_col_name].rolling(span).std(ddof=0)
 
         if col_name not in self.print_columns and print_column:
@@ -350,31 +342,7 @@ class Bars(BasicBars):
                          span: int = 20,
                          stddev: int = 2,
                          moving_average: str = "sma",
-                         print_column: bool = True,
-                         truncate: bool = True):
-
-        # if truncate:
-        #     slice_span = int(-(span * 2.5))
-        #     self.bars["Typical_Price"] = (self.bars["High"][slice_span:] +
-        #                                   self.bars["Low"][slice_span:] +
-        #                                   self.bars["Close"][slice_span:]) / 3
-        #     self.bars["BBands_σ"] = self.bars["Typical_Price"][slice_span:].rolling(span).std(
-        #         ddof=0)
-        #     if moving_average == "ema":
-        #         self.bars["BBands_MA"] = self.bars["Typical_Price"][slice_span:].ewm(
-        #             span=span, adjust=False).mean()
-        #     else:
-        #         self.bars["BBands_MA"] = self.bars["Typical_Price"][slice_span:].rolling(
-        #             span).mean()
-
-        #     bband_upper_name = "BBandU_" + str(stddev) + "σ"
-        #     bband_lower_name = "BBandL_" + str(stddev) + "σ"
-        #     self.bars[bband_upper_name] = self.bars["BBands_MA"][
-        #         slice_span:] + stddev * self.bars["BBands_σ"][slice_span:]
-        #     self.bars[bband_lower_name] = self.bars["BBands_MA"][
-        #         slice_span:] - stddev * self.bars["BBands_σ"][slice_span:]
-
-        # else:
+                         print_column: bool = True):
         self.bars["Typical_Price"] = (self.bars["High"] + self.bars["Low"] + self.bars["Close"]) / 3
         self.bars["BBands_σ"] = self.bars["Typical_Price"].rolling(span).std(ddof=0)
 
@@ -395,6 +363,36 @@ class Bars(BasicBars):
         if bband_lower_name not in self.print_columns and print_column:
             self.print_columns.append(bband_lower_name)
 
+    def calculate_column_diff(self, column: str, print_column: bool = True):
+        col_name = column + "Δ"
+        self.bars[col_name] = self.bars[col_name].diff()
+
+        if col_name not in self.print_columns and print_column:
+            self.print_columns.append(col_name)
+
+    def calculate_columns_ave(self, columns: list, print_column: bool = True):
+        col_name = "("
+        col_sum = 0
+        col_len = len(columns)
+
+        for column in columns:
+            col_name = col_name + column
+            col_sum = col_sum + self.bars[column]
+
+        col_name = col_name + ") Ave"
+
+        self.bars[col_name] = col_sum / col_len
+
+        if col_name not in self.print_columns and print_column:
+            self.print_columns.append(col_name)
+
+    def calculate_columns_delta(self, column1, column2, print_column: bool = True):
+        col_name = column1 + "-" + column2 + "Δ"
+        self.bars[col_name] = self.bars[column1] - self.bars[column2]
+
+        if col_name not in self.print_columns and print_column:
+            self.print_columns.append(col_name)
+
     def calculate_cumsum(self, column: str):
         col_name = column + "_CumSum"
         self.bars[col_name] = self.bars[column].cumsum()
@@ -403,24 +401,7 @@ class Bars(BasicBars):
         col_name = column + "_Squared"
         self.bars[col_name] = self.bars[column] * self.bars[column]
 
-    def calculate_close_delta(self, print_column: bool = True, truncate: bool = True):
-        col_name = "CloseΔ"
-        self.bars[col_name] = self.bars["Close"].diff()
-
-        if col_name not in self.print_columns and print_column:
-            self.print_columns.append(col_name)
-
-    def calculate_donchain_channel(self,
-                                   span: int = 20,
-                                   print_column: bool = True,
-                                   truncate: bool = True):
-        # if truncate:
-        #     slice_span = int(-(span * 2.5))
-        #     self.bars["DC_Upper"] = self.bars["High"][slice_span:].rolling(span).max()
-        #     self.bars["DC_Lower"] = self.bars["Low"][slice_span:].rolling(span).min()
-        #     self.bars["DC_Middle"] = (self.bars["DC_Upper"][slice_span:] +
-        #                               self.bars["DC_Lower"][slice_span:]) / 2
-        # else:
+    def calculate_donchain_channel(self, span: int = 20, print_column: bool = True):
         self.bars["DC_Upper"] = self.bars["High"].rolling(span).max()
         self.bars["DC_Lower"] = self.bars["Low"].rolling(span).min()
         self.bars["DC_Middle"] = (self.bars["DC_Upper"] + self.bars["DC_Lower"]) / 2
@@ -432,28 +413,7 @@ class Bars(BasicBars):
         if "DC_Lower" not in self.print_columns and print_column:
             self.print_columns.append("DC_Lower")
 
-    def calculate_dcupper_close_delta(self, print_column: bool = True, truncate: bool = True):
-        # if truncate:
-        #     slice_span = int(-(self.long_period_count["EMA"] * 2.5))
-
-        #     self.bars["DC Upper - Close Δ"] = abs(self.bars["DC_Upper"][slice_span:] -
-        #                                           self.bars["Close"][slice_span:])
-        #     self.bars["DC Lower - Close Δ"] = abs(self.bars["DC_Lower"][slice_span:] -
-        #                                           self.bars["Close"][slice_span:])
-        # else:
-        self.bars["DC Upper - Close Δ"] = abs(self.bars["DC_Upper"] - self.bars["Close"])
-        self.bars["DC Lower - Close Δ"] = abs(self.bars["DC_Lower"] - self.bars["Close"])
-
-        if "DC Upper - Close Δ" not in self.print_columns and print_column:
-            self.print_columns.append("DC Upper - Close Δ")
-        if "DC Lower - Close Δ" not in self.print_columns and print_column:
-            self.print_columns.append("DC Lower - Close Δ")
-
-    def calculate_ema(self,
-                      span: int,
-                      span_type: str,
-                      print_column: bool = True,
-                      truncate: bool = True):
+    def calculate_ema(self, span: int, span_type: str, print_column: bool = True):
         col_name = str(span) + "EMA"
 
         if span_type == "long":
@@ -468,158 +428,21 @@ class Bars(BasicBars):
         else:
             logger.error("Invalid Span Type: %s", span_type)
 
-            # if truncate:
-            #     if "EMA" in self.long_period_count.keys():
-            #         slice_span = int(-(self.long_period_count["EMA"] * 2.5))
-            #     else:
-            #         slice_span = int(-(span * 2.5))
-
-            #     self.bars[col_name] = self.bars["Close"][slice_span:].ewm(span=span,
-            #                                                               adjust=False).mean()
-            # else:
         self.bars[col_name] = self.bars["Close"].ewm(span=span, adjust=False).mean()
 
         if col_name not in self.print_columns and print_column:
             self.print_columns.append(col_name)
 
-    def calculate_high_low_ave(self, print_column: bool = True, truncate: bool = True):
-        col_name = "H/L Ave"
-
-        # if truncate:
-        #     slice_span = int(-(self.long_period_count["EMA"] * 2.5))
-        #     self.bars[col_name] = (self.bars["High"][slice_span:] +
-        #                            self.bars["Low"][slice_span:]) / 2
-        # else:
-        self.bars[col_name] = (self.bars["High"] + self.bars["Low"]) / 2
-
-    def calculate_ma_short_long_delta(self,
-                                      moving_ave_name: str,
-                                      print_column: bool = True,
-                                      truncate: bool = True):
-        col_name = str(self.short_period_count[moving_ave_name]) + "/" + str(
-            self.long_period_count[moving_ave_name]) + moving_ave_name + "Δ"
-
-        # if truncate:
-        #     slice_span = int(-(self.long_period_count[moving_ave_name] * 2.5))
-
-        #     self.bars[col_name] = self.bars[self.short_period[moving_ave_name]][
-        #         slice_span:] - self.bars[self.long_period[moving_ave_name]][slice_span:]
-        # else:
-        self.bars[col_name] = self.bars[self.short_period[moving_ave_name]] - self.bars[
-            self.long_period[moving_ave_name]]
-
-        if col_name not in self.print_columns and print_column:
-            self.print_columns.append(col_name)
-
-        return self.bars[col_name].iloc[-1]
-
-    def calculate_ma_delta(self,
-                           moving_ave_name: str,
-                           span_type: str,
-                           print_column: bool = True,
-                           truncate: bool = True):
-        # if truncate:
-        #     slice_span = int(-(self.long_period_count[moving_ave_name] * 2.5))
-
-        #     if span_type == "long":
-        #         col_name = self.long_period[moving_ave_name] + "Δ"
-        #         self.bars[col_name] = self.bars[
-        #             self.long_period[moving_ave_name]][slice_span:].diff()
-        #     elif span_type == "medium":
-        #         col_name = self.medium_period[moving_ave_name] + "Δ"
-        #         self.bars[col_name] = self.bars[
-        #             self.medium_period[moving_ave_name]][slice_span:].diff()
-        #     elif span_type == "short":
-        #         col_name = self.short_period[moving_ave_name] + "Δ"
-        #         self.bars[col_name] = self.bars[
-        #             self.short_period[moving_ave_name]][slice_span:].diff()
-        #     else:
-        #         logger.error("Invalid Span Type: %s", span_type)
-
-        # else:
-        if span_type == "long":
-            col_name = self.long_period[moving_ave_name] + "Δ"
-            self.bars[col_name] = self.bars[self.long_period[moving_ave_name]].diff()
-        elif span_type == "medium":
-            col_name = self.medium_period[moving_ave_name] + "Δ"
-            self.bars[col_name] = self.bars[self.medium_period[moving_ave_name]].diff()
-        elif span_type == "short":
-            col_name = self.short_period[moving_ave_name] + "Δ"
-            self.bars[col_name] = self.bars[self.short_period[moving_ave_name]].diff()
-        else:
-            logger.error("Invalid Span Type: %s", span_type)
-
-        if col_name not in self.print_columns and print_column:
-            self.print_columns.append(col_name)
-
-        return self.bars[col_name].iloc[-1]
-
-    def calculate_open_close_delta(self, print_column: bool = True, truncate: bool = True):
-        col_name = "Open/CloseΔ"
-
-        # if truncate:
-        #     slice_span = int(-(self.long_period_count["EMA"] * 2.5))
-        #     self.bars[col_name] = self.bars["Close"][slice_span:] - self.bars["Open"][slice_span:]
-        # else:
-        self.bars[col_name] = self.bars["Close"] - self.bars["Open"]
-
-        if col_name not in self.print_columns and print_column:
-            self.print_columns.append(col_name)
-
-    def calculate_ocd_atr_delta(self,
-                                span: int = 14,
-                                print_column: bool = True,
-                                truncate: bool = True):
+    def calculate_ocd_atr_delta(self, span: int = 14, print_column: bool = True):
         col_name = "OCD/ATRΔ"
-
         atr_col_name = str(span) + "ATR"
 
-        # if truncate:
-        #     slice_span = int(-(self.long_period_count["EMA"] * 2.5))
-        #     self.bars[col_name] = abs(
-        #         self.bars["Open/CloseΔ"][slice_span:]) - self.bars[atr_col_name][slice_span:]
-        # else:
         self.bars[col_name] = abs(self.bars["Open/CloseΔ"]) - self.bars[atr_col_name]
 
         if col_name not in self.print_columns and print_column:
             self.print_columns.append(col_name)
 
-    def calculate_on_balance_volume(self, print_column: bool = True, truncate: bool = True):
-        self.calculate_close_delta(print_column, truncate)
-        col_name = "On Balance Volume"
-
-        datetime_fmt = "%Y%m%d %H:%M:%S"
-        timezone = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
-
-        open_minute = datetime.datetime.combine(datetime.date.today(),
-                                                datetime.time(hour=9, minute=30, tzinfo=timezone))
-        open_minute_pd = pandas.to_datetime(open_minute, format=datetime_fmt)
-        open_minute_str = str(open_minute_pd)
-
-        logger.debug("Open Minute: %s", open_minute_str)
-        if (open_minute_pd in self.bars["DateTime"].values):
-            row_index = self.bars.index.get_loc(open_minute_pd)
-            logger.debug("Row index: %s", row_index)
-
-            self.bars.loc[self.bars["CloseΔ"].gt(0), "Vol+-"] = self.bars["Volume"]
-            self.bars.loc[self.bars["CloseΔ"].lt(0), "Vol+-"] = self.bars["Volume"] * -1
-            self.bars.loc[self.bars["CloseΔ"].eq(0), "Vol+-"] = 0
-
-            self.bars[col_name] = self.bars["Vol+-"].cumsum()
-
-            if col_name not in self.print_columns and print_column:
-                self.print_columns.append(col_name)
-
-        else:
-            logger.warning("Open Minute '%s' not in Dataframe", open_minute_pd)
-            logger.warning("Dataframe for %s:\n %s", self.ticker,
-                           self.bars[self.print_columns].tail(30))
-
-    def calculate_sma(self,
-                      span: int,
-                      span_type: str,
-                      print_column: bool = True,
-                      truncate: bool = True):
+    def calculate_sma(self, span: int, span_type: str, print_column: bool = True):
         col_name = str(span) + "SMA"
 
         if span_type == "long":
@@ -634,14 +457,6 @@ class Bars(BasicBars):
         else:
             logger.error("Invalid Span Type: %s", span_type)
 
-        # if truncate:
-        #     if "SMA" in self.long_period_count.keys():
-        #         slice_span = int(-(self.long_period_count["SMA"] * 2.5))
-        #     else:
-        #         slice_span = int(-(span * 2.5))
-
-        #     self.bars[col_name] = self.bars["Close"][slice_span:].rolling(span).mean()
-        # else:
         self.bars[col_name] = self.bars["Close"].rolling(span).mean()
 
         if col_name not in self.print_columns and print_column:
@@ -650,26 +465,11 @@ class Bars(BasicBars):
     def calculate_stochastic_oscillator(self,
                                         span: int = 14,
                                         moving_average: str = "sma",
-                                        print_column: bool = True,
-                                        truncate: bool = True):
+                                        print_column: bool = True):
 
         high_col_name = str(span) + "_max"
         low_col_name = str(span) + "_min"
 
-        # if truncate:
-        #     slice_span = int(-(span * 2.5))
-        #     self.bars[high_col_name] = self.bars["High"][slice_span:].rolling(span).max()
-        #     self.bars[low_col_name] = self.bars["Low"][slice_span:].rolling(span).min()
-        #     self.bars["Fast Stochastic (%K)"] = (
-        #         self.bars["Close"][slice_span:] - self.bars[low_col_name][slice_span:]
-        #     ) / (self.bars[high_col_name][slice_span:] - self.bars[low_col_name][slice_span:]) * 100
-        #     if moving_average == "ema":
-        #         self.bars["Slow Stochastic (%D)"] = self.bars["Fast Stochastic (%K)"][
-        #             slice_span:].ewm(span=3, adjust=False).mean()
-        #     else:
-        #         self.bars["Slow Stochastic (%D)"] = self.bars["Fast Stochastic (%K)"][
-        #             slice_span:].rolling(3).mean()
-        # else:
         self.bars[high_col_name] = self.bars["High"].rolling(span).max()
         self.bars[low_col_name] = self.bars["Low"].rolling(span).min()
         self.bars["Fast Stochastic (%K)"] = (self.bars["Close"] - self.bars[low_col_name]) / (
@@ -685,20 +485,7 @@ class Bars(BasicBars):
         if "Slow Stochastic (%D)" not in self.print_columns and print_column:
             self.print_columns.append("Slow Stochastic (%D)")
 
-    def calculate_true_range(self,
-                             span: int = 14,
-                             print_column: bool = True,
-                             truncate: bool = True):
-        # if truncate:
-        #     slice_span = int(-(span * 2.5))
-
-        #     self.bars["TR1"] = abs(self.bars["High"][slice_span:] - self.bars["Low"])
-        #     self.bars["TR2"] = abs(self.bars["High"][slice_span:] -
-        #                            self.bars["Close"][slice_span:].shift())
-        #     self.bars["TR3"] = abs(self.bars["Low"][slice_span:] -
-        #                            self.bars["Close"][slice_span:].shift())
-        #     self.bars["TrueRange"] = self.bars[["TR1", "TR2", "TR3"]][slice_span:].max(axis=1)
-        # else:
+    def calculate_true_range(self, print_column: bool = True):
         self.bars["TR1"] = abs(self.bars["High"] - self.bars["Low"])
         self.bars["TR2"] = abs(self.bars["High"] - self.bars["Close"].shift())
         self.bars["TR3"] = abs(self.bars["Low"] - self.bars["Close"].shift())
