@@ -344,12 +344,12 @@ class Bars(BasicBars):
 
     def calculate_column_diff(self, column: str, print_column: bool = True):
         col_name = column + "Δ"
-        self.bars[col_name] = self.bars[col_name].diff()
+        self.bars[col_name] = self.bars[column].diff()
 
         if col_name not in self.print_columns and print_column:
             self.print_columns.append(col_name)
 
-    def calculate_column_stddev(self, column: str, print_column: bool = True):
+    def calculate_column_stddev(self, column: str, span: int, print_column: bool = True):
         col_name = column + "σ"
         self.bars[col_name] = self.bars[column].rolling(span).std(ddof=0)
 
