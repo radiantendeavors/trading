@@ -369,8 +369,8 @@ class Strategy():
 
         except KeyboardInterrupt as msg:
             logger.critical("Received Keyboard Interupt, shutting down now!")
-        except Exception as msg:
-            logger.critical("We fucked up: %s", msg)
+        # except Exception as msg:
+        #     logger.critical("We fucked up: %s", msg)
 
         finally:
             self.on_end()
