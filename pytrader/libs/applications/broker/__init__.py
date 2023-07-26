@@ -35,9 +35,10 @@ from multiprocessing import Queue
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader import CLIENT_ID
+from pytrader import CLIENT_ID, git_branch
 from pytrader.libs.applications.broker.ibkr.tws import TwsDataThread
 from pytrader.libs.clients.broker.ibkr.tws import TwsApiClient
+from pytrader.libs.utilities.exceptions import BrokerNotAvailable
 
 # Conditional Libraries
 
@@ -48,9 +49,6 @@ from pytrader.libs.clients.broker.ibkr.tws import TwsApiClient
 # ==================================================================================================
 ## The Base Logger
 logger = logging.getLogger(__name__)
-
-## List of potential ports TWS/IB Gateway could listen on.
-ALLOWED_PORTS = [7496, 7497, 4001, 4002]
 
 
 # ==================================================================================================
@@ -127,8 +125,16 @@ class BrokerProcess():
 
         @return bool: True if the port is available, False if it is not available.
         """
-        tws_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        return tws_socket.connect_ex((self.address, port)) == 0
+
+        # try:
+        #     tws_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        #     connection = (tws_socket.connect_ex((self.address, port)) == 0)
+        #     tws_socket.shutdown()
+
+        #     return connection
+        # except:
+        #     return False
+        return True
 
     def _place_order(self, order_request):
         """!
@@ -178,14 +184,23 @@ class BrokerProcess():
     #             target=self.ticks[key].run, daemon=True)
     #         self.tick_thread[key].start()
 
+    def _identify_allowed_ports(self):
+        if git_branch == "main":
+            allowed_ports = [7496, 7497, 4001, 4002]
+        else:
+            allowed_ports = [7497, 4002]
+
+        return allowed_ports
+
     def _set_broker_ports(self):
         """!
         Creates a list of available ports to connect to the broker.
         """
-        # for port in ALLOWED_PORTS:
-        #     if self._check_if_ports_available(int(port)):
-        #         self.available_ports.append(int(port))
-        self.available_ports.append(int(7497))
+        allowed_ports = self._identify_allowed_ports()
+
+        for port in allowed_ports:
+            if self._check_if_ports_available(int(port)):
+                self.available_ports.append(int(port))
         logger.debug9("Available ports: %s", self.available_ports)
 
     def _set_cmd(self, subcommand):
@@ -209,11 +224,15 @@ class BrokerProcess():
         """
         # TODO: Configure to connect to multiple available clients
         logger.debug("Client Id: %s", self.client_id)
-        self.brokerclient.connect(self.address, self.available_ports[0], self.client_id)
-        logger.debug9("BrokerClient connected")
 
-        self.brokerclient.start_thread(self.broker_queue)
-        self.data_thread.start()
+        if len(self.available_ports) > 0:
+            self.brokerclient.connect(self.address, self.available_ports[0], self.client_id)
+            logger.debug9("BrokerClient connected")
+
+            self.brokerclient.start_thread(self.broker_queue)
+            self.data_thread.start()
+        else:
+            raise BrokerNotAvailable("No ports detected.")
 
     def _stop(self):
         """!

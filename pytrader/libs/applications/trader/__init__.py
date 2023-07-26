@@ -34,6 +34,7 @@ from pytrader.libs.system import logging
 from pytrader import BROKER_ID, CLIENT_ID
 from pytrader.libs.applications import broker
 from pytrader.libs.applications import strategy
+from pytrader.libs.utilities.exceptions import BrokerNotAvailable
 
 # ==================================================================================================
 #
@@ -121,6 +122,9 @@ class ProcessManager():
                 strat = strategy.StrategyProcess(self.cmd_queue, self.data_queue, next_order_id)
                 strategy_process = multiprocessing.Process(target=strat.run, args=(strategy_list, ))
                 strategy_process.start()
+        except BrokerNotAvailable as msg:
+            logger.critical("Broker Not Available. %s", msg)
+
         except KeyboardInterrupt as msg:
             logger.critical("Keyboard Interrupt, Closing Application: %s", msg)
         finally:
