@@ -303,7 +303,7 @@ class Bars(BasicBars):
                       alpha: float = 0.0,
                       print_column: bool = True):
         #if "TrueRange" not in self.bars.columns:
-        self.calculate_true_range(span, print_column)
+        self.calculate_true_range(print_column)
 
         col_name = str(span) + "ATR"
 
