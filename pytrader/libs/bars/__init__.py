@@ -303,7 +303,7 @@ class Bars(BasicBars):
                       alpha: float = 0.0,
                       print_column: bool = True):
         #if "TrueRange" not in self.bars.columns:
-        self.calculate_true_range(span, print_column, False)
+        self.calculate_true_range(span, print_column)
 
         col_name = str(span) + "ATR"
 
@@ -388,16 +388,20 @@ class Bars(BasicBars):
         self.bars[col_name] = self.bars[column] * self.bars[column]
 
     def calculate_donchain_channel(self, span: int = 20, print_column: bool = True):
-        self.bars["DC_Upper"] = self.bars["High"].rolling(span).max()
-        self.bars["DC_Lower"] = self.bars["Low"].rolling(span).min()
-        self.bars["DC_Middle"] = (self.bars["DC_Upper"] + self.bars["DC_Lower"]) / 2
+        dc_upper_name = str(span) + "DC_Upper"
+        dc_lower_name = str(span) + "DC_Lower"
+        dc_middle_name = str(span) + "DC_Lower"
 
-        if "DC_Upper" not in self.print_columns and print_column:
-            self.print_columns.append("DC_Upper")
-        if "DC_Middle" not in self.print_columns and print_column:
-            self.print_columns.append("DC_Middle")
-        if "DC_Lower" not in self.print_columns and print_column:
-            self.print_columns.append("DC_Lower")
+        self.bars[dc_upper_name] = self.bars["High"].rolling(span).max()
+        self.bars[dc_lower_name] = self.bars["Low"].rolling(span).min()
+        self.bars[dc_middle_name] = (self.bars[dc_upper_name] + self.bars[dc_lower_name]) / 2
+
+        if dc_upper_name not in self.print_columns and print_column:
+            self.print_columns.append(dc_upper_name)
+        if dc_middle_name not in self.print_columns and print_column:
+            self.print_columns.append(dc_middle_name)
+        if dc_lower_name not in self.print_columns and print_column:
+            self.print_columns.append(dc_lower_name)
 
     def calculate_ema(self, span: int, span_type: str, print_column: bool = True):
         col_name = str(span) + "EMA"
@@ -444,8 +448,10 @@ class Bars(BasicBars):
                                         moving_average: str = "sma",
                                         print_column: bool = True):
 
-        high_col_name = str(span) + "_max"
-        low_col_name = str(span) + "_min"
+        self.calculate_donchain_channel(span, False)
+
+        high_col_name = str(span) + "DC_Upper"
+        low_col_name = str(span) + "DC_Lower"
 
         self.bars[high_col_name] = self.bars["High"].rolling(span).max()
         self.bars[low_col_name] = self.bars["Low"].rolling(span).min()
