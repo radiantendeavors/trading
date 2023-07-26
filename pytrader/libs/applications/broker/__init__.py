@@ -95,16 +95,19 @@ class BrokerProcess():
         self._set_broker_ports()
         self._start_threads()
 
-        broker_connection = True
-        while broker_connection:
-            cmd = self.cmd_queue.get()
-            logger.debug4("Command: %s", cmd)
+        try:
+            broker_connection = True
+            while broker_connection:
+                cmd = self.cmd_queue.get()
+                logger.debug4("Command: %s", cmd)
 
-            if cmd == "Quit":
-                broker_connection = False
-            else:
-                self._process_commands(cmd)
-                broker_connection = self.brokerclient.is_connected()
+                if cmd == "Quit":
+                    broker_connection = False
+                else:
+                    self._process_commands(cmd)
+                    broker_connection = self.brokerclient.is_connected()
+        except KeyboardInterrupt as msg:
+            logger.warning("Keyboard Interupt received, shutting down Broker")
 
     # ==============================================================================================
     #
