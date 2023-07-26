@@ -367,6 +367,9 @@ class Strategy():
                 self._process_message(message)
                 continue_strategy = self.continue_strategy()
 
+        except Exception as msg:
+            logger.critical("We fucked up: %s", msg)
+
         finally:
             self.on_end()
 
