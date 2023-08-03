@@ -254,44 +254,33 @@ class Bars(BasicBars):
                     f"{self.bars[self.print_columns].tail(10)}"
         return message
 
-    def calculate_adx(self, span: int = 14, print_column: bool = True):
-        atr_col_name = str(span) + "ATR"
-        moving_average = "smma"
-        alpha = 1.0 / span
+    def calculate_adx(self,
+                      span: int = 14,
+                      moving_average: str = "smma",
+                      print_column: bool = True):
+        """!
+        Average Directional Index
 
-        #if atr_col_name not in self.bars.columns:
-        self.calculate_atr(span, moving_average, alpha, False)
+        https://www.investopedia.com/terms/a/adx.asp
 
-        self.bars["H-pH"] = self.bars["High"] - self.bars["High"].shift(1)
-        self.bars["pL-L"] = self.bars["Low"].shift(1) - self.bars["Low"]
-        self.bars["+DX"] = numpy.where(
-            (self.bars["H-pH"] > self.bars["pL-L"]) & (self.bars["H-pH"] > 0), self.bars["H-pH"],
-            0.0)
-        self.bars["-DX"] = numpy.where(
-            (self.bars["pL-L"] > self.bars["H-pH"]) & (self.bars["pL-L"] > 0), self.bars["pL-L"],
-            0.0)
-
-        self.bars["S+DM"] = self.bars["+DX"].ewm(alpha=alpha, adjust=False).mean()
-        self.bars["S-DM"] = self.bars["-DX"].ewm(alpha=alpha, adjust=False).mean()
-        self.bars["+DMI"] = (self.bars["S+DM"] / self.bars[atr_col_name]) * 100
-        self.bars["-DMI"] = (self.bars["S-DM"] / self.bars[atr_col_name]) * 100
+        FIXME: Does NOT match Trader Workstation.
+        """
+        self.calculate_dmi(span, moving_average, False)
 
         self.bars["DX"] = (numpy.abs(self.bars["+DMI"] - self.bars["-DMI"]) /
-                           (self.bars["+DMI"] + self.bars["-DMI"])) * 100
-        self.bars["ADX"] = self.bars["DX"].ewm(alpha=alpha, adjust=False).mean()
+                           numpy.abs(self.bars["+DMI"] + self.bars["-DMI"])) * 100
 
-        # if "+DX" not in self.print_columns and print_column:
-        #     self.print_columns.append("+DX")
-        # if "-DX" not in self.print_columns and print_column:
-        #     self.print_columns.append("-DX")
-        # if "S+DM" not in self.print_columns and print_column:
-        #     self.print_columns.append("S+DM")
-        # if "S-DM" not in self.print_columns and print_column:
-        #     self.print_columns.append("S-DM")
-        # if "+DMI" not in self.print_columns and print_column:
-        #     self.print_columns.append("+DMI")
-        # if "-DMI" not in self.print_columns and print_column:
-        #     self.print_columns.append("-DMI")
+        if moving_average.lower() == "smma":
+            alpha = 1.0 / span
+            self.bars["ADX"] = self.bars["DX"].ewm(alpha=alpha, adjust=False).mean()
+
+            if "ADX2" not in self.bars.columns:
+                self.bars["ADX2"] = 0
+
+            self.bars["ADX2"] = ((self.bars["ADX2"].shift() * (span - 1)) + self.bars["DX"]) / span
+        else:
+            self.bars["ADX"] = self.bars["DX"].ewm(span=span, adjust=False).mean()
+
         if "DX" not in self.print_columns and print_column:
             self.print_columns.append("DX")
         if "ADX" not in self.print_columns and print_column:
@@ -299,16 +288,23 @@ class Bars(BasicBars):
 
     def calculate_atr(self,
                       span: int = 14,
-                      moving_average: str = "SMA",
+                      moving_average: str = "sma",
                       alpha: float = 0.0,
                       print_column: bool = True):
+        """!
+        Average True Range
+
+        NOTE: Matches Trader Workstation
+        """
         #if "TrueRange" not in self.bars.columns:
         self.calculate_true_range(print_column)
 
         col_name = str(span) + "ATR"
 
-        if moving_average == "smma":
+        if moving_average.lower() == "smma":
             self.bars[col_name] = self.bars["TrueRange"].ewm(alpha=alpha, adjust=False).mean()
+        elif moving_average.lower() == "ema":
+            self.bars[col_name] = self.bars["TrueRange"].ewm(span=span, adjust=False).mean()
         else:
             self.bars[col_name] = self.bars["TrueRange"].rolling(span).mean()
 
@@ -321,19 +317,34 @@ class Bars(BasicBars):
                          span: int = 20,
                          stddev: int = 2,
                          moving_average: str = "sma",
+                         typical_price: str = "",
                          print_column: bool = True):
-        self.bars["Typical_Price"] = (self.bars["High"] + self.bars["Low"] + self.bars["Close"]) / 3
-        self.bars["BBands_σ"] = self.bars["Typical_Price"].rolling(span).std(ddof=0)
+        """
+        Bollinger Bands
+
+        https://www.investopedia.com/terms/b/bollingerbands.asp
+
+        FIXME: This does not match Trader Workstation.  It seems to be very close when using "Close"
+        for the typical price.
+        """
+        if typical_price:
+            typical_price_col = typical_price
+        else:
+            typical_price_col = "Ave(HighLowClose)"
+            self.calculate_columns_ave(["High", "Low", "Close"], False)
+
+        self.bars["BBandsσ"] = self.bars[typical_price_col].rolling(span).std(ddof=0)
 
         if moving_average == "ema":
-            self.bars["BBands_MA"] = self.bars["Typical_Price"].ewm(span=span, adjust=False).mean()
+            self.bars["BBands_MA"] = self.bars[typical_price_col].ewm(span=span,
+                                                                      adjust=False).mean()
         else:
-            self.bars["BBands_MA"] = self.bars["Typical_Price"].rolling(span).mean()
+            self.bars["BBands_MA"] = self.bars[typical_price_col].rolling(span).mean()
 
         bband_upper_name = "BBandU_" + str(stddev) + "σ"
         bband_lower_name = "BBandL_" + str(stddev) + "σ"
-        self.bars[bband_upper_name] = self.bars["BBands_MA"] + stddev * self.bars["BBands_σ"]
-        self.bars[bband_lower_name] = self.bars["BBands_MA"] - stddev * self.bars["BBands_σ"]
+        self.bars[bband_upper_name] = self.bars["BBands_MA"] + stddev * self.bars["BBandsσ"]
+        self.bars[bband_lower_name] = self.bars["BBands_MA"] - stddev * self.bars["BBandsσ"]
 
         if "BBands_MA" not in self.print_columns and print_column:
             self.print_columns.append("BBands_MA")
@@ -354,10 +365,10 @@ class Bars(BasicBars):
         self.bars[col_name] = self.bars[column].rolling(span).std(ddof=0)
 
         if col_name not in self.print_columns and print_column:
-            self.print_columns.append("ATRσ")
+            self.print_columns.append(col_name)
 
     def calculate_columns_ave(self, columns: list, print_column: bool = True):
-        col_name = "("
+        col_name = "Ave("
         col_sum = 0
         col_len = len(columns)
 
@@ -365,7 +376,7 @@ class Bars(BasicBars):
             col_name = col_name + column
             col_sum = col_sum + self.bars[column]
 
-        col_name = col_name + ") Ave"
+        col_name = col_name + ")"
 
         self.bars[col_name] = col_sum / col_len
 
@@ -387,7 +398,64 @@ class Bars(BasicBars):
         col_name = column + "_Squared"
         self.bars[col_name] = self.bars[column] * self.bars[column]
 
+    def calculate_dmi(self,
+                      span: int = 20,
+                      moving_average: str = "smma",
+                      print_column: bool = True):
+        """!
+        Directional Movement Index
+
+        https://www.investopedia.com/terms/d/dmi.asp
+
+        FIXME: Does not match Trader Workstation.  Trader workstation has a parameter "Input Price"
+        which defaults to "Close".  Not sure where that comes into play.
+        """
+
+        atr_col_name = str(span) + "ATR"
+
+        if moving_average.lower() == "smma":
+            alpha = 1.0 / span
+        else:
+            alpha = 0.0
+
+        #if atr_col_name not in self.bars.columns:
+        self.calculate_atr(span, moving_average, alpha, False)
+
+        self.bars["H-pH"] = self.bars["High"] - self.bars["High"].shift(1)
+        self.bars["pL-L"] = self.bars["Low"].shift(1) - self.bars["Low"]
+        self.bars["+DX"] = numpy.where(
+            (self.bars["H-pH"] > self.bars["pL-L"]) & (self.bars["H-pH"] > 0), self.bars["H-pH"],
+            0.0)
+        self.bars["-DX"] = numpy.where(
+            (self.bars["pL-L"] > self.bars["H-pH"]) & (self.bars["pL-L"] > 0), self.bars["pL-L"],
+            0.0)
+
+        self.bars["S+DM"] = self.bars["+DX"].ewm(alpha=alpha, adjust=False).mean()
+        self.bars["S-DM"] = self.bars["-DX"].ewm(alpha=alpha, adjust=False).mean()
+        self.bars["+DMI"] = (self.bars["S+DM"] / self.bars[atr_col_name]) * 100
+        self.bars["-DMI"] = (self.bars["S-DM"] / self.bars[atr_col_name]) * 100
+
+        # if "+DX" not in self.print_columns and print_column:
+        #     self.print_columns.append("+DX")
+        # if "-DX" not in self.print_columns and print_column:
+        #     self.print_columns.append("-DX")
+        # if "S+DM" not in self.print_columns and print_column:
+        #     self.print_columns.append("S+DM")
+        # if "S-DM" not in self.print_columns and print_column:
+        #     self.print_columns.append("S-DM")
+        if "+DMI" not in self.print_columns and print_column:
+            self.print_columns.append("+DMI")
+        if "-DMI" not in self.print_columns and print_column:
+            self.print_columns.append("-DMI")
+
     def calculate_donchain_channel(self, span: int = 20, print_column: bool = True):
+        """!
+        Donchain Channels
+
+        https://www.investopedia.com/terms/d/donchianchannels.asp
+
+        NOTE: This matches Trader Workstation
+        """
         dc_upper_name = str(span) + "DC_Upper"
         dc_lower_name = str(span) + "DC_Lower"
         dc_middle_name = str(span) + "DC_Middle"
@@ -404,6 +472,13 @@ class Bars(BasicBars):
             self.print_columns.append(dc_lower_name)
 
     def calculate_ema(self, span: int, span_type: str, print_column: bool = True):
+        """!
+        Exponentiial Moving Average
+
+        https://www.investopedia.com/terms/e/ema.asp
+
+        NOTE: This matches Trader Workstation
+        """
         col_name = str(span) + "EMA"
 
         if span_type == "long":
@@ -432,6 +507,8 @@ class Bars(BasicBars):
         Klinger Volume Oscillator
 
         https://www.reddit.com/r/algotrading/comments/u275ue/help_with_klinger_volume_osilator/
+
+        FIXME: This does NOT match Trader Workstation
         """
         short_vf_ema_col = str(short_span) + "VF_EMA"
         long_vf_ema_col = str(long_span) + "VF_EMA"
@@ -442,8 +519,8 @@ class Bars(BasicBars):
         if trend_col not in self.bars.columns:
             self.bars[trend_col] = 0
 
-        self.bars[trend_col] = numpy.where(self.bars["HLC"].diff() >= 0, 1, -1)
-        self.bars.at[self.bars.index[-1], trend_col] = 1
+        self.bars[trend_col] = numpy.where(self.bars["HLC"].diff() == 0, 0,
+                                           numpy.where(self.bars["HLC"].diff() > 0, 1, -1))
         self.bars["VolForce"] = self.bars["Volume"] * self.bars[trend_col]
         self.bars[short_vf_ema_col] = self.bars["VolForce"].ewm(span=short_span,
                                                                 adjust=False).mean()
@@ -467,9 +544,11 @@ class Bars(BasicBars):
 
         https://www.investopedia.com/terms/k/klingeroscillator.asp
 
+        NOTE: Trader Workstation does not support this variation.  Trading View will always produce
+        a different result because of the how they get their volume information.
         """
-        short_vf_ema_col = str(short_span) + "VF_EMA"
-        long_vf_ema_col = str(long_span) + "VF_EMA"
+        short_vf_ema_col = str(short_span) + "VF_EMA(C)"
+        long_vf_ema_col = str(long_span) + "VF_EMA(C)"
         trend_col = "kTrend"
         cm_col_base = "klinger_cm_base"
         cm_col = "klinger_cm"
@@ -489,21 +568,28 @@ class Bars(BasicBars):
                                              self.bars["klinger_dm"].shift(1))
         self.bars[cm_col] = numpy.where(self.bars.index == 0, 0,
                                         self.bars[cm_col_base] + self.bars["klinger_dm"])
-        self.bars["VolForce"] = self.bars["Volume"] * numpy.abs(2 * (
+        self.bars["VolForce(C)"] = self.bars["Volume"] * numpy.abs(2 * (
             (self.bars["klinger_dm"] / self.bars["klinger_cm"]) - 1)) * self.bars[trend_col] * 100
-        self.bars[short_vf_ema_col] = self.bars["VolForce"].ewm(span=short_span,
-                                                                adjust=False).mean()
-        self.bars[long_vf_ema_col] = self.bars["VolForce"].ewm(span=long_span, adjust=False).mean()
+        self.bars[short_vf_ema_col] = self.bars["VolForce(C)"].ewm(span=short_span,
+                                                                   adjust=False).mean()
+        self.bars[long_vf_ema_col] = self.bars["VolForce(C)"].ewm(span=long_span,
+                                                                  adjust=False).mean()
 
-        self.bars["KVO"] = self.bars[short_vf_ema_col] - self.bars[long_vf_ema_col]
-        self.bars["KVO_Signal"] = self.bars["KVO"].ewm(span=signal_span, adjust=False).mean()
+        self.bars["KVO(C)"] = self.bars[short_vf_ema_col] - self.bars[long_vf_ema_col]
+        self.bars["KVO_Signal(C)"] = self.bars["KVO(C)"].ewm(span=signal_span, adjust=False).mean()
 
-        if "KVO" not in self.print_columns and print_column:
-            self.print_columns.append("KVO")
-        if "KVO_Signal" not in self.print_columns and print_column:
-            self.print_columns.append("KVO_Signal")
+        if "KVO(C)" not in self.print_columns and print_column:
+            self.print_columns.append("KVO(C)")
+        if "KVO_Signal(C)" not in self.print_columns and print_column:
+            self.print_columns.append("KVO_Signal(C)")
 
     def calculate_sma(self, span: int, span_type: str, print_column: bool = True):
+        """Simple Moving Average
+
+        https://www.investopedia.com/terms/s/sma.asp
+
+        NOTE: This matches Trader Workstation
+        """
         col_name = str(span) + "SMA"
 
         if span_type == "long":
@@ -527,6 +613,13 @@ class Bars(BasicBars):
                                         span: int = 14,
                                         moving_average: str = "sma",
                                         print_column: bool = True):
+        """
+        Stochastic Oscillator
+
+        https://www.investopedia.com/terms/s/stochasticoscillator.asp
+
+        NOTE: Matches Trader Workstation
+        """
 
         self.calculate_donchain_channel(span, False)
 
