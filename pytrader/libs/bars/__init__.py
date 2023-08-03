@@ -423,6 +423,86 @@ class Bars(BasicBars):
         if col_name not in self.print_columns and print_column:
             self.print_columns.append(col_name)
 
+    def calculate_kvo(self,
+                      short_span: int = 34,
+                      long_span: int = 55,
+                      signal_span: int = 13,
+                      print_column: bool = True):
+        """
+        Klinger Volume Oscillator
+
+        https://www.reddit.com/r/algotrading/comments/u275ue/help_with_klinger_volume_osilator/
+        """
+        short_vf_ema_col = str(short_span) + "VF_EMA"
+        long_vf_ema_col = str(long_span) + "VF_EMA"
+        trend_col = "kTrend"
+
+        self.bars["HLC"] = self.bars["High"] + self.bars["Low"] + self.bars["Close"]
+
+        if trend_col not in self.bars.columns:
+            self.bars[trend_col] = 0
+
+        self.bars[trend_col] = numpy.where(self.bars["HLC"].diff() >= 0, 1, -1)
+        self.bars.at[self.bars.index[-1], trend_col] = 1
+        self.bars["VolForce"] = self.bars["Volume"] * self.bars[trend_col]
+        self.bars[short_vf_ema_col] = self.bars["VolForce"].ewm(span=short_span,
+                                                                adjust=False).mean()
+        self.bars[long_vf_ema_col] = self.bars["VolForce"].ewm(span=long_span, adjust=False).mean()
+
+        self.bars["KVO"] = self.bars[short_vf_ema_col] - self.bars[long_vf_ema_col]
+        self.bars["KVO_Signal"] = self.bars["KVO"].ewm(span=signal_span, adjust=False).mean()
+
+        if "KVO" not in self.print_columns and print_column:
+            self.print_columns.append("KVO")
+        if "KVO_Signal" not in self.print_columns and print_column:
+            self.print_columns.append("KVO_Signal")
+
+    def calculate_kvo_classic(self,
+                              short_span: int = 34,
+                              long_span: int = 55,
+                              signal_span: int = 13,
+                              print_column: bool = True):
+        """
+        Klinger Volume Oscillator (Classic)
+
+        https://www.investopedia.com/terms/k/klingeroscillator.asp
+
+        """
+        short_vf_ema_col = str(short_span) + "VF_EMA"
+        long_vf_ema_col = str(long_span) + "VF_EMA"
+        trend_col = "kTrend"
+        cm_col_base = "klinger_cm_base"
+        cm_col = "klinger_cm"
+
+        self.bars["HLC"] = self.bars["High"] + self.bars["Low"] + self.bars["Close"]
+
+        if trend_col not in self.bars.columns:
+            self.bars[trend_col] = 0
+        self.bars[trend_col] = numpy.where(self.bars["HLC"].diff() == 0, 0,
+                                           numpy.where(self.bars["HLC"].diff() > 0, 1, -1))
+        self.bars["klinger_dm"] = self.bars["High"] - self.bars["Low"]
+
+        if "klinger_cm" not in self.bars.columns:
+            self.bars["klinger_cm"] = 0
+        self.bars[cm_col_base] = numpy.where(self.bars[trend_col].diff() == 0,
+                                             self.bars["klinger_cm"].shift(1),
+                                             self.bars["klinger_dm"].shift(1))
+        self.bars[cm_col] = numpy.where(self.bars.index == 0, 0,
+                                        self.bars[cm_col_base] + self.bars["klinger_dm"])
+        self.bars["VolForce"] = self.bars["Volume"] * numpy.abs(2 * (
+            (self.bars["klinger_dm"] / self.bars["klinger_cm"]) - 1)) * self.bars[trend_col] * 100
+        self.bars[short_vf_ema_col] = self.bars["VolForce"].ewm(span=short_span,
+                                                                adjust=False).mean()
+        self.bars[long_vf_ema_col] = self.bars["VolForce"].ewm(span=long_span, adjust=False).mean()
+
+        self.bars["KVO"] = self.bars[short_vf_ema_col] - self.bars[long_vf_ema_col]
+        self.bars["KVO_Signal"] = self.bars["KVO"].ewm(span=signal_span, adjust=False).mean()
+
+        if "KVO" not in self.print_columns and print_column:
+            self.print_columns.append("KVO")
+        if "KVO_Signal" not in self.print_columns and print_column:
+            self.print_columns.append("KVO_Signal")
+
     def calculate_sma(self, span: int, span_type: str, print_column: bool = True):
         col_name = str(span) + "SMA"
 
@@ -452,19 +532,20 @@ class Bars(BasicBars):
 
         high_col_name = str(span) + "DC_Upper"
         low_col_name = str(span) + "DC_Lower"
+        fast_col_name = "FStochOsc(%K)"
+        slow_col_name = "SStochOsc(%D)"
 
-        self.bars["Fast Stochastic (%K)"] = (self.bars["Close"] - self.bars[low_col_name]) / (
+        self.bars[fast_col_name] = (self.bars["Close"] - self.bars[low_col_name]) / (
             self.bars[high_col_name] - self.bars[low_col_name]) * 100
         if moving_average == "ema":
-            self.bars["Slow Stochastic (%D)"] = self.bars["Fast Stochastic (%K)"].ewm(
-                span=3, adjust=False).mean()
+            self.bars[slow_col_name] = self.bars[fast_col_name].ewm(span=3, adjust=False).mean()
         else:
-            self.bars["Slow Stochastic (%D)"] = self.bars["Fast Stochastic (%K)"].rolling(3).mean()
+            self.bars[slow_col_name] = self.bars[fast_col_name].rolling(3).mean()
 
-        if "Fast Stochastic (%K)" not in self.print_columns and print_column:
-            self.print_columns.append("Fast Stochastic (%K)")
-        if "Slow Stochastic (%D)" not in self.print_columns and print_column:
-            self.print_columns.append("Slow Stochastic (%D)")
+        if fast_col_name not in self.print_columns and print_column:
+            self.print_columns.append(fast_col_name)
+        if slow_col_name not in self.print_columns and print_column:
+            self.print_columns.append(slow_col_name)
 
     def calculate_true_range(self, print_column: bool = True):
         self.bars["TR1"] = abs(self.bars["High"] - self.bars["Low"])
