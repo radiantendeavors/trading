@@ -247,11 +247,11 @@ class Bars(BasicBars):
             if "EMA" in self.long_period_count.keys():
                 message = f"{class_name}\n" \
                     f"{self.bar_size} for bars {self.ticker}:\n" \
-                    f"{self.bars[self.print_columns].tail(self.long_period_count['EMA'])}"
+                    f"{self.bars[self.print_columns].round(3).tail(self.long_period_count['EMA'])}"
             else:
                 message = f"{class_name}\n" \
                     f"{self.bar_size} for bars {self.ticker}:\n" \
-                    f"{self.bars[self.print_columns].tail(10)}"
+                    f"{self.bars[self.print_columns].round(3).tail(10)}"
         return message
 
     def calculate_adx(self,
@@ -263,23 +263,20 @@ class Bars(BasicBars):
 
         https://www.investopedia.com/terms/a/adx.asp
 
-        FIXME: Does NOT match Trader Workstation.
+        NOTE: Matches Trader Workstation, when moving_average = "ema"
         """
         self.calculate_dmi(span, moving_average, False)
 
         self.bars["DX"] = (numpy.abs(self.bars["+DMI"] - self.bars["-DMI"]) /
                            numpy.abs(self.bars["+DMI"] + self.bars["-DMI"])) * 100
 
-        if moving_average.lower() == "smma":
+        if moving_average.lower() == "sma":
+            self.bars["ADX"] = self.bars["DX"].rolling(span=span).mean()
+        elif moving_average.lower() == "ema":
+            self.bars["ADX"] = self.bars["DX"].ewm(span=span, adjust=False).mean()
+        else:
             alpha = 1.0 / span
             self.bars["ADX"] = self.bars["DX"].ewm(alpha=alpha, adjust=False).mean()
-
-            if "ADX2" not in self.bars.columns:
-                self.bars["ADX2"] = 0
-
-            self.bars["ADX2"] = ((self.bars["ADX2"].shift() * (span - 1)) + self.bars["DX"]) / span
-        else:
-            self.bars["ADX"] = self.bars["DX"].ewm(span=span, adjust=False).mean()
 
         if "DX" not in self.print_columns and print_column:
             self.print_columns.append("DX")
@@ -294,7 +291,7 @@ class Bars(BasicBars):
         """!
         Average True Range
 
-        NOTE: Matches Trader Workstation
+        NOTE: Matches Trader Workstation when moving_average = "sma"
         """
         #if "TrueRange" not in self.bars.columns:
         self.calculate_true_range(print_column)
@@ -407,19 +404,10 @@ class Bars(BasicBars):
 
         https://www.investopedia.com/terms/d/dmi.asp
 
-        FIXME: Does not match Trader Workstation.  Trader workstation has a parameter "Input Price"
-        which defaults to "Close".  Not sure where that comes into play.
+        NOTE: Matches Trader Workstation when moving_average = "ema"
         """
 
         atr_col_name = str(span) + "ATR"
-
-        if moving_average.lower() == "smma":
-            alpha = 1.0 / span
-        else:
-            alpha = 0.0
-
-        #if atr_col_name not in self.bars.columns:
-        self.calculate_atr(span, moving_average, alpha, False)
 
         self.bars["H-pH"] = self.bars["High"] - self.bars["High"].shift(1)
         self.bars["pL-L"] = self.bars["Low"].shift(1) - self.bars["Low"]
@@ -430,8 +418,20 @@ class Bars(BasicBars):
             (self.bars["pL-L"] > self.bars["H-pH"]) & (self.bars["pL-L"] > 0), self.bars["pL-L"],
             0.0)
 
-        self.bars["S+DM"] = self.bars["+DX"].ewm(alpha=alpha, adjust=False).mean()
-        self.bars["S-DM"] = self.bars["-DX"].ewm(alpha=alpha, adjust=False).mean()
+        if moving_average.lower() == "ema":
+            self.calculate_atr(span, moving_average, 0.0, False)
+            self.bars["S+DM"] = self.bars["+DX"].ewm(span=span, adjust=False).mean()
+            self.bars["S-DM"] = self.bars["-DX"].ewm(span=span, adjust=False).mean()
+        elif moving_average.lower() == "sma":
+            self.calculate_atr(span, moving_average, 0.0, False)
+            self.bars["S+DM"] = self.bars["+DX"].rolling(span=span).mean()
+            self.bars["S-DM"] = self.bars["-DX"].rolling(span=span).mean()
+        else:
+            alpha = 1.0 / span
+            self.calculate_atr(span, moving_average, alpha, False)
+            self.bars["S+DM"] = self.bars["+DX"].ewm(alpha=alpha, adjust=False).mean()
+            self.bars["S-DM"] = self.bars["-DX"].ewm(alpha=alpha, adjust=False).mean()
+
         self.bars["+DMI"] = (self.bars["S+DM"] / self.bars[atr_col_name]) * 100
         self.bars["-DMI"] = (self.bars["S-DM"] / self.bars[atr_col_name]) * 100
 
@@ -502,6 +502,7 @@ class Bars(BasicBars):
                       short_span: int = 34,
                       long_span: int = 55,
                       signal_span: int = 13,
+                      moving_average: str = "ema"
                       print_column: bool = True):
         """
         Klinger Volume Oscillator
@@ -522,12 +523,26 @@ class Bars(BasicBars):
         self.bars[trend_col] = numpy.where(self.bars["HLC"].diff() == 0, 0,
                                            numpy.where(self.bars["HLC"].diff() > 0, 1, -1))
         self.bars["VolForce"] = self.bars["Volume"] * self.bars[trend_col]
-        self.bars[short_vf_ema_col] = self.bars["VolForce"].ewm(span=short_span,
+
+        if moving_average.lower() == "smma":
+            alpha = 1.0 / short_span
+            self.bars[short_vf_ema_col] = self.bars["VolForce"].ewm(alpha=alpha,
                                                                 adjust=False).mean()
-        self.bars[long_vf_ema_col] = self.bars["VolForce"].ewm(span=long_span, adjust=False).mean()
+            alpha = 1.0 / long_span
+            self.bars[long_vf_ema_col] = self.bars["VolForce"].ewm(alpha=alpha, adjust=False).mean()
+
+        else:
+            self.bars[short_vf_ema_col] = self.bars["VolForce"].ewm(span=short_span,
+                                                                    adjust=False).mean()
+            self.bars[long_vf_ema_col] = self.bars["VolForce"].ewm(span=long_span, adjust=False).mean()
 
         self.bars["KVO"] = self.bars[short_vf_ema_col] - self.bars[long_vf_ema_col]
-        self.bars["KVO_Signal"] = self.bars["KVO"].ewm(span=signal_span, adjust=False).mean()
+
+        if moving_average.lower() == "smma":
+            alpha = 1.0 / signal_span
+            self.bars["KVO_Signal"] = self.bars["KVO"].ewm(alpha=alpha, adjust=False).mean()
+        else:
+            self.bars["KVO_Signal"] = self.bars["KVO"].ewm(span=signal_span, adjust=False).mean()
 
         if "KVO" not in self.print_columns and print_column:
             self.print_columns.append("KVO")
@@ -618,7 +633,7 @@ class Bars(BasicBars):
 
         https://www.investopedia.com/terms/s/stochasticoscillator.asp
 
-        NOTE: Matches Trader Workstation
+        NOTE: Matches Trader Workstation when moving_average = "ema"
         """
 
         self.calculate_donchain_channel(span, False)
@@ -690,4 +705,4 @@ class Bars(BasicBars):
         pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
         filename = directory + self.ticker + ".csv"
         logger.debug("Saving dataframe to '%s'", filename)
-        self.bars.to_csv(filename, encoding="utf-8")
+        self.bars.to_csv(filename, encoding="utf-8", index=False)
