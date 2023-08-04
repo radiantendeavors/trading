@@ -502,17 +502,19 @@ class Bars(BasicBars):
                       short_span: int = 34,
                       long_span: int = 55,
                       signal_span: int = 13,
-                      moving_average: str = "ema"
+                      moving_average: str = "ema",
+                      signal_moving_average: str = "ema",
+                      mode: str = "TradingView",
                       print_column: bool = True):
         """
         Klinger Volume Oscillator
 
         https://www.reddit.com/r/algotrading/comments/u275ue/help_with_klinger_volume_osilator/
 
+        "Classic" Formula: https://www.investopedia.com/terms/k/klingeroscillator.asp
+
         FIXME: This does NOT match Trader Workstation
         """
-        short_vf_ema_col = str(short_span) + "VF_EMA"
-        long_vf_ema_col = str(long_span) + "VF_EMA"
         trend_col = "kTrend"
 
         self.bars["HLC"] = self.bars["High"] + self.bars["Low"] + self.bars["Close"]
@@ -522,81 +524,62 @@ class Bars(BasicBars):
 
         self.bars[trend_col] = numpy.where(self.bars["HLC"].diff() == 0, 0,
                                            numpy.where(self.bars["HLC"].diff() > 0, 1, -1))
-        self.bars["VolForce"] = self.bars["Volume"] * self.bars[trend_col]
+
+        if mode == "TradingView":
+            short_vf_ema_col = str(short_span) + "VF_EMA"
+            long_vf_ema_col = str(long_span) + "VF_EMA"
+            vf_col = "VolForce"
+            kvo_col = "KVO"
+            kvo_signal_col = "KVO_Signal"
+
+            self.bars[vf_col] = self.bars["Volume"] * self.bars[trend_col]
+        else:
+            short_vf_ema_col = str(short_span) + "VF_EMA(C)"
+            long_vf_ema_col = str(long_span) + "VF_EMA(C)"
+            cm_col_base = "klinger_cm_base"
+            cm_col = "klinger_cm"
+            vf_col = "VolForce(C)"
+            kvo_col = "KVO(C)"
+            kvo_signal_col = "KVO_Signal(C)"
+
+            self.bars["klinger_dm"] = self.bars["High"] - self.bars["Low"]
+
+            if "klinger_cm" not in self.bars.columns:
+                self.bars["klinger_cm"] = 0
+            self.bars[cm_col_base] = numpy.where(self.bars[trend_col].diff() == 0,
+                                                 self.bars[cm_col].shift(1),
+                                                 self.bars["klinger_dm"].shift(1))
+            self.bars[cm_col] = numpy.where(self.bars.index == 0, 0,
+                                            self.bars[cm_col_base] + self.bars["klinger_dm"])
+            self.bars[vf_col] = self.bars["Volume"] * numpy.abs(2 * (
+                (self.bars["klinger_dm"] / self.bars[cm_col]) - 1)) * self.bars[trend_col] * 100
 
         if moving_average.lower() == "smma":
             alpha = 1.0 / short_span
-            self.bars[short_vf_ema_col] = self.bars["VolForce"].ewm(alpha=alpha,
-                                                                adjust=False).mean()
+            self.bars[short_vf_ema_col] = self.bars[vf_col].ewm(alpha=alpha, adjust=False).mean()
             alpha = 1.0 / long_span
-            self.bars[long_vf_ema_col] = self.bars["VolForce"].ewm(alpha=alpha, adjust=False).mean()
+            self.bars[long_vf_ema_col] = self.bars[vf_col].ewm(alpha=alpha, adjust=False).mean()
 
         else:
-            self.bars[short_vf_ema_col] = self.bars["VolForce"].ewm(span=short_span,
-                                                                    adjust=False).mean()
-            self.bars[long_vf_ema_col] = self.bars["VolForce"].ewm(span=long_span, adjust=False).mean()
+            self.bars[short_vf_ema_col] = self.bars[vf_col].ewm(span=short_span,
+                                                                adjust=False).mean()
+            self.bars[long_vf_ema_col] = self.bars[vf_col].ewm(span=long_span, adjust=False).mean()
 
-        self.bars["KVO"] = self.bars[short_vf_ema_col] - self.bars[long_vf_ema_col]
+        self.bars[kvo_col] = self.bars[short_vf_ema_col] - self.bars[long_vf_ema_col]
 
-        if moving_average.lower() == "smma":
+        if signal_moving_average.lower() == "smma":
             alpha = 1.0 / signal_span
-            self.bars["KVO_Signal"] = self.bars["KVO"].ewm(alpha=alpha, adjust=False).mean()
+            self.bars[kvo_signal_col] = self.bars[kvo_col].ewm(alpha=alpha, adjust=False).mean()
+        elif signal_moving_average.lower() == "sma":
+            self.bars[kvo_signal_col] = self.bars[kvo_col].rolling(signal_span).mean()
         else:
-            self.bars["KVO_Signal"] = self.bars["KVO"].ewm(span=signal_span, adjust=False).mean()
+            self.bars[kvo_signal_col] = self.bars[kvo_col].ewm(span=signal_span,
+                                                               adjust=False).mean()
 
-        if "KVO" not in self.print_columns and print_column:
-            self.print_columns.append("KVO")
-        if "KVO_Signal" not in self.print_columns and print_column:
-            self.print_columns.append("KVO_Signal")
-
-    def calculate_kvo_classic(self,
-                              short_span: int = 34,
-                              long_span: int = 55,
-                              signal_span: int = 13,
-                              print_column: bool = True):
-        """
-        Klinger Volume Oscillator (Classic)
-
-        https://www.investopedia.com/terms/k/klingeroscillator.asp
-
-        NOTE: Trader Workstation does not support this variation.  Trading View will always produce
-        a different result because of the how they get their volume information.
-        """
-        short_vf_ema_col = str(short_span) + "VF_EMA(C)"
-        long_vf_ema_col = str(long_span) + "VF_EMA(C)"
-        trend_col = "kTrend"
-        cm_col_base = "klinger_cm_base"
-        cm_col = "klinger_cm"
-
-        self.bars["HLC"] = self.bars["High"] + self.bars["Low"] + self.bars["Close"]
-
-        if trend_col not in self.bars.columns:
-            self.bars[trend_col] = 0
-        self.bars[trend_col] = numpy.where(self.bars["HLC"].diff() == 0, 0,
-                                           numpy.where(self.bars["HLC"].diff() > 0, 1, -1))
-        self.bars["klinger_dm"] = self.bars["High"] - self.bars["Low"]
-
-        if "klinger_cm" not in self.bars.columns:
-            self.bars["klinger_cm"] = 0
-        self.bars[cm_col_base] = numpy.where(self.bars[trend_col].diff() == 0,
-                                             self.bars["klinger_cm"].shift(1),
-                                             self.bars["klinger_dm"].shift(1))
-        self.bars[cm_col] = numpy.where(self.bars.index == 0, 0,
-                                        self.bars[cm_col_base] + self.bars["klinger_dm"])
-        self.bars["VolForce(C)"] = self.bars["Volume"] * numpy.abs(2 * (
-            (self.bars["klinger_dm"] / self.bars["klinger_cm"]) - 1)) * self.bars[trend_col] * 100
-        self.bars[short_vf_ema_col] = self.bars["VolForce(C)"].ewm(span=short_span,
-                                                                   adjust=False).mean()
-        self.bars[long_vf_ema_col] = self.bars["VolForce(C)"].ewm(span=long_span,
-                                                                  adjust=False).mean()
-
-        self.bars["KVO(C)"] = self.bars[short_vf_ema_col] - self.bars[long_vf_ema_col]
-        self.bars["KVO_Signal(C)"] = self.bars["KVO(C)"].ewm(span=signal_span, adjust=False).mean()
-
-        if "KVO(C)" not in self.print_columns and print_column:
-            self.print_columns.append("KVO(C)")
-        if "KVO_Signal(C)" not in self.print_columns and print_column:
-            self.print_columns.append("KVO_Signal(C)")
+        if kvo_col not in self.print_columns and print_column:
+            self.print_columns.append(kvo_col)
+        if kvo_signal_col not in self.print_columns and print_column:
+            self.print_columns.append(kvo_signal_col)
 
     def calculate_sma(self, span: int, span_type: str, print_column: bool = True):
         """Simple Moving Average
