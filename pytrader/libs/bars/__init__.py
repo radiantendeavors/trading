@@ -215,7 +215,8 @@ class BasicBars():
             "5 mins": 300,
             "15 mins": 900,
             "30 mins": 1800,
-            "1 hour": 3600
+            "1 hour": 3600,
+            "1 day": 86400
         }
 
         return bar_seconds[size]
