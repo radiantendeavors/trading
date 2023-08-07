@@ -757,7 +757,8 @@ class Strategy():
             func_map = {
                 "Filled": self.on_order_filled,
                 "Cancelled": self.on_order_cancelled,
-                "ApiCancelled": self.on_order_cancelled
+                "ApiCancelled": self.on_order_cancelled,
+                "TWS_CLOSED": self.on_order_cancelled
             }
 
             if order_id in list(self.order_ids.keys()):
