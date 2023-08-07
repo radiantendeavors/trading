@@ -1196,7 +1196,7 @@ class TwsApiClient(EWrapper, EClient):
         error_codes = [
             100, 102, 103, 104, 105, 106, 107, 109, 110, 111, 113, 116, 117, 118, 119, 120, 121,
             122, 123, 124, 125, 126, 129, 131, 132, 162, 200, 320, 321, 502, 503, 504, 1101, 2100,
-            2101, 2102, 2103, 2168, 2169, 10038
+            2101, 2102, 2103, 2168, 2169, 10038, 10147
         ]
         warning_codes = [101, 501, 1100, 2105, 2107, 2108, 2109, 2110, 2137]
         info_codes = [1102]
@@ -1218,6 +1218,10 @@ class TwsApiClient(EWrapper, EClient):
             if code == 200:
                 self.data[req_id] = {"Error": msg}
                 self.data_available[req_id].set()
+
+            elif code == 10147:
+                msg = {"order_status": {req_id: {"status": "TWS_CLOSED"}}}
+                self.queue.put(msg)
 
         elif code in warning_codes:
             if advanced_order_rejection:
