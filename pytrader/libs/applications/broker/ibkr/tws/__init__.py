@@ -199,12 +199,14 @@ class TwsDataThread(BrokerDataThread):
         if size == "rtb":
             logger.error("Invalid Bar Size for History")
         else:
-            duration = self._set_duration(size)
 
-            if self.brokerclient:
-                self._retreive_broker_bar_history(contract_, size, duration)
-            else:
-                raise NotImplementedError
+            if contract_.secType != "OPT" and size != "1 day":
+                duration = self._set_duration(size)
+
+                if self.brokerclient:
+                    self._retreive_broker_bar_history(contract_, size, duration)
+                else:
+                    raise NotImplementedError
 
     def _retreive_broker_bar_history(self, contract_: Contract, size: str, duration: str):
         if contract_.localSymbol not in list(self.historical_bar_ids.keys()):
