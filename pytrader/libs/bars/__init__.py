@@ -201,7 +201,8 @@ class BasicBars():
             "5 mins": 60,
             "15 mins": 180,
             "30 mins": 360,
-            "1 hour": 720
+            "1 hour": 720,
+            "1 day": 17280
         }
         return bar_conversion[size]
 
