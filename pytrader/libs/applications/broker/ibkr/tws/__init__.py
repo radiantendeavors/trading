@@ -201,7 +201,7 @@ class TwsDataThread(BrokerDataThread):
         else:
 
             if contract_.secType == "OPT" and size == "1 day":
-                logger.debug("Option Daily Bar, skipping")
+                logger.debug9("Option Daily Bar, skipping")
             else:
                 duration = self._set_duration(size)
 
