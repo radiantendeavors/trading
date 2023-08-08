@@ -453,8 +453,7 @@ class Bars(BasicBars):
     def calculate_correlation_cycle(self,
                                     span: int = 20,
                                     input_period: int = 20,
-                                    print_column: bool = True,
-                                    truncate: bool = False):
+                                    print_column: bool = True):
         self.gen_index()
         self.bars["CCY_Cosine"] = numpy.cos(360 * self.bars.index / span)
         self.calculate_cumsum("Close")
@@ -486,8 +485,7 @@ class Bars(BasicBars):
     def calculate_correlation_cycle_rate_of_change(self,
                                                    span: int = 20,
                                                    input_period: int = 20,
-                                                   print_column: bool = True,
-                                                   truncate: bool = False):
+                                                   print_column: bool = True):
         self.calculate_correlation_cycle(span, input_period)
         self.bars["SineCorr"] = -numpy.sin(360 * self.bars.index / span)
         self.calculate_cumsum("SineCorr")
@@ -516,14 +514,13 @@ class Bars(BasicBars):
             self.print_columns.append("CCYROC")
 
     def calculate_correlation_cycle_state(self,
-                                          span: int = 20,
+                                          span: int = 40,
                                           input_period: int = 20,
-                                          print_column: bool = True,
-                                          truncate: bool = False):
+                                          print_column: bool = True):
         #col_name = str(threshold) + "CCYState"
         col_name = "CCYState"
         threshold = 360 / span
-        self.calculate_correlation_cycle_rate_of_change(span, input_period, print_column, truncate)
+        self.calculate_correlation_cycle_rate_of_change(span / 2, input_period, print_column)
 
         self.bars["CCY_Arctan"] = numpy.arctan2(self.bars["CCY"], self.bars["CCYROC"])
 
