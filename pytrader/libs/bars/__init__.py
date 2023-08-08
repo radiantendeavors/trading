@@ -517,9 +517,9 @@ class Bars(BasicBars):
                                           span: int = 40,
                                           input_period: int = 20,
                                           print_column: bool = True):
-        #col_name = str(threshold) + "CCYState"
-        col_name = "CCYState"
         threshold = 360 / span
+        col_name = "CCYState"
+        #col_name = str(threshold) + "CCYState"
         self.calculate_correlation_cycle_rate_of_change(span / 2, input_period, print_column)
 
         self.bars["CCY_Arctan"] = numpy.arctan2(self.bars["CCY"], self.bars["CCYROC"])
