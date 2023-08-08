@@ -200,7 +200,9 @@ class TwsDataThread(BrokerDataThread):
             logger.error("Invalid Bar Size for History")
         else:
 
-            if contract_.secType != "OPT" and size != "1 day":
+            if contract_.secType == "OPT" and size == "1 day":
+                logger.debug("Option Daily Bar, skipping")
+            else:
                 duration = self._set_duration(size)
 
                 if self.brokerclient:

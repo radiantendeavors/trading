@@ -496,9 +496,13 @@ class Strategy():
             new_bar = self.bars[ticker][bar_size].rescale(item)
 
             if new_bar:
-                self.bars[ticker][item].append_bar(new_bar)
-                if item == self.bar_sizes[0]:
-                    self.on_bar(ticker, item)
+                try:
+                    self.bars[ticker][item].append_bar(new_bar)
+                    if item == self.bar_sizes[0]:
+                        self.on_bar(ticker, item)
+                except KeyError as msg:
+                    logger.critical("KeyError for %s, bar size: %s", ticker, item)
+                    logger.critical("Bars: %s", self.bars)
             else:
                 self.on_5sec_rtb(ticker, bar_data[ticker]["rtb"])
 
