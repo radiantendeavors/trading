@@ -114,25 +114,12 @@ class BasicBars():
         return message
 
     def append_bar(self, bar: list):
-        self.bar_list.append(bar)
-        self._append_dataframe()
+        if not isinstance(bar[0], list):
+            self.bar_list.append(bar)
+            self._append_dataframe()
 
     def create_dataframe(self):
-        logger.debug10("Begin Function")
-        if self.bar_size in self.bar_size_long_duration:
-            datetime_str = "Date"
-            datetime_fmt = "%Y%m%d"
-        else:
-            datetime_str = "DateTime"
-            datetime_fmt = "%Y%m%d %H:%M:%S %Z"
-
-        logger.debug9("Bar List: %s", self.bar_list)
-
-        self.bars = pandas.DataFrame(
-            self.bar_list,
-            columns=[datetime_str, "Open", "High", "Low", "Close", "Volume", "WAP", "Count"])
-        self.bars[datetime_str] = pandas.to_datetime(self.bars[datetime_str], format=datetime_fmt)
-        logger.debug10("End Function")
+        self.bars = self._create_dataframe(self.bar_list)
 
     def rescale(self, size):
         seconds = self._bar_seconds(size)
@@ -172,25 +159,8 @@ class BasicBars():
     # ==============================================================================================
     def _append_dataframe(self):
         bar_list = [self.bar_list[-1]]
-
-        logger.debug10("Begin Function")
-        if self.bar_size in self.bar_size_long_duration:
-            datetime_str = "Date"
-            datetime_fmt = "%Y%m%d"
-        else:
-            datetime_str = "DateTime"
-            datetime_fmt = "%Y%m%d %H:%M:%S %Z"
-
-        logger.debug9("Bar List: %s", self.bar_list)
-
-        bars_pd = pandas.DataFrame(
-            bar_list,
-            columns=[datetime_str, "Open", "High", "Low", "Close", "Volume", "WAP", "Count"])
-        bars_pd[datetime_str] = pandas.to_datetime(bars_pd[datetime_str], format=datetime_fmt)
-
-        self.bars = pandas.concat([self.bars, bars_pd], ignore_index=True)
-
-        logger.debug10("End Function")
+        bars_df = self._create_dataframe(bar_list)
+        self.bars = pandas.concat([self.bars, bars_df], ignore_index=True)
 
     def _bar_conversion(self, size):
         bar_conversion = {
@@ -222,18 +192,46 @@ class BasicBars():
 
         return bar_seconds[size]
 
+    def _create_dataframe(self, bar_list):
+        if self.bar_size in self.bar_size_long_duration:
+            datetime_str = "Date"
+            datetime_fmt = "%Y%m%d"
+        else:
+            datetime_str = "DateTime"
+            datetime_fmt = "%Y%m%d %H:%M:%S %Z"
+
+        try:
+            bars_df = pandas.DataFrame(
+                bar_list,
+                columns=[datetime_str, "Open", "High", "Low", "Close", "Volume", "WAP", "Count"])
+            bars_df[datetime_str] = pandas.to_datetime(bars_df[datetime_str], format=datetime_fmt)
+            return bars_df
+
+        except (AssertionError, ValueError) as msg:
+            logger.critical("Failed to Create DataFrame for %s: %s", self.ticker, self.bar_size)
+            if self.bars is not None:
+                logger.critical("Existing DataFrame: %s", self.bars)
+            logger.critical("Message: %s", msg)
+            logger.critical("Bar List: %s", bar_list)
+
 
 class Bars(BasicBars):
 
     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.long_period = {}
         self.long_period_count = {}
         self.medium_period = {}
         self.medium_period_count = {}
         self.short_period = {}
         self.short_period_count = {}
-        self.print_columns = ["DateTime", "Open", "High", "Low", "Close", "Volume", "WAP", "Count"]
-        super().__init__(*args, **kwargs)
+
+        if self.bar_size in self.bar_size_long_duration:
+            dt_col = "Date"
+        else:
+            dt_col = "DateTime"
+
+        self.print_columns = [dt_col, "Open", "High", "Low", "Close", "Volume", "WAP", "Count"]
 
     def __repr__(self):
         class_name = type(self).__name__
@@ -301,6 +299,7 @@ class Bars(BasicBars):
         col_name = str(span) + "ATR"
 
         if moving_average.lower() == "smma":
+            col_name = str(span) + "ATR(" + moving_average + ")"
             self.bars[col_name] = self.bars["TrueRange"].ewm(alpha=alpha, adjust=False).mean()
         elif moving_average.lower() == "ema":
             self.bars[col_name] = self.bars["TrueRange"].ewm(span=span, adjust=False).mean()
@@ -409,7 +408,7 @@ class Bars(BasicBars):
         NOTE: Matches Trader Workstation when moving_average = "ema"
         """
 
-        atr_col_name = str(span) + "ATR"
+        atr_col_name = str(span) + "ATR(" + moving_average + ")"
 
         self.bars["H-pH"] = self.bars["High"] - self.bars["High"].shift(1)
         self.bars["pL-L"] = self.bars["Low"].shift(1) - self.bars["Low"]
@@ -437,14 +436,6 @@ class Bars(BasicBars):
         self.bars["+DMI"] = (self.bars["S+DM"] / self.bars[atr_col_name]) * 100
         self.bars["-DMI"] = (self.bars["S-DM"] / self.bars[atr_col_name]) * 100
 
-        # if "+DX" not in self.print_columns and print_column:
-        #     self.print_columns.append("+DX")
-        # if "-DX" not in self.print_columns and print_column:
-        #     self.print_columns.append("-DX")
-        # if "S+DM" not in self.print_columns and print_column:
-        #     self.print_columns.append("S+DM")
-        # if "S-DM" not in self.print_columns and print_column:
-        #     self.print_columns.append("S-DM")
         if "+DMI" not in self.print_columns and print_column:
             self.print_columns.append("+DMI")
         if "-DMI" not in self.print_columns and print_column:
@@ -454,7 +445,9 @@ class Bars(BasicBars):
                                     span: int = 20,
                                     input_period: int = 20,
                                     print_column: bool = True):
-        self.gen_index()
+        """!
+        Ehler's Correlation Cycle as a Trend Indicator.
+        """
         self.bars["CCY_Cosine"] = numpy.cos(360 * self.bars.index / span)
         self.calculate_cumsum("Close")
         self.calculate_cumsum("CCY_Cosine")
@@ -742,9 +735,6 @@ class Bars(BasicBars):
 
         if "TrueRange" not in self.print_columns and print_column:
             self.print_columns.append("TrueRange")
-
-    def gen_index(self):
-        self.bars["Index"] = range(len(self.bars))
 
     def get_last_row(self, column: str = ""):
         if column:

@@ -57,9 +57,15 @@ class ProcessManager():
 
     def __init__(self):
         self.cmd_queue = multiprocessing.Queue()
-        self.data_queue = multiprocessing.Queue()
+        self.data_queue = {}
+        self.broker_process = None
+        self.strategy_process = None
 
-    def run_processes(self, *args, **kwargs):
+    def run_processes(self,
+                      address,
+                      broker_id: str = BROKER_ID,
+                      client_id: int = CLIENT_ID,
+                      strategy_list: list = []):
         """!
         Runs the various subprocesses.
 
@@ -67,73 +73,53 @@ class ProcessManager():
 
         @return None
         """
-        address = args[0]
-        strategy_list = []
-
-        logger.debug9("Length args: %s", len(args))
-        if len(args) > 1:
-            strategy_list = args[1]
-
-        if len(args) > 2:
-            broker_id = args[2]
-        else:
-            broker_id = BROKER_ID
-
-        if len(args) > 3:
-            client_id = args[3]
-        else:
-            client_id = CLIENT_ID
-
-        logger.debug("Args: %s", args)
-        logger.debug("Broker ID: %s", broker_id)
-        logger.debug("Client ID: %s", client_id)
-
         try:
-            logger.debug9("Address: %s", address)
-            logger.debug9("Strategy List: %s", strategy_list)
-            broker_client = broker.BrokerProcess(self.cmd_queue, self.data_queue, address,
-                                                 broker_id, client_id)
-            broker_process = multiprocessing.Process(target=broker_client.run)
-            broker_process.start()
-
+            self._run_broker_process(address, broker_id, client_id, strategy_list)
+            # This ensures we have the next order ID before doing anything else.
             next_order_id = 0
             while next_order_id == 0:
-                message = self.data_queue.get()
+                message = self.data_queue["Main"].get()
                 if message.get("next_order_id"):
                     next_order_id = message["next_order_id"]
 
-            if kwargs.get("downloader"):
-                if kwargs.get("asset_classes"):
-                    asset_classes = kwargs["asset_classes"]
-
-                if kwargs.get("securities_list"):
-                    securities_list = kwargs["securities_list"]
-                else:
-                    securities_list = []
-
-                # downloader_ = downloader.DownloadProcess(
-                #     self.cmd_queue, self.data_queue)
-
-                # downloader_process = multiprocessing.Process(
-                #     target=downloader_.run,
-                #     args=(asset_classes, securities_list))
-                # downloader_process.start()
-            elif len(strategy_list) > 0:
-                strat = strategy.StrategyProcess(self.cmd_queue, self.data_queue, next_order_id)
-                strategy_process = multiprocessing.Process(target=strat.run, args=(strategy_list, ))
-                strategy_process.start()
+            if len(strategy_list) > 0:
+                self._run_strategy_process(strategy_list, next_order_id)
         except BrokerNotAvailable as msg:
             logger.critical("Broker Not Available. %s", msg)
 
         except KeyboardInterrupt as msg:
             logger.critical("Keyboard Interrupt, Closing Application: %s", msg)
         finally:
-            if len(args) > 1:
-                strategy_process.join()
-                self.cmd_queue.put("Quit")
-            # elif kwargs.get("downloader"):
-            #     downloader_process.join()
-            broker_process.join()
+            if len(strategy_list) > 0:
+                self.strategy_process.join()
+
+            self.cmd_queue.put("Quit")
+            self.broker_process.join()
+
+    def _run_broker_process(self,
+                            address: str,
+                            broker_id: str,
+                            client_id: int,
+                            strategy_list: list = []):
+        self.data_queue["Main"] = multiprocessing.Queue()
+
+        if len(strategy_list) > 0:
+            for strategy_id in strategy_list:
+                strategy_data_queue = multiprocessing.Queue()
+                self.data_queue[strategy_id] = strategy_data_queue
+
+        broker_client = broker.BrokerProcess(self.cmd_queue, self.data_queue, address, broker_id,
+                                             client_id)
+        if len(strategy_list) > 0:
+            broker_client.set_strategies(strategy_list)
+
+        self.broker_process = multiprocessing.Process(target=broker_client.run)
+        self.broker_process.start()
+
+    def _run_strategy_process(self, strategy_list: list, next_order_id: int):
+        strat = strategy.StrategyProcess(self.cmd_queue, self.data_queue, next_order_id)
+        self.strategy_process = multiprocessing.Process(target=strat.run, args=(strategy_list, ))
+        self.strategy_process.start()
 
 
 # ==================================================================================================

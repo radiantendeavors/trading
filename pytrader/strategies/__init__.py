@@ -29,6 +29,7 @@ import datetime
 
 from abc import ABCMeta, abstractmethod
 from multiprocessing import Queue
+from threading import Event
 
 # 3rd Party libraries
 from ibapi import contract
@@ -68,6 +69,7 @@ class Strategy():
         self.data_queue = data_queue
         self.next_order_id = next_order_id
         self.strategy_id = strategy_id
+        self.initializing = True
 
         self.time_now = datetime.datetime.now()
 
@@ -347,17 +349,15 @@ class Strategy():
             self._create_contracts()
             self._send_contracts()
 
-            self._send_bar_sizes()
-
             logger.debug9("Use Options: %s", self.use_options)
             if self.use_options:
                 self._req_option_details()
 
+            self._send_bar_sizes()
             self._req_bar_history()
-
-            self._req_real_time_bars()
-            #self._req_tick_by_tick_data()
             self._req_market_data()
+            self._req_real_time_bars()
+            # #self._req_tick_by_tick_data()
 
             self.on_start()
 
@@ -368,7 +368,8 @@ class Strategy():
                 continue_strategy = self.continue_strategy()
 
         except KeyboardInterrupt as msg:
-            logger.critical("Received Keyboard Interupt, shutting down now!")
+            logger.critical("Received Keyboard Interupt! Ending Strategy '%s'.",
+                            self.strategy_id.capitalize())
         # except Exception as msg:
         #     logger.critical("We fucked up: %s", msg)
 
@@ -390,8 +391,8 @@ class Strategy():
                 # Re-send requests to get data for options as well
                 self._send_bar_sizes()
                 self._req_bar_history()
-                self._req_real_time_bars()
                 self._req_market_data()
+                self._req_real_time_bars()
 
     def select_option_strikes(self, ticker, price):
         x = 0
@@ -489,7 +490,6 @@ class Strategy():
         return option_name
 
     def _process_5sec_rtb(self, bar_data):
-        logger.debug9("Bar Data: %s", bar_data)
         ticker, bar_size = self._process_bars(bar_data)
 
         for item in self.bar_sizes:
@@ -518,20 +518,21 @@ class Strategy():
         bar_size = list(bar_size_dict.keys())[0]
         bar_list = bar_size_dict[bar_size]
 
-        if bar_size != "rtb":
-            logger.debug2("%s Bars received for: %s", bar_size, ticker)
+        if bar_size == "rtb":
+            logger.debug9("%s: %s - %s Bars received", self.strategy_id, ticker, bar_size)
+        else:
+            logger.debug2("%s: %s - %s Bars received", self.strategy_id, ticker, bar_size)
+
         if bar_size in list(self.bars[ticker].keys()):
             self.bars[ticker][bar_size].append_bar(bar_list)
         else:
             self.bars[ticker][bar_size] = bars.Bars(ticker, bar_size=bar_size, bar_list=bar_list)
-
             self.bars[ticker][bar_size].create_dataframe()
 
         return ticker, bar_size
 
     def _process_contracts(self, contracts):
         self.contracts = contracts
-        logger.debug9("Contracts: %s", self.contracts)
 
         for item in list(self.contracts.keys()):
             self.market_data[item] = {
@@ -568,8 +569,6 @@ class Strategy():
             self._process_order_status(data["order_status"])
 
     def _process_message(self, message):
-
-        logger.debug9("Message: %s", message)
         if isinstance(message, dict):
             self._process_data(message)
         else:
@@ -734,8 +733,16 @@ class Strategy():
         elif market_data[1] in list(func_map.keys()):
             func = func_map.get(market_data[1])
             func(ticker, market_data[2])
-            self.market_data[ticker][data_map[market_data[1]]] = market_data[2]
-            logger.debug9("Market Data for ticker %s: %s", ticker, self.market_data[ticker])
+
+            try:
+                self.market_data[ticker][data_map[market_data[1]]] = market_data[2]
+                logger.debug9("Market Data for ticker %s: %s", ticker, self.market_data[ticker])
+            except KeyError as msg:
+                logger.critical("Key Error: %s not in market_data dictionary for strategy: %s",
+                                ticker, self.strategy_id)
+                logger.critical("Market Data Dictionary: %s", self.market_data)
+                logger.critical("Message: %s", msg)
+
         else:
             logger.warning("Market Data Type Id #%s has not been implemented.  Ticker %s, Data %s",
                            market_data[1], ticker, market_data)
@@ -795,27 +802,27 @@ class Strategy():
         logger.debug10("End Function")
 
     def _req_bar_history(self):
-        message = {"req": "bar_history"}
+        message = {self.strategy_id: {"req": "bar_history"}}
         self.cmd_queue.put(message)
 
     def _req_global_cancel(self):
-        message = {"req": "global_cancel"}
+        message = {self.strategy_id: {"req": "global_cancel"}}
         self.cmd_queue.put(message)
 
     def _req_market_data(self):
-        message = {"req": "real_time_market_data"}
+        message = {self.strategy_id: {"req": "real_time_market_data"}}
         self.cmd_queue.put(message)
 
     def _req_option_details(self):
-        message = {"req": "option_details"}
+        message = {self.strategy_id: {"req": "option_details"}}
         self.cmd_queue.put(message)
 
     def _req_real_time_bars(self):
-        message = {"req": "real_time_bars"}
+        message = {self.strategy_id: {"req": "real_time_bars"}}
         self.cmd_queue.put(message)
 
     def _req_tick_by_tick_data(self):
-        message = {"req": "tick_by_tick_data"}
+        message = {self.strategy_id: {"req": "tick_by_tick_data"}}
         self.cmd_queue.put(message)
 
     def _select_expiration(self, ticker, expirations):
@@ -836,7 +843,7 @@ class Strategy():
         logger.debug2("Expiry for %s: %s", ticker, expiry_date)
 
     def _send_bar_sizes(self):
-        message = {"set": {"bar_sizes": self.bar_sizes}}
+        message = {self.strategy_id: {"set": {"bar_sizes": self.bar_sizes}}}
         self.cmd_queue.put(message)
 
     def _send_contracts(self, contracts: dict = {}):
@@ -848,7 +855,7 @@ class Strategy():
         if contracts is False:
             logger.error("Contracts Not Set")
 
-        message = {"set": {"tickers": contracts_to_send}}
+        message = {self.strategy_id: {"set": {"tickers": contracts_to_send}}}
         self.cmd_queue.put(message)
 
 

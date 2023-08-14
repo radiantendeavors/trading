@@ -52,11 +52,12 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 class BaseOrder():
 
-    def __init__(self, data_queue: Queue, contract: Contract):
+    def __init__(self, data_queue: Queue, contract: Contract, strategy: str):
         self.contract = contract
         self.data_queue = data_queue
         self.order = order.Order()
         self.status = None
+        self.strategy_id = strategy
 
     def get_order(self):
         return self.order
@@ -97,12 +98,19 @@ class BaseOrder():
 class Order(BaseOrder):
 
     def send_order(self):
-        message = {"place_order": {"order": self.order, "contract": self.contract}}
+        message = {
+            self.strategy_id: {
+                "place_order": {
+                    "order": self.order,
+                    "contract": self.contract
+                }
+            }
+        }
         logger.debug("Sending order message: %s", message)
         self.data_queue.put(message)
 
     def send_order_cancel(self):
-        message = {"cancel_order": self.order.orderId}
+        message = {self.strategy_id: {"cancel_order": self.order.orderId}}
         self.data_queue.put(message)
 
     # def close_long_position(self, ticker, order_type=None, price=None):

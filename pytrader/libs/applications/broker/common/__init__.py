@@ -28,7 +28,7 @@ import datetime
 import queue
 
 from abc import ABCMeta, abstractmethod
-from multiprocessing import Queue
+from queue import Queue
 
 # 3rd Party libraries
 from ibapi.contract import Contract
@@ -110,21 +110,21 @@ class BrokerDataThread():
         self.brokerclient.req_global_cancel()
 
     @abstractmethod
-    def request_option_details(self):
+    def request_option_details(self, strategy_id: str):
         """!
         Abstract method to request for option details.
         """
         pass
 
     @abstractmethod
-    def request_market_data(self):
+    def request_market_data(self, strategy_id: str):
         """!
         Abstract method to request streaming market data.
         """
         pass
 
     @abstractmethod
-    def request_real_time_bars(self):
+    def request_real_time_bars(self, strategy_id: str):
         """!
         Abstract method to request real time bars.
         """
@@ -144,7 +144,7 @@ class BrokerDataThread():
         Sends the next order id to the strategy.
         """
         message = {"next_order_id": self.next_order_id}
-        self.data_queue.put(message)
+        self.data_queue["Main"].put(message)
 
     @abstractmethod
     def send_order_status(self, order_status: dict):
@@ -166,7 +166,7 @@ class BrokerDataThread():
         """
         pass
 
-    def set_attributes(self, brokerclient, data_queue: Queue, broker_queue: Queue):
+    def set_attributes(self, brokerclient, data_queue: dict, broker_queue: Queue) -> None:
         """!
         Sets class attributes.
         """
@@ -175,44 +175,32 @@ class BrokerDataThread():
         self.queue = broker_queue
 
     @abstractmethod
-    def set_bar_sizes(self, bar_sizes: list):
+    def set_bar_sizes(self, bar_sizes: list, strategy_id: str):
         """!
         Abstract method to set bar sizes.
         """
         pass
 
     @abstractmethod
-    def set_contracts(self, contracts):
+    def set_contracts(self, contracts: dict, strategy_id: str):
         """!
         Abstract method to set the contracts.
         """
         pass
 
-    def send_bars(self, contract: Contract, bar_type, bar_size, bars_):
-        """!
-        Sends bars to the strategies.
+    # def send_ticks(self, contract: Contract, tick):
+    #     """!
+    #     Sends tick data to the strategies.
 
-        @param contract: The contract for the bar to send.
-        @param bar_type: The type of bar to send.
-        @param bar_size: The time period size for the bar.
-        @param bars: The bars to send.
+    #     @param contract: The contract for the bar to send.
+    #     @param tick: The tick data to send.
 
-        @return None
-        """
-        message = {bar_type: {contract.localSymbol: {bar_size: bars_}}}
-        self.data_queue.put(message)
-
-    def send_ticks(self, contract: Contract, tick):
-        """!
-        Sends tick data to the strategies.
-
-        @param contract: The contract for the bar to send.
-        @param tick: The tick data to send.
-
-        @return None
-        """
-        message = {"market_data": {contract.localSymbol: tick}}
-        self.data_queue.put(message)
+    #     @return None
+    #     """
+    #     ticker = contract.localSymbol
+    #     message = {"market_data": {contract.localSymbol: tick}}
+    #     for strategy_id in self.contract_strategies[ticker]:
+    #         self.data_queue[strategy_id].put(message)
 
     # ==============================================================================================
     #

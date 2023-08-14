@@ -46,6 +46,7 @@ from ibapi.utils import (iswrapper)
 from ibapi.wrapper import EWrapper
 
 # Standard Library Overrides
+from pytrader import git_branch
 from pytrader.libs.system import logging
 
 # Other Libraries
@@ -190,6 +191,15 @@ class TwsApiClient(EWrapper, EClient):
         """
         self.accounts_available.wait()
         return self.accounts
+
+    def get_allowed_ports(self) -> list:
+        """!
+        Provides a list of allowed ports for the client.
+        """
+        if git_branch == "main":
+            return [7496, 7497, 4001, 4002]
+
+        return [7497, 4002]
 
     def get_client_id(self):
         """!
@@ -2152,7 +2162,6 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        logger.debug("Begin Function")
         tick = ["tick_news", timestamp, provider_code, article_id, headline, extra_data]
         msg = {"market_data": {req_id: tick}}
         self.queue.put(msg)

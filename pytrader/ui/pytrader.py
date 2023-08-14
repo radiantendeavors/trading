@@ -32,7 +32,7 @@ from pytrader.libs.system import argparse
 from pytrader.libs.system import logging
 
 # Application Libraries
-from pytrader import DEBUG
+from pytrader import BROKER_ID, CLIENT_ID, DEBUG
 from pytrader.libs.applications import trader
 from pytrader.libs.utilities import config
 
@@ -65,24 +65,6 @@ def broker_address(args, conf):
         return conf.brokerclient_address
 
 
-def process_arguments(args, conf):
-    """!
-    Processes the arguments received from the command line.
-
-    @param args - Provides the arguments from the command line.
-    @param conf - Provides the configuration from config files.
-
-    @return None
-    """
-    # Create the client and connect to TWS or IB Gateway
-    address = broker_address(args, conf)
-    strategy_list = args.strategies
-    broker = args.broker
-    processed_args = (address, strategy_list, broker)
-
-    return processed_args
-
-
 def init(args):
     """! Initializates the program.
 
@@ -108,50 +90,46 @@ def init(args):
     parser.add_argument("-s",
                         "--strategies",
                         nargs="+",
-                        required=True,
-                        help="One or more strategies to run.")
-    parser.add_argument("-b", "--broker", choices=["twsapi"], default="twsapi", help="Broker")
-    parser.add_argument("-c", "--client-id", help="Broker Client Id")
+                        default=[],
+                        help="Strategies to run.  If not specified no strategies will run.")
+    parser.add_argument("-b", "--broker", choices=["twsapi"], default=BROKER_ID, help="Broker")
+    parser.add_argument("-c", "--client-id", default=CLIENT_ID, help="Broker Client Id")
 
     parser.set_defaults(debug=False, verbosity=0, loglevel='INFO')
 
-    args = parser.parse_args()
+    try:
+        args = parser.parse_args()
 
-    conf = config.Config()
-    conf.read_config()
-    conf.set_loglevel(args)
+        conf = config.Config()
+        conf.read_config()
+        conf.set_loglevel(args)
 
-    logger.debug2('Configuration set')
-    logger.debug8('Configuration Settings: ' + str(conf))
-    logger.debug9('Arguments: ' + str(args))
+        logger.debug2('Configuration set')
+        logger.debug8('Configuration Settings: ' + str(conf))
+        logger.debug9('Arguments: ' + str(args))
 
-    # 'application' code
-    if DEBUG is False:
-        logger.debug8("Attempting to start client")
-        try:
-            processed_args = process_arguments(args, conf)
-            process_manager = trader.ProcessManager()
-            if args.client_id:
-                process_manager.run_processes(processed_args[0], processed_args[1],
-                                              processed_args[2], args.client_id)
-            else:
-                process_manager.run_processes(processed_args[0], processed_args[1],
-                                              processed_args[2])
-        except Exception as msg:
-            parser.print_help()
-            logger.error('No command was given')
-            logger.critical(msg)
-    else:
-        logger.debug8("Starting Client")
-        processed_args = process_arguments(args, conf)
-        process_manager = trader.ProcessManager()
-        if args.client_id:
-            process_manager.run_processes(processed_args[0], processed_args[1], processed_args[2],
-                                          args.client_id)
+        # 'application' code
+        if DEBUG is False:
+            logger.debug8("Attempting to start client")
+            try:
+                address = broker_address(args, conf)
+                process_manager = trader.ProcessManager()
+
+                process_manager.run_processes(address, args.broker, args.client_id, args.strategies)
+            except Exception as msg:
+                parser.print_help()
+                logger.critical(msg)
         else:
-            process_manager.run_processes(processed_args[0], processed_args[1], processed_args[2])
+            logger.debug8("Starting Client")
+            address = broker_address(args, conf)
+            process_manager = trader.ProcessManager()
+            process_manager.run_processes(address, args.broker, args.client_id, args.strategies)
+        return 0
 
-    return 0
+    except argparse.ArgumentError as msg:
+        logger.critical("Invalid Argument")
+        parser.print_help()
+        return 2
 
 
 def main(args=None):
@@ -162,16 +140,7 @@ def main(args=None):
     """
     logger.debug("Begin Application")
 
-    if DEBUG is False:
-        try:
-            init(args)
-        except Exception as msg:
-            logger.critical(msg)
-    else:
-        init(args)
-
-    logger.debug("End Application")
-    return 0
+    return init(args)
 
 
 if __name__ == "__main__":
