@@ -234,6 +234,7 @@ class OptionData(Subject):
 class OrderData(Subject):
 
     _observers: List[Observer] = []
+    valid_order_ids = []
     order_id = None
     order_status = {}
 

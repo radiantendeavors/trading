@@ -1229,7 +1229,7 @@ class TwsApiClient(EWrapper, EClient):
                 self.data[req_id] = {"Error": msg}
                 self.data_available[req_id].set()
 
-            elif code == 10147:
+            elif code in [103, 10147]:
                 msg = {"order_status": {req_id: {"status": "TWS_CLOSED"}}}
                 self.queue.put(msg)
 

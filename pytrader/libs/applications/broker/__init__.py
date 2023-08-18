@@ -23,7 +23,6 @@ The main user interface for the trading program.
 """
 # System Libraries
 import queue
-import socket
 import threading
 
 from multiprocessing import Queue
@@ -35,7 +34,7 @@ from multiprocessing import Queue
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader import CLIENT_ID, git_branch
+from pytrader import BROKER_ID, CLIENT_ID, git_branch
 from pytrader.libs.applications.broker.ibkr.tws import TwsDataThread
 from pytrader.libs.clients.broker.ibkr.tws import TwsApiClient
 from pytrader.libs.utilities.exceptions import BrokerNotAvailable
@@ -66,7 +65,7 @@ class BrokerProcess():
                  cmd_queue: Queue,
                  data_queue: dict,
                  address: str = "127.0.0.1",
-                 broker_id: str = "twsapi",
+                 broker_id: str = BROKER_ID,
                  client_id: int = CLIENT_ID):
         """!
         Creates an instance of the BrokerProcess.

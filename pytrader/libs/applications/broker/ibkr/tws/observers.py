@@ -173,7 +173,7 @@ class StrategyOrderDataObserver(OrderDataObserver):
     def update(self, subject: Subject) -> None:
         if len(self.order_ids) > 0:
             if subject.order_id in self.order_ids:
-                message = subject.order_status
+                message = {"order_status": subject.order_status}
                 self.msg_queue.put(message)
 
 

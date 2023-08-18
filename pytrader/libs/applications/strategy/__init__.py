@@ -72,7 +72,6 @@ class StrategyProcess():
         """
         try:
             for index, strategy_id in enumerate(strategy_list):
-                index += 0
                 order_id = self.next_order_id + (index * 1000)
                 logger.debug("Order Id for Strategy %s: %s", strategy_id, order_id)
                 module_name = IMPORT_PATH + strategy_id

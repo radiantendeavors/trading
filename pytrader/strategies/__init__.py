@@ -496,19 +496,13 @@ class Strategy():
             new_bar = self.bars[ticker][bar_size].rescale(item)
 
             if new_bar:
-                try:
-                    self.bars[ticker][item].append_bar(new_bar)
-                    if item == self.bar_sizes[0]:
-                        self.on_bar(ticker, item)
-                except KeyError as msg:
-                    logger.critical("KeyError for %s, bar size: %s", ticker, item)
-                    logger.critical("Bars: %s", self.bars)
+                self.bars[ticker][item].append_bar(new_bar)
+                self.on_bar(ticker, item)
             else:
                 self.on_5sec_rtb(ticker, bar_data[ticker]["rtb"])
 
     def _process_bars(self, bar_data):
         # TODO: This is an ugly way to extract key value pairs for dicts with single item
-
         ticker = list(bar_data.keys())[0]
         bar_size_dict = bar_data[ticker]
 
@@ -521,7 +515,7 @@ class Strategy():
         if bar_size == "rtb":
             logger.debug9("%s: %s - %s Bars received", self.strategy_id, ticker, bar_size)
         else:
-            logger.debug2("%s: %s - %s Bars received", self.strategy_id, ticker, bar_size)
+            logger.debug8("%s: %s - %s Bars received", self.strategy_id, ticker, bar_size)
 
         if bar_size in list(self.bars[ticker].keys()):
             self.bars[ticker][bar_size].append_bar(bar_list)
@@ -557,7 +551,8 @@ class Strategy():
             self._process_5sec_rtb(data["real_time_bars"])
         if data.get("bars"):
             logger.debug9("Processing Bars")
-            self._process_bars(data["bars"])
+            ticker, bar_size = self._process_bars(data["bars"])
+            self.on_bar(ticker, bar_size)
         if data.get("tick"):
             logger.debug9("Processing Tick Data")
             self._process_ticks(data["tick"])
@@ -761,34 +756,35 @@ class Strategy():
         logger.debug8("Order Status: %s", order_status)
         order_id = list(order_status.keys())[0]
 
-        if order_id in order_status.keys():
-            status = order_status[order_id]["status"]
+        func_map = {
+            "Filled": self.on_order_filled,
+            "Cancelled": self.on_order_cancelled,
+            "ApiCancelled": self.on_order_cancelled,
+            "TWS_CLOSED": self.on_order_cancelled
+        }
+
+        if order_id in list(self.order_ids.keys()):
             local_symbol = self.order_ids[order_id]
+            status = order_status[order_id]["status"]
 
-            func_map = {
-                "Filled": self.on_order_filled,
-                "Cancelled": self.on_order_cancelled,
-                "ApiCancelled": self.on_order_cancelled,
-                "TWS_CLOSED": self.on_order_cancelled
-            }
+            if status in ["Filled", "Cancelled", "ApiCancelled", "TWS_CLOSED"]:
+                self.orders[local_symbol].pop(order_id, None)
+                self.order_ids.pop(order_id, None)
+            else:
+                if order_id in list(self.orders[local_symbol].keys()):
+                    self.orders[local_symbol][order_id].set_status(status)
+                    logger.debug9("Order Status: %s",
+                                  self.orders[local_symbol][order_id].get_status())
 
-            if order_id in list(self.order_ids.keys()):
-
-                if status in ["Filled", "Cancelled", "ApiCancelled"]:
-                    logger.debug9("Order %s to be removed", order_id)
-                    self.orders[local_symbol].pop(order_id, None)
                 else:
-                    if order_id in list(self.orders[local_symbol].keys()):
-                        self.orders[local_symbol][order_id].set_status(status)
-                        logger.debug9("Order Status: %s",
-                                      self.orders[local_symbol][order_id].get_status())
+                    logger.debug9("Orders for %s", local_symbol)
+                    logger.debug9("Orders: %s", self.orders[local_symbol])
 
-                    else:
-                        logger.debug9("Orders for %s", local_symbol)
-                        logger.debug9("Orders: %s", self.orders[local_symbol])
-
-            #func = func_map.get(status)
-            #func(local_symbol, order_id, order_status[order_id])
+        if status in list(func_map.keys()):
+            func = func_map.get(status)
+            func(local_symbol, order_id, order_status[order_id])
+        else:
+            logger.warning("Order Status '%s' processing has not been implemented.")
 
     def _process_ticks(self, new_ticks):
         ticker = None

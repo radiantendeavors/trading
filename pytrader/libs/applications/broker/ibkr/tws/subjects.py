@@ -137,8 +137,8 @@ class BrokerContractData(ContractData):
             contract_details = self.brokerclient.get_data(req_id)
 
             if isinstance(contract_details, (dict, set)):
-                logger.error("Failed to obtain contract details for %s", ticker)
-                logger.error("Contract: %s", contract_details)
+                logger.error("Failed to obtain contract details for %s: %s", ticker,
+                             contract_details["Error"])
             else:
                 logger.debug2("Received Contract Details for Ticker: %s", ticker)
                 new_contract = contract_details.contract
@@ -174,6 +174,10 @@ class BrokerOptionData(OptionData):
 
 class BrokerOrderData(OrderData):
 
+    def cancel_order(self, order_id: int):
+        if order_id in self.valid_order_ids:
+            self.brokerclient.cancel_order(order_id)
+
     def create_order(self, order_contract: Contract, new_order: Order, order_id: int):
         """!
         Create a new order from an order request.
@@ -182,11 +186,18 @@ class BrokerOrderData(OrderData):
 
         @return None.
         """
+        self.valid_order_ids.append(order_id)
         self.brokerclient.place_order(order_contract, new_order, order_id)
 
     def send_order_status(self, order_status: dict):
-        self.order_id = list(order_status.keys()[0])
+        self.order_id = list(order_status.keys())[0]
         self.order_status = order_status
+        status = order_status[self.order_id]["status"]
+
+        if status in ["Filled", "Cancelled", "ApiCancelled", "TWS_CLOSED"]:
+            if self.order_id in self.valid_order_ids:
+                self.valid_order_ids.remove(self.order_id)
+
         self.notify()
 
 

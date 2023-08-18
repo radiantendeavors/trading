@@ -92,7 +92,7 @@ class TwsDataThread(BrokerDataThread):
 
         @return None.
         """
-        self.brokerclient.cancel_order(order_id)
+        self.order_subjects.cancel_order(order_id)
 
     def create_order(self, order_request: dict, strategy_id: str):
         """!
@@ -169,7 +169,7 @@ class TwsDataThread(BrokerDataThread):
 
             # Add Option Detail Observers
             self.order_observers[strategy] = StrategyOrderDataObserver(self.data_queue[strategy])
-            self.order_subjects.attach(self.option_observers[strategy], self.brokerclient)
+            self.order_subjects.attach(self.order_observers[strategy], self.brokerclient)
 
             # Add Real Time Bar Observers
             self.rtb_observers[strategy] = StrategyRealTimeBarObserver(self.data_queue[strategy])

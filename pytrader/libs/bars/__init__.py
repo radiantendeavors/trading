@@ -739,8 +739,8 @@ class Bars(BasicBars):
     def get_last_row(self, column: str = ""):
         if column:
             return self.bars[column].iloc[-1]
-        else:
-            return self.bars.tail(1).copy()
+
+        return self.bars.tail(1).copy()
 
     def is_cross_up(self, moving_ave_name: str):
         previous_short = self.bars[self.short_period[moving_ave_name]].iloc[-2]
@@ -763,13 +763,14 @@ class Bars(BasicBars):
     def save_dataframe(self):
         home = os.path.expanduser("~") + "/"
         today_date = str(datetime.date.today())
+        doc_dir = home + "Documents/investing/"
 
         if git_branch == "main":
-            directory = home + "Documents/investing/" + today_date + "/" + self.bar_size + "/"
+            directory = doc_dir + today_date + "/" + self.bar_size + "/"
         elif git_branch.startswith("release"):
-            directory = home + "Documents/investing/release/" + today_date + "/" + self.bar_size + "/"
+            directory = doc_dir + "release/" + today_date + "/" + self.bar_size + "/"
         else:
-            directory = home + "Documents/investing/development/" + today_date + "/" + self.bar_size + "/"
+            directory = doc_dir + "development/" + today_date + "/" + self.bar_size + "/"
 
         pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
         filename = directory + self.ticker + ".csv"

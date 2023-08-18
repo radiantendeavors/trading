@@ -226,4 +226,4 @@ class BrokerDataThread():
                 self.next_order_id = response_data["next_order_id"]
                 self.send_order_id()
         elif response_data.get("order_status"):
-            self.send_order_status(response_data)
+            self.send_order_status(response_data["order_status"])

@@ -106,7 +106,7 @@ class Order(BaseOrder):
                 }
             }
         }
-        logger.debug("Sending order message: %s", message)
+        logger.debug9("Sending order message: %s", message)
         self.data_queue.put(message)
 
     def send_order_cancel(self):
