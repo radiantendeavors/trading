@@ -24,7 +24,8 @@ Provides the application process manager
 # Standard Libraries
 import importlib
 import multiprocessing
-import threading
+
+from multiprocessing import Queue
 
 # 3rd Party Libraries
 
@@ -59,7 +60,7 @@ class StrategyProcess():
     This prosess manages the various strategies that are running.
     """
 
-    def __init__(self, cmd_queue, data_queue, next_order_id):
+    def __init__(self, cmd_queue: Queue, data_queue: dict, next_order_id: int):
         self.cmd_queue = cmd_queue
         self.data_queue = data_queue
         self.next_order_id = next_order_id
@@ -69,15 +70,20 @@ class StrategyProcess():
         """!
         Runs the various strategies.
         """
-        for index, strategy_path in enumerate(strategy_list):
-            order_id = self.next_order_id + (index * 1000)
-            logger.debug("Order Id for Strategy %s: %s", strategy_path, order_id)
-            module_name = IMPORT_PATH + strategy_path
-            module = importlib.import_module(module_name, __name__)
-            strategy = module.Strategy(self.cmd_queue, self.data_queue, order_id)
-            self.strategy_process[strategy_path] = multiprocessing.Process(target=strategy.run,
-                                                                           args=())
-            self.strategy_process[strategy_path].start()
+        try:
+            for index, strategy_id in enumerate(strategy_list):
+                order_id = self.next_order_id + (index * 1000)
+                logger.debug("Order Id for Strategy %s: %s", strategy_id, order_id)
+                module_name = IMPORT_PATH + strategy_id
+                module = importlib.import_module(module_name, __name__)
+                strategy = module.Strategy(self.cmd_queue, self.data_queue[strategy_id], order_id,
+                                           strategy_id)
+                self.strategy_process[strategy_id] = multiprocessing.Process(target=strategy.run,
+                                                                             args=())
+                self.strategy_process[strategy_id].start()
 
-        for strategy in strategy_list:
-            self.strategy_process[strategy].join()
+        except KeyboardInterrupt as msg:
+            logger.critical("Received Keyboard Interupt! Ending strategy processeses!")
+        finally:
+            for strategy_id in strategy_list:
+                self.strategy_process[strategy_id].join()

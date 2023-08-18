@@ -46,6 +46,7 @@ from ibapi.utils import (iswrapper)
 from ibapi.wrapper import EWrapper
 
 # Standard Library Overrides
+from pytrader import git_branch
 from pytrader.libs.system import logging
 
 # Other Libraries
@@ -190,6 +191,15 @@ class TwsApiClient(EWrapper, EClient):
         """
         self.accounts_available.wait()
         return self.accounts
+
+    def get_allowed_ports(self) -> list:
+        """!
+        Provides a list of allowed ports for the client.
+        """
+        if git_branch == "main":
+            return [7496, 7497, 4001, 4002]
+
+        return [7497, 4002]
 
     def get_client_id(self):
         """!
@@ -621,12 +631,14 @@ class TwsApiClient(EWrapper, EClient):
         """
         self.reqManagedAccounts()
 
-    def req_market_data(self,
-                        contract: Contract,
-                        generic_tick_list: str = "221, 233, 258, 411, 456",
-                        snapshot: bool = False,
-                        regulatory_snapshot: bool = False,
-                        market_data_options: list = []):
+    def req_market_data(
+            self,
+            contract: Contract,
+            generic_tick_list:
+        str = "221, 232, 233, 236, 258, 293, 294, 295, 318, 375, 411, 456, 595, 619",
+            snapshot: bool = False,
+            regulatory_snapshot: bool = False,
+            market_data_options: list = []):
         """!
         Requests real time market data. Returns market data for an instrument either in real time or
         10-15 minutes delayed (depending on the market data type specified)
@@ -639,7 +651,7 @@ class TwsApiClient(EWrapper, EClient):
             - 104 Historical Volatility (currently for stocks)
             - 105 Average Option Volume (currently for stocks)
             - 106 Option Implied Volatility (currently for stocks)
-            - 162 Index Future Premium
+            - 162 Index Future Premium (TODO: Futures Only?)
             - 165 Miscellaneous Stats
             - 221 Mark Price (used in TWS P&L computations)
             - 225 Auction values (volume, price and imbalance)
@@ -649,24 +661,25 @@ class TwsApiClient(EWrapper, EClient):
             - 236 Shortable
             - 256 Inventory
             - 258 Fundamental Ratios
-            - 292 TBD
-            - 293 TBD
-            - 294 TBD
-            - 295 TBD
-            - 318 TBD
-            - 375 TBD
+            - 292 Wide_news
+            - 293 TradeCount
+            - 294 TradeRate
+            - 295 VolumeRate
+            - 318 LastRTHTrade
+            - 375 RTTrdVolume
             - 411 Realtime Historical Volatility
             - 456 IBDividends
-            - 460 TBD
-            - 576 TBD
-            - 577 TBD
-            - 578 TBD
-            - 586 TBD
-            - 588 TBD
-            - 595 TBD
-            - 614 TBD
-            - 619 TBD
-            - 623 TBD
+            - 460 Bond Factor Multiplier
+            - 576 EtfNavBidAsk(navbidask)
+            - 577 EtfNavLast(navlast)
+            - 578 EtfNavClose(navclose)
+            - 586 IPOHLMPRC
+            - 587 Pl Price Delayed
+            - 588 Futures Open Interest
+            - 595 Short-Term Volume X Mins
+            - 614 EtfNavMisc(high/low)
+            - 619 Creditman Slow Mark Price
+            - 623 EtfFrozenNavLast(fznavlast)
         @param snapshot: for users with corresponding real time market data subscriptions:
             - True will return a one-time snapshot
             - False will provide streaming data
@@ -681,17 +694,47 @@ class TwsApiClient(EWrapper, EClient):
         self.req_id += 1
 
         if contract.secType == "STK":
+            """
+            Legal ones for (STK) are:
+              - 100(Option Volume)
+              - 101(Option Open Interest)
+              - 105(Average Opt Volume)
+              - 106(impvolat)
+              - 165(Misc. Stats)
+              - 221/220(Creditman Mark Price)
+              - 225(Auction)
+              - 232/221(Pl Price)
+              - 233(RTVolume)
+              - 236(inventory)
+              - 258/47(Fundamentals)
+              - 292(Wide_news)
+              - 293(TradeCount)
+              - 294(TradeRate)
+              - 295(VolumeRate)
+              - 318(LastRTHTrade)
+              - 375(RTTrdVolume)
+              - 411(rthistvol)
+              - 456/59(IBDividends)
+              - 460(Bond Factor Multiplier)
+              - 576(EtfNavBidAsk(navbidask))
+              - 577(EtfNavLast(navlast))
+              - 578(EtfNavClose(navclose))
+              - 586(IPOHLMPRC)
+              - 587(Pl Price Delayed)
+              - 588(Futures Open Interest)
+              - 595(Short-Term Volume X Mins)
+              - 614(EtfNavMisc(high/low))
+              - 619(Creditman Slow Mark Price)
+              - 623(EtfFrozenNavLast(fznavlast)
+            """
             if generic_tick_list == "":
-                generic_tick_list = "100, 101, 105, 106, 165"
+                generic_tick_list = "100, 101, 104, 105, 106, 165, 292"
             else:
-                generic_tick_list += ", 100, 101, 105, 106, 165"
+                generic_tick_list += ", 100, 101, 104, 105, 106, 165, 292"
 
-        ## TODO: Verify if pacing violations exist for market data
-        #self._historical_data_wait()
         self.reqMktData(self.req_id, contract, generic_tick_list, snapshot, regulatory_snapshot,
                         market_data_options)
 
-        #self.__historical_data_req_timestamp = datetime.datetime.now()
         return self.req_id
 
     def req_real_time_bars(self,
@@ -1163,7 +1206,7 @@ class TwsApiClient(EWrapper, EClient):
         error_codes = [
             100, 102, 103, 104, 105, 106, 107, 109, 110, 111, 113, 116, 117, 118, 119, 120, 121,
             122, 123, 124, 125, 126, 129, 131, 132, 162, 200, 320, 321, 502, 503, 504, 1101, 2100,
-            2101, 2102, 2103, 2168, 2169, 10038
+            2101, 2102, 2103, 2168, 2169, 10038, 10147
         ]
         warning_codes = [101, 501, 1100, 2105, 2107, 2108, 2109, 2110, 2137]
         info_codes = [1102]
@@ -1185,6 +1228,10 @@ class TwsApiClient(EWrapper, EClient):
             if code == 200:
                 self.data[req_id] = {"Error": msg}
                 self.data_available[req_id].set()
+
+            elif code in [103, 10147]:
+                msg = {"order_status": {req_id: {"status": "TWS_CLOSED"}}}
+                self.queue.put(msg)
 
         elif code in warning_codes:
             if advanced_order_rejection:
@@ -1762,14 +1809,14 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def realtimeBar(self, req_id: int, datetime: int, bar_open: float, bar_high: float,
+    def realtimeBar(self, req_id: int, timestamp: int, bar_open: float, bar_high: float,
                     bar_low: float, bar_close: float, bar_volume: Decimal, bar_wap: Decimal,
                     bar_count: int):
         """!
         Updates the real time 5 seconds bars
 
         @param req_id: the request's identifier
-        @param datetime: the bar's date and time (Epoch/Unix time)
+        @param timestamp: the bar's date and time (Epoch/Unix time)
         @param bar_open: the bar's open point
         @param bar_high: the bar's high point
         @param bar_low: the bar's low point
@@ -1781,7 +1828,7 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        bar = [datetime, bar_open, bar_high, bar_low, bar_close, bar_volume, bar_wap, bar_count]
+        bar = [timestamp, bar_open, bar_high, bar_low, bar_close, bar_volume, bar_wap, bar_count]
         msg = {"real_time_bars": {req_id: bar}}
         self.queue.put(msg)
 
@@ -1989,14 +2036,15 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug("End Function")
 
     @iswrapper
-    def tickByTickAllLast(self, req_id: int, tick_type: int, time: int, price: float, size: Decimal,
-                          tick_attrib_last: TickAttribLast, exchange: str, special_conditions: str):
+    def tickByTickAllLast(self, req_id: int, tick_type: int, timestamp: int, price: float,
+                          size: Decimal, tick_attrib_last: TickAttribLast, exchange: str,
+                          special_conditions: str):
         """!
         Returns "Last" or "AllLast" tick-by-tick real-time tick
 
         @param reqId: unique identifier of the request
         @param tickType: tick-by-tick real-time tick type: "Last" or "AllLast"
-        @param time: tick-by-tick real-time tick timestamp
+        @param timestamp: tick-by-tick real-time tick timestamp
         @param price: tick-by-tick real-time tick last price
         @param size: tick-by-tick real-time tick last size
         @param tick_attrib_last: tick-by-tick real-time last tick attribs
@@ -2007,20 +2055,20 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        tick = [tick_type, time, price, size, tick_attrib_last, exchange, special_conditions]
+        tick = [tick_type, timestamp, price, size, tick_attrib_last, exchange, special_conditions]
 
-        msg = {"market_data": {req_id: tick}}
+        msg = {"tick": {req_id: tick}}
         self.queue.put(msg)
 
     @iswrapper
-    def tickByTickBidAsk(self, req_id: int, time: int, bid_price: float, ask_price: float,
+    def tickByTickBidAsk(self, req_id: int, timestamp: int, bid_price: float, ask_price: float,
                          bid_size: Decimal, ask_size: Decimal,
                          tick_attrib_bid_ask: TickAttribBidAsk):
         """!
         Returns "BidAsk" tick-by-tick real-time tick
 
         @param req_id: unique identifier of the request
-        @param time: tick-by-tick real-time tick timestamp
+        @param timestamp: tick-by-tick real-time tick timestamp
         @param bid_price: tick-by-tick real-time tick bid price
         @param ask_price: tick-by-tick real-time tick ask price
         @param bid_size: tick-by-tick real-time tick bid size
@@ -2031,24 +2079,24 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        tick = [time, bid_price, ask_price, bid_size, ask_size, tick_attrib_bid_ask]
+        tick = [timestamp, bid_price, ask_price, bid_size, ask_size, tick_attrib_bid_ask]
 
-        msg = {"market_data": {req_id: tick}}
+        msg = {"tick": {req_id: tick}}
         self.queue.put(msg)
 
     @iswrapper
-    def tickByTickMidPoint(self, req_id: int, time: int, mid_point: float):
+    def tickByTickMidPoint(self, req_id: int, timestamp: int, mid_point: float):
         """!
         Returns "MidPoint" tick-by-tick real-time tick
 
         @param reqId: unique identifier of the request
-        @param time: tick-by-tick real-time tick timestamp
+        @param timestamp: tick-by-tick real-time tick timestamp
         @param mid_point: tick-by-tick real-time tick mid_point
 
         @return
         """
-        tick = [time, mid_point]
-        msg = {"market_data": {req_id: tick}}
+        tick = [timestamp, mid_point]
+        msg = {"tick": {req_id: tick}}
         self.queue.put(msg)
 
     @iswrapper
@@ -2074,8 +2122,12 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        tick = [
+            "tick_efp", tick_type, basis_points, formatted_basis_points, implied_future, hold_days,
+            future_last_trade_date, dividend_impact, dividends_to_last_trade_date
+        ]
+        msg = {"market_data": {req_id: tick}}
+        self.queue.put(msg)
 
     @iswrapper
     def tickGeneric(self, req_id: int, field: int, value: float):
@@ -2110,7 +2162,6 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        logger.debug("Begin Function")
         tick = ["tick_news", timestamp, provider_code, article_id, headline, extra_data]
         msg = {"market_data": {req_id: tick}}
         self.queue.put(msg)
@@ -2585,6 +2636,8 @@ class TwsApiClient(EWrapper, EClient):
     # ==============================================================================================
     def _data_wait(self, timestamp, sleep_time):
         time_diff = datetime.datetime.now() - timestamp
+
+        # TODO: Why is this a loop?
         while time_diff.total_seconds() < sleep_time:
 
             logger.debug6("Now: %s", datetime.datetime.now())

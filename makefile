@@ -8,7 +8,7 @@
 #
 # ---------------------------------------------------------------------
 NAME=trader
-VERSION=0.3.2
+VERSION=0.4.0
 
 
 # -------
@@ -18,9 +18,9 @@ VERSION=0.3.2
 # -------
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 ifeq (Branch, main)
-	VENV_DIR := $(HOME)/.local/lib/pytrader_stable
+	VENV_DIR := $(HOME)/.local/lib/pytrader/stable
 else
-	VENV_DIR := $(HOME)/.local/lib/pytrader_development
+	VENV_DIR := $(HOME)/.local/lib/pytrader/development
 endif
 
 PYTHON := /usr/bin/python3

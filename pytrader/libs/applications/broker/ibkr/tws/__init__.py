@@ -22,13 +22,8 @@ The main user interface for the trading program.
 @file pytrader/libs/applications/broker/ibkr/tws/__init__.py
 """
 # System Libraries
-import datetime
-import threading
-from multiprocessing import Queue
 
 # 3rd Party Libraries
-from ibapi.contract import Contract
-from ibapi.order import Order
 
 # Application Libraries
 # System Library Overrides
@@ -36,7 +31,13 @@ from pytrader.libs.system import logging
 
 # Other Application Libraries
 from pytrader.libs.applications.broker.common import BrokerDataThread
-from pytrader.libs.applications.broker.common import orders
+from pytrader.libs.applications.broker.ibkr.tws.observers import (
+    StrategyBarDataObserver, StrategyContractDataObserver, StrategyMarketDataObserver,
+    StrategyOptionDataObserver, StrategyOrderDataObserver, StrategyRealTimeBarObserver)
+from pytrader.libs.applications.broker.ibkr.tws.subjects import (BrokerBarData, BrokerContractData,
+                                                                 BrokerMarketData, BrokerOptionData,
+                                                                 BrokerOrderData,
+                                                                 BrokerRealTimeBarData)
 # Conditional Libraries
 
 # ==================================================================================================
@@ -62,21 +63,24 @@ class TwsDataThread(BrokerDataThread):
         """!
         Initializes the TwsDataThread class.
         """
+        # Contract Subjects and Observers
+        self.contract_subjects = BrokerContractData()
+        self.contract_observers = {}
 
-        ## Dictionary containing all active contracts.
-        self.contracts = {}
+        self.bar_subjects = BrokerBarData()
+        self.bar_observers = {}
 
-        ## List containing all active bar sizes.
-        self.bar_sizes = []
+        self.mkt_data_subjects = BrokerMarketData()
+        self.mkt_data_observers = {}
 
-        ## Dictionary to match request ids to contracts for historical bars.
-        self.historical_bar_ids = {}
+        self.option_subjects = BrokerOptionData()
+        self.option_observers = {}
 
-        ## Dictionary to match request ids to contracts for real time bars.
-        self.rtb_ids = {}
+        self.order_subjects = BrokerOrderData()
+        self.order_observers = {}
 
-        ## Dictionary to match request ids to contracts for real time market data.
-        self.rtmd_ids = {}
+        self.rtb_subjects = BrokerRealTimeBarData()
+        self.rtb_observers = {}
 
         super().__init__(*args, **kwargs)
 
@@ -88,9 +92,9 @@ class TwsDataThread(BrokerDataThread):
 
         @return None.
         """
-        self.brokerclient.cancel_order(order_id)
+        self.order_subjects.cancel_order(order_id)
 
-    def create_order(self, order_request: dict):
+    def create_order(self, order_request: dict, strategy_id: str):
         """!
         Create a new order from an order request.
 
@@ -100,67 +104,78 @@ class TwsDataThread(BrokerDataThread):
         """
         order_contract = order_request["contract"]
         new_order = order_request["order"]
+        order_id = new_order.orderId
 
-        self.brokerclient.place_order(order_contract, new_order, new_order.orderId)
+        self.order_subjects.create_order(order_contract, new_order, order_id)
+        self.order_observers[strategy_id].add_order_id(order_id)
 
     def request_bar_history(self):
-        for contract_ in list(self.contracts.values()):
-            for size in self.bar_sizes:
-                if size != "rtb":
-                    self._retrieve_bar_history(contract_, size)
+        self.bar_subjects.request_bars()
+        self.bar_subjects.notify()
 
-    def request_option_details(self):
-        for ticker, contract_ in self.contracts.items():
-            req_id = self.brokerclient.req_sec_def_opt_params(contract_)
-            option_details = self.brokerclient.get_data(req_id)
-            #logger.debug2("Requesting Option Details  for Ticker: %s", ticker)
+    def request_option_details(self, strategy_id):
+        tickers = self.contract_observers[strategy_id].get_tickers()
+        contracts = self.contract_subjects.get_contracts()
 
-            message = {"option_details": {"ticker": ticker, "details": option_details}}
-            logger.debug9("Option Details: %s", message)
-            self.data_queue.put(message)
+        self.option_observers[strategy_id].add_tickers(tickers)
+        self.option_subjects.add_tickers(tickers, contracts)
+        self.option_subjects.request_option_details()
+        self.option_subjects.notify()
 
-    def request_real_time_bars(self):
-        for ticker, contract_ in self.contracts.items():
+    def request_real_time_bars(self, strategy_id):
+        tickers = self.contract_observers[strategy_id].get_tickers()
+        contracts = self.contract_subjects.get_contracts()
 
-            if ticker not in self.rtb_ids.values():
-                logger.debug2("Requesting Real Time Bars for Ticker: %s", ticker)
-                req_id = self.brokerclient.req_real_time_bars(contract_)
-                self.rtb_ids[req_id] = ticker
+        self.rtb_observers[strategy_id].add_tickers(tickers)
+        self.rtb_subjects.add_tickers(tickers, contracts)
+        self.rtb_subjects.request_real_time_bars()
 
-    def request_market_data(self):
-        for ticker, contract_ in self.contracts.items():
-            if ticker not in self.rtmd_ids.values():
-                logger.debug2("Requesting Market Data for Ticker: %s", ticker)
-                req_id = self.brokerclient.req_market_data(contract_)
-                self.rtmd_ids[req_id] = ticker
+    def request_market_data(self, strategy_id):
+        tickers = self.contract_observers[strategy_id].get_tickers()
+        contracts = self.contract_subjects.get_contracts()
+
+        self.mkt_data_observers[strategy_id].add_tickers(tickers)
+        self.mkt_data_subjects.add_tickers(tickers, contracts)
+        self.mkt_data_subjects.request_market_data()
 
     def send_market_data_ticks(self, market_data: dict):
-        req_id = list(market_data.keys())[0]
-        ticker = self.rtmd_ids[req_id]
-        contract_ = self.contracts[ticker]
-        self.send_ticks(contract_, market_data[req_id])
+        self.mkt_data_subjects.send_market_data_ticks(market_data)
 
     def send_order_status(self, order_status: dict):
-        logger.debug9("Order Status: %s", order_status)
-        self.data_queue.put(order_status)
+        self.order_subjects.send_order_status(order_status)
 
     def send_real_time_bars(self, real_time_bar: dict):
-        # There should really only be one key.
-        req_id = list(real_time_bar.keys())[0]
-        ticker = self.rtb_ids[req_id]
-        contract_ = self.contracts[ticker]
+        self.rtb_subjects.send_real_time_bars(real_time_bar)
 
-        rtb = real_time_bar[req_id]
+    def set_strategies(self, strategy_list: list):
+        for strategy in strategy_list:
+            # Add Bar Observers
+            self.bar_observers[strategy] = StrategyBarDataObserver(self.data_queue[strategy])
+            self.bar_subjects.attach(self.bar_observers[strategy], self.brokerclient)
 
-        bar_datetime = datetime.datetime.fromtimestamp(rtb[0]).strftime('%Y%m%d %H:%M:%S')
-        bar_datetime_str = str(bar_datetime) + " EST"
+            # Add Contract Observers
+            self.contract_observers[strategy] = StrategyContractDataObserver(
+                self.data_queue[strategy])
+            self.contract_subjects.attach(self.contract_observers[strategy], self.brokerclient)
 
-        rtb[0] = bar_datetime_str
-        rtb[5] = int(rtb[5])
-        rtb[6] = float(rtb[6])
-        self.send_bars(contract_, "real_time_bars", "rtb", rtb)
+            # Add MarketData Observers
+            self.mkt_data_observers[strategy] = StrategyMarketDataObserver(
+                self.data_queue[strategy])
+            self.mkt_data_subjects.attach(self.mkt_data_observers[strategy], self.brokerclient)
 
-    def set_bar_sizes(self, bar_sizes: list):
+            # Add Option Detail Observers
+            self.option_observers[strategy] = StrategyOptionDataObserver(self.data_queue[strategy])
+            self.option_subjects.attach(self.option_observers[strategy], self.brokerclient)
+
+            # Add Option Detail Observers
+            self.order_observers[strategy] = StrategyOrderDataObserver(self.data_queue[strategy])
+            self.order_subjects.attach(self.order_observers[strategy], self.brokerclient)
+
+            # Add Real Time Bar Observers
+            self.rtb_observers[strategy] = StrategyRealTimeBarObserver(self.data_queue[strategy])
+            self.rtb_subjects.attach(self.rtb_observers[strategy], self.brokerclient)
+
+    def set_bar_sizes(self, bar_sizes: list, strategy_id: str):
         """!
         Sets bar sizes
 
@@ -168,94 +183,19 @@ class TwsDataThread(BrokerDataThread):
 
         @return None
         """
-        # We use keys here because we do not need the entire key, value pair
-        self.bar_sizes = bar_sizes
+        tickers = self.contract_observers[strategy_id].get_tickers()
+        contracts = self.contract_subjects.get_contracts()
+        self.bar_subjects.add_bar_sizes(tickers, contracts, bar_sizes)
+        self.bar_observers[strategy_id].add_ticker_bar_sizes(tickers, bar_sizes)
 
-    def set_contracts(self, contracts: dict):
+    def set_contracts(self, contracts: dict, strategy_id: str):
         for ticker, contract_ in contracts.items():
-            logger.debug2("Requesting Contract Details for contract: %s", ticker)
+            self.contract_subjects.request_contract_data(ticker, contract_)
 
-            req_id = self.brokerclient.req_contract_details(contract_)
-            contract_details = self.brokerclient.get_data(req_id)
+        # We do this after requesting contract detail, so we can check if the ticker has a valid
+        # contract.
+        valid_tickers = self.contract_subjects.get_tickers()
+        tickers = set(valid_tickers).intersection(list(contracts.keys()))
 
-            if isinstance(contract_details, (dict, set)):
-                logger.error("Failed to obtain contract details for %s", ticker)
-                logger.error("Contract: %s", contract_details)
-            else:
-                new_contract = contract_details.contract
-                if new_contract.localSymbol not in list(self.contracts.keys()):
-                    self.contracts[new_contract.localSymbol] = new_contract
-
-        msg = {"contracts": self.contracts}
-        logger.debug9("Sending New Contracts: %s", msg)
-        self.data_queue.put(msg)
-
-    # ==============================================================================================
-    #
-    # Internal Use only functions.  These should not be used outside the class.
-    #
-    # ==============================================================================================
-    def _retrieve_bar_history(self, contract_: Contract, size: str):
-        if size == "rtb":
-            logger.error("Invalid Bar Size for History")
-        else:
-            duration = self._set_duration(size)
-
-            if self.brokerclient:
-                self._retreive_broker_bar_history(contract_, size, duration)
-            else:
-                raise NotImplementedError
-
-    def _retreive_broker_bar_history(self, contract_: Contract, size: str, duration: str):
-        if contract_.localSymbol not in list(self.historical_bar_ids.keys()):
-            self.historical_bar_ids[contract_.localSymbol] = {}
-
-        if size not in list(self.historical_bar_ids[contract_.localSymbol].keys()):
-            new_bar_list = []
-
-            if duration == "all":
-                logger.debug8("Getting all history")
-
-            else:
-                req_id = self.brokerclient.req_historical_data(contract_,
-                                                               size,
-                                                               duration_str=duration)
-
-            # Bar List is a list of ibapi class Bar.
-            bar_list = self.brokerclient.get_data(req_id)
-
-            logger.debug9("Bar List: %s", bar_list)
-
-            # This is done to convert the Bar Class into a list of elements.
-            for ohlc_bar in bar_list:
-                logger.debug9("Bar: %s", ohlc_bar)
-
-                new_bar_list.append([
-                    ohlc_bar.date, ohlc_bar.open, ohlc_bar.high, ohlc_bar.low, ohlc_bar.close,
-                    float(ohlc_bar.volume), ohlc_bar.wap, ohlc_bar.barCount
-                ])
-
-            self.send_bars(contract_, "bars", size, new_bar_list)
-            self.historical_bar_ids[contract_.localSymbol][size] = req_id
-
-    def _set_duration(self, size: str):
-        logger.debug5("Setting Duration for Bar Size: %s", size)
-        if size == "1 month":
-            duration = "2 Y"
-        elif size == "1 week":
-            duration = "1 Y"
-        elif size == "1 day":
-            duration = "1 Y"
-        elif size == "1 hour":
-            duration = "7 W"
-        elif size == "30 mins":
-            duration = "4 W"
-        elif size == "15 mins":
-            duration = "10 D"
-        elif size == "5 mins":
-            duration = "4 D"
-        elif size in ["15 secs", "30 secs", "1 min"]:
-            duration = "2 D"
-        logger.debug9("Duration Set to %s", duration)
-
-        return duration
+        self.contract_observers[strategy_id].add_tickers(tickers)
+        self.contract_subjects.notify()
