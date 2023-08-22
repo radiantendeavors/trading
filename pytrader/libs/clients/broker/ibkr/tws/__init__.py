@@ -1,5 +1,5 @@
 """!
-@package pytrader.libs.clients.broker.ibkrclient
+@package pytrader.libs.clients.broker.ibkr.tws
 
 Provides the client for Interactive Brokers
 
@@ -22,17 +22,34 @@ Provides the client for Interactive Brokers
 
   Creates a basic interface for interacting with Interactive Brokers.
 
-@file pytrader/libs/clients/broker/ibrkrclient.py
+@file pytrader/libs/clients/broker/ibkr/tws/__init__.py
+
+This is the only file to not use snake_case for functions or variables.  This is to match TWSAPI
+abstract function names, and their variables.
 
 Provides the client for Interactive Brokers
 """
+# ==================================================================================================
+#
+# This file requires special pylint rules to match the API format.
+#
+# C0103: Invalid Name
+# C0104: Bad name (bar)
+# C0302: too many lines
+# R0913: too many arguments
+# R0904: too many public methods
+#
+# pylint: disable=C0103,C0104,C0302,R0913,R0904
+#
+# ==================================================================================================
 # Standard Libraries
 import datetime
 import threading
-import time
 
 from decimal import Decimal
 from queue import Queue
+from time import sleep
+from typing import Optional
 
 # 3rd Party Libraries
 from ibapi.client import EClient
@@ -47,6 +64,7 @@ from ibapi.wrapper import EWrapper
 
 # Standard Library Overrides
 from pytrader import git_branch
+from pytrader.libs.utilities.exceptions import (BrokerTooManyRequests, InvalidTickType)
 from pytrader.libs.system import logging
 
 # Other Libraries
@@ -103,7 +121,7 @@ class TwsApiClient(EWrapper, EClient):
     Serves as the client interface for Interactive Brokers
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         """!@fn __init__
 
         Initialize the IbkrClient class
@@ -181,7 +199,11 @@ class TwsApiClient(EWrapper, EClient):
         ##
         self.tick_queue = {}
 
+        ##
         self.mkt_data_queue = {}
+
+        ##
+        self.api_thread = None
 
     def get_account_list(self):
         """!
@@ -224,19 +246,36 @@ class TwsApiClient(EWrapper, EClient):
 
             # We pop this data to prevent the amount of data from constantly growing.
             return self.data.pop(req_id)
-        else:
-            return self.data
 
-    def get_next_order_id(self):
+        return self.data
+
+    def get_next_order_id(self) -> int:
+        """!
+        Returns the next valid order id.
+
+        @return self.next_order_id
+        """
         self.next_valid_id_available.wait()
         return self.next_order_id
 
-    def start_thread(self, queue):
+    def start_thread(self, queue: Queue) -> None:
+        """!
+        Starts the api thread.
+
+        @param queue: The thread message passing queue.
+
+        @return None
+        """
         self.queue = queue
         self.api_thread = threading.Thread(target=self.run, daemon=True)
         self.api_thread.start()
 
-    def stop_thread(self):
+    def stop_thread(self) -> None:
+        """!
+        Stops the api thread.
+
+        @return None.
+        """
         self.api_thread.join()
 
     # ==============================================================================================
@@ -248,11 +287,12 @@ class TwsApiClient(EWrapper, EClient):
     # All functions in alphabetical order.
     #
     # ==============================================================================================
-    def calculate_implied_volatility(self,
-                                     contract: Contract,
-                                     option_price: float,
-                                     under_price: float,
-                                     implied_option_volatility_options: list = []):
+    def calculate_implied_volatility(
+            self,
+            contract: Contract,
+            option_price: float,
+            under_price: float,
+            implied_option_volatility_options: Optional[list] = None) -> int:
         """!
         Calculate the volatility for an option.
         Request the calculation of the implied volatility based on hypothetical option and its
@@ -262,16 +302,26 @@ class TwsApiClient(EWrapper, EClient):
         @param contract: The option's contract for which the volatility is to be calculated.
         @param option_price: Hypothetical Option Price
         @param under_price: Hypothetical option's underlying price.
+        @param implied_option_volatility_options: FIXME: This is not documented by the TWSAPI
 
-        @return
+        @return req_id: The request identifier used.
         """
         self.req_id += 1
+
+        # TWSAPI will crash if implied_option_volatility_options is NoneType.  Since setting the
+        # default value to and empty list '[]' is dangerous, we do this instead.
+        if implied_option_volatility_options is None:
+            implied_option_volatility_options = []
+        self.calculateImpliedVolatility(self.req_id, contract, option_price, under_price,
+                                        implied_option_volatility_options)
+
+        return self.req_id
 
     def calculate_option_price(self,
                                contract: Contract,
                                volatility: float,
                                under_price: float,
-                               option_price_options: list = []):
+                               option_price_options: Optional[list] = None) -> int:
         """!
         Calculates an option's price based on the provided volatility and its underlying's price.
         The calculation will be return in EWrapper's tickOptionComputation callback.
@@ -279,63 +329,108 @@ class TwsApiClient(EWrapper, EClient):
         @param contract: The option's contract for which the price wants to be calculated.
         @param volatility: Hypothetical volatility.
         @param under_price: Hypothetical underlying's price.
+        @param option_price_options: FIXME: This is not documented by the TWSAPI
 
-        @return
+        @return req_id: The request identifier used
         """
         self.req_id += 1
+        if option_price_options is None:
+            option_price_options = []
+        self.calculateOptionPrice(self.req_id, contract, volatility, under_price,
+                                  option_price_options)
 
-    def cancel_account_summary(self):
+        return self.req_id
+
+    def cancel_account_summary(self, req_id: int) -> None:
         """!
         Cancels the account's summary request. After requesting an account's summary, invoke this
         function to cancel it.
 
         @param req_id: The identifier of the previously performed account request.
 
-        @return
+        @return None
         """
-        self.req_id += 1
+        self.cancelAccountSummary(req_id)
 
-    def cancel_account_updates_multi(self):
+    def cancel_account_updates_multi(self, req_id: int) -> None:
         """!
         Cancels account updates request for account and/or model.
 
         @param req_id: The account subscription to cancel.
 
-        @return
+        @return None
         """
-        self.req_id += 1
+        self.cancelAccountUpdatesMulti(req_id)
 
-    def cancel_calculate_implied_volatility(self):
-        self.req_id += 1
+    def cancel_calculate_implied_volatility(self, req_id: int) -> None:
+        """!
+        Cancels an option's implied volatility calculation request
 
-    def cancel_head_timestamp(self):
-        self.req_id += 1
-        self.cancelHeadTimeStamp(self.req_id)
+        @param req_id: The request id to cancel
 
-    def cancel_historical_data(self):
-        self.req_id += 1
+        @return None
+        """
+        self.cancelCalculateImpliedVolatility(req_id)
+
+    def cancel_head_timestamp(self, req_id: int) -> None:
+        """!
+        Cancels a pending reqHeadTimeStamp request.
+
+        @param req_id: The request id to cancel.
+
+        @return None
+        """
+        self.cancelHeadTimeStamp(req_id)
+
+    def cancel_historical_data(self, req_id: int) -> None:
+        """!
+        Cancels a historical data request.
+
+        @param req_id: The requeust id to cancel.
+
+        @return None
+        """
         self.__active_historical_data_requests -= 1
-        self.cancelHistoricalData(self.req_id)
+        self.cancelHistoricalData(req_id)
 
-    def cancel_mkt_data(self):
-        self.req_id += 1
+    def cancel_mkt_data(self, req_id: int) -> None:
+        """!
+        Cancels a RT Market Data request.
 
-    def cancel_mkt_depth(self, is_smart_depth: bool):
-        self.req_id += 1
-        self.cancelMktDepth(self.req_id, is_smart_depth)
+        @param req_id: The request id to cancel.
 
-    def cancel_news_bulletin(self):
-        self.cancelNewsBulletin()
+        @return None
+        """
+        self.cancelMktData(req_id)
 
-    def cancel_order(self, order_id: int, manual_order_cancel_time: str = ""):
+    def cancel_mkt_depth(self, req_id: int, is_smart_depth: bool) -> None:
+        """!
+        Cancels a market depth request.
+
+        @param req_id: The request id to cancel.
+        @param is_smart_depth: FIXME: This is not documented by the TWSAPI.
+
+        @return None
+        """
+        self.cancelMktDepth(req_id, is_smart_depth)
+
+    def cancel_news_bulletins(self) -> None:
+        """!
+        Cancels IB's news bulletin subscription.
+
+        @return None
+        """
+        self.cancelNewsBulletins()
+
+    def cancel_order(self, order_id: int, manual_order_cancel_time: str = "") -> None:
         """!
         Cancels an active order placed by from the same API client ID.
         Note: API clients cannot cancel individual orders placed by other clients. Only
         reqGlobalCancel is available.
 
         @param order_id: The Order Id to cancel.
-        @param manual_order_cancel_time - IBAPI does not provide a definition.  IBAPI says to set
-               the value to an empty string.
+        @param manual_order_cancel_time: FIXME: This is not documented by the TWSAPI.  IBAPI says to
+                                         set the value to an empty string.
 
         @return None
         """
@@ -351,6 +446,17 @@ class TwsApiClient(EWrapper, EClient):
         return self.isConnected()
 
     def place_order(self, contract: Contract, order: Order, order_id=None):
+        """!
+        Places or modifies an order.
+
+        @param contract: The contract for the order.
+        @param order: The order
+        @param order_id: The order's unique identifier.  Use a sequential id starting with the id
+               received at the nextValidId method. If a new order is placed with an order ID less
+               than or equal to the order ID of a previous order an error will occur.
+
+        @return order_id:  The order_id that was used.
+        """
         logger.debug("Order: %s", order)
         if order_id is None:
             self.next_valid_id_available.wait()
@@ -360,14 +466,84 @@ class TwsApiClient(EWrapper, EClient):
         self.req_ids()
         return order_id
 
-    def req_account_summary(self, account_types: str = "ALL", tags: list = []):
+    def req_account_summary(self, account_types: str = "ALL", tags: Optional[list] = None) -> int:
+        """!
+        Requests a specific account's summary.
+        This method will subscribe to the account summary as presented in the TWS' Account Summary
+        tab. The data is returned at EWrapper::accountSummary
+        https://www.interactivebrokers.com/en/software/tws/accountwindowtop.htm.
+
+        @param account_types: Set to "All" to return account summary data for all accounts, or set
+               to a specific Advisor Account Group name that has already been created in TWS
+               Global Configuration.
+        @param tags: A comma separated list with the desired tags
+               AccountType — Identifies the IB account structure
+               NetLiquidation — The basis for determining the price of the assets in your account.
+                                Total cash value + stock value + options value + bond value
+               TotalCashValue — Total cash balance recognized at the time of trade + futures PNL
+               SettledCash — Cash recognized at the time of settlement
+                             - purchases at the time of trade
+                             - commissions
+                             - taxes
+                             - fees
+               AccruedCash — Total accrued cash value of stock, commodities and securities
+               BuyingPower — Buying power serves as a measurement of the dollar value of securities
+                             that one may purchase in a securities account without depositing
+                             additional funds
+               EquityWithLoanValue — Forms the basis for determining whether a client has the
+                                     necessary assets to either initiate or maintain security
+                                     positions.
+                                     Cash + stocks + bonds + mutual funds
+               PreviousEquityWithLoanValue — Marginable Equity with Loan value as of 16:00 ET the
+                                             previous day
+               GrossPositionValue — The sum of the absolute value of all stock and equity option
+                                    positions
+               RegTEquity — Regulation T equity for universal account
+               RegTMargin — Regulation T margin for universal account
+               SMA — Special Memorandum Account: Line of credit created when the market value of
+                     securities in a Regulation T account increase in value
+               InitMarginReq — Initial Margin requirement of whole portfolio
+               MaintMarginReq — Maintenance Margin requirement of whole portfolio
+               AvailableFunds — This value tells what you have available for trading
+               ExcessLiquidity — This value shows your margin cushion, before liquidation
+               Cushion — Excess liquidity as a percentage of net liquidation value
+               FullInitMarginReq — Initial Margin of whole portfolio with no discounts or intraday
+                                   credits
+               FullMaintMarginReq — Maintenance Margin of whole portfolio with no discounts or
+                                    intraday credits
+               FullAvailableFunds — Available funds of whole portfolio with no discounts or intraday
+                                    credits
+               FullExcessLiquidity — Excess liquidity of whole portfolio with no discounts or
+                                     intraday credits
+               LookAheadNextChange — Time when look-ahead values take effect
+               LookAheadInitMarginReq — Initial Margin requirement of whole portfolio as of next
+                                        period's margin change
+               LookAheadMaintMarginReq — Maintenance Margin requirement of whole portfolio as of
+                                         next period's margin change
+               LookAheadAvailableFunds — This value reflects your available funds at the next margin
+                                         change
+               LookAheadExcessLiquidity — This value reflects your excess liquidity at the next
+                                          margin change
+               HighestSeverity — A measure of how close the account is to liquidation
+               DayTradesRemaining — The Number of Open/Close trades a user could put on before
+                                    Pattern Day Trading is detected. A value of "-1" means that the
+                                    user can put on unlimited day trades.
+               Leverage — GrossPositionValue / NetLiquidation
+               $LEDGER — Single flag to relay all cash balance tags*, only in base currency.
+               $LEDGER:CURRENCY — Single flag to relay all cash balance tags*, only in the specified
+                                  currency.
+               $LEDGER:ALL — Single flag to relay all cash balance tags* in all currencies.
+
+        @return req_id: The request identifier used.
+        """
         self.req_id += 1
+
         tags_string = ", ".join([str(item) for item in tags])
         self.data_available[self.req_id] = threading.Event()
         self.reqAccountSummary(self.req_id, account_types, tags_string)
         return self.req_id
 
-    def req_account_updates(self, subscribe: bool, account_code: str):
+    def req_account_updates(self, subscribe: bool, account_code: str) -> None:
         """!
         Subscribes to a specific account's information and portfolio. Through this method, a single
         account's subscription can be started/stopped. As a result from the subscription, the
@@ -383,7 +559,7 @@ class TwsApiClient(EWrapper, EClient):
         @param subscribe: Set to true to start the subscription, and false to stop it
         @param account_code: the account id (i.e. U123456) for which the information is requested.
 
-        @return
+        @return None
         """
         self.reqAccountUpdates(subscribe, account_code)
 
@@ -409,13 +585,13 @@ class TwsApiClient(EWrapper, EClient):
         self.__contract_details_data_req_timestamp = datetime.datetime.now()
         return self.req_id
 
-    def req_global_cancel(self):
+    def req_global_cancel(self) -> None:
         """!
         Cancels all active orders.
 
         This method will cancel ALL open orders including those placed directly from TWS.
 
-        @return
+        @return None
         """
         self.reqGlobalCancel()
 
@@ -423,7 +599,7 @@ class TwsApiClient(EWrapper, EClient):
                            contract: Contract,
                            what_to_show: str = "TRADES",
                            use_regular_trading_hours: bool = True,
-                           format_date: bool = True):
+                           format_date: bool = True) -> int:
         """!
         Requests the earliest available bar data for a contract.
 
@@ -460,7 +636,8 @@ class TwsApiClient(EWrapper, EClient):
                             use_regular_trading_hours: bool = True,
                             format_date: bool = True,
                             keep_up_to_date: bool = False,
-                            chart_options: list = []):
+                            chart_options: Optional[list] = None) -> int:
+        # pylint: disable=C0301
         """!
         Requests contracts' historical data. When requesting historical data, a finishing time and
         date is required along with a duration string. For example, having:
@@ -517,11 +694,10 @@ class TwsApiClient(EWrapper, EClient):
           - set to 2 to obtain it like system time format in seconds
         @param keep_up_to_date: set to True to received continuous updates on most recent bar data.
         If True, and endDateTime cannot be specified.
-        @param chart_options: FIXME: TWS API does not document this parameter
+        @param chart_options: FIXME: This is not documented by the TWSAPI
 
         @return req_id: The request identifier
         """
-
         # ==========================================================================================
         #
         # The maximum number of simultaneous open historical data requests from the API is 50. In
@@ -558,6 +734,11 @@ class TwsApiClient(EWrapper, EClient):
             logger.debug6("Requesting Historical Bars for: %s", contract.localSymbol)
 
             self.data_available[self.req_id] = threading.Event()
+
+            # TWSAPI expects chart_options type to be a list.
+            if chart_options is None:
+                chart_options = []
+
             self.reqHistoricalData(self.req_id, contract, end_date_time, duration_str,
                                    bar_size_setting, what_to_show, use_regular_trading_hours,
                                    format_date, keep_up_to_date, chart_options)
@@ -571,8 +752,8 @@ class TwsApiClient(EWrapper, EClient):
 
             self.data[self.req_id] = []
             return self.req_id
-        else:
-            raise Exception("Too many open historical data requests")
+
+        raise BrokerTooManyRequests("Too many open historical data requests")
 
     def req_historical_ticks(self,
                              contract: Contract,
@@ -582,7 +763,7 @@ class TwsApiClient(EWrapper, EClient):
                              what_to_show: str,
                              use_regular_trading_hours: int,
                              ignore_size: bool,
-                             misc_options: list = []):
+                             misc_options: Optional[list] = None) -> int:
         """!
         Requests historical Time&Sales data for an instrument.
 
@@ -602,19 +783,22 @@ class TwsApiClient(EWrapper, EClient):
         self.req_id += 1
 
         # The maximum allowed is 1000 per request
-        if number_of_ticks > 1000:
-            number_of_ticks = 1000
+        number_of_ticks = min(number_of_ticks, 1000)
+
+        # TWSAPI expects misc_options type to be a list
+        if misc_options is None:
+            misc_options = []
 
         self.reqHistoricalTicks(self.req_id, contract, start_date_time, end_date_time,
                                 number_of_ticks, what_to_show, use_regular_trading_hours,
                                 ignore_size, misc_options)
         return self.req_id
 
-    def req_ids(self):
+    def req_ids(self) -> None:
         """!
         Requests the next valid order ID at the current moment.
 
-        @return
+        @return None
         """
 
         # NOTE: TWS API reqIds has a required parameter 'numIds'.  The API Docs say it is
@@ -622,14 +806,14 @@ class TwsApiClient(EWrapper, EClient):
         self.next_valid_id_available.clear()
         self.reqIds(1)
 
-    def req_managed_accounts(self):
+    def req_managed_accounts(self) -> None:
         """!
         Requests the accounts to which the logged user has access to.
 
         NOTE: This data is already provided during the initial connection, and stored in
         self.accounts.
         """
-        self.reqManagedAccounts()
+        self.reqManagedAccts()
 
     def req_market_data(
             self,
@@ -638,7 +822,7 @@ class TwsApiClient(EWrapper, EClient):
         str = "221, 232, 233, 236, 258, 293, 294, 295, 318, 375, 411, 456, 595, 619",
             snapshot: bool = False,
             regulatory_snapshot: bool = False,
-            market_data_options: list = []):
+            market_data_options: Optional[list] = None):
         """!
         Requests real time market data. Returns market data for an instrument either in real time or
         10-15 minutes delayed (depending on the market data type specified)
@@ -687,46 +871,44 @@ class TwsApiClient(EWrapper, EClient):
             have "US Securities Snapshot Bundle" subscription but not corresponding Network A, B, or
             C subscription necessary for streaming * market data. One-time snapshot of current
             market price that will incur a fee of 1 cent to the account per snapshot
-        @param market_data_options -
+        @param market_data_options: FIXME: This is not documented by the TWSAPI
 
         @return req_id: The rquest's identifier
         """
         self.req_id += 1
 
         if contract.secType == "STK":
-            """
-            Legal ones for (STK) are:
-              - 100(Option Volume)
-              - 101(Option Open Interest)
-              - 105(Average Opt Volume)
-              - 106(impvolat)
-              - 165(Misc. Stats)
-              - 221/220(Creditman Mark Price)
-              - 225(Auction)
-              - 232/221(Pl Price)
-              - 233(RTVolume)
-              - 236(inventory)
-              - 258/47(Fundamentals)
-              - 292(Wide_news)
-              - 293(TradeCount)
-              - 294(TradeRate)
-              - 295(VolumeRate)
-              - 318(LastRTHTrade)
-              - 375(RTTrdVolume)
-              - 411(rthistvol)
-              - 456/59(IBDividends)
-              - 460(Bond Factor Multiplier)
-              - 576(EtfNavBidAsk(navbidask))
-              - 577(EtfNavLast(navlast))
-              - 578(EtfNavClose(navclose))
-              - 586(IPOHLMPRC)
-              - 587(Pl Price Delayed)
-              - 588(Futures Open Interest)
-              - 595(Short-Term Volume X Mins)
-              - 614(EtfNavMisc(high/low))
-              - 619(Creditman Slow Mark Price)
-              - 623(EtfFrozenNavLast(fznavlast)
-            """
+            # Legal ones for (STK) are:
+            #   - 100(Option Volume)
+            #   - 101(Option Open Interest)
+            #   - 105(Average Opt Volume)
+            #   - 106(impvolat)
+            #   - 165(Misc. Stats)
+            #   - 221/220(Creditman Mark Price)
+            #   - 225(Auction)
+            #   - 232/221(Pl Price)
+            #   - 233(RTVolume)
+            #   - 236(inventory)
+            #   - 258/47(Fundamentals)
+            #   - 292(Wide_news)
+            #   - 293(TradeCount)
+            #   - 294(TradeRate)
+            #   - 295(VolumeRate)
+            #   - 318(LastRTHTrade)
+            #   - 375(RTTrdVolume)
+            #   - 411(rthistvol)
+            #   - 456/59(IBDividends)
+            #   - 460(Bond Factor Multiplier)
+            #   - 576(EtfNavBidAsk(navbidask))
+            #   - 577(EtfNavLast(navlast))
+            #   - 578(EtfNavClose(navclose))
+            #   - 586(IPOHLMPRC)
+            #   - 587(Pl Price Delayed)
+            #   - 588(Futures Open Interest)
+            #   - 595(Short-Term Volume X Mins)
+            #   - 614(EtfNavMisc(high/low))
+            #   - 619(Creditman Slow Mark Price)
+            #   - 623(EtfFrozenNavLast(fznavlast)
             if generic_tick_list == "":
                 generic_tick_list = "100, 101, 104, 105, 106, 165, 292"
             else:
@@ -742,7 +924,7 @@ class TwsApiClient(EWrapper, EClient):
                            bar_size_setting: int = 5,
                            what_to_show: str = "TRADES",
                            use_regular_trading_hours: bool = True,
-                           real_time_bar_options: list = []):
+                           real_time_bar_options: Optional[list] = None) -> int:
         """!
         Requests real time bars
         Currently, only 5 seconds bars are provided. This request is subject to the same pacing as
@@ -762,7 +944,7 @@ class TwsApiClient(EWrapper, EClient):
         @param use_regular_trading_hours:
             - 0 to obtain the data which was also generated ourside of the Regular Trading Hours
             - 1 to obtain only the RTH data
-        @param real_time_bar_options -
+        @param real_time_bar_options: FIXME: This is not documented by the TWSAPI
 
         @return req_id: The request's identifier
         """
@@ -773,6 +955,10 @@ class TwsApiClient(EWrapper, EClient):
         logger.debug6("Real time bar options: %s", real_time_bar_options)
 
         self.req_id += 1
+
+        # TWSAPI expects real_time_bar_options type to be a list
+        if real_time_bar_options is None:
+            real_time_bar_options = []
 
         self._small_bar_data_wait()
 
@@ -828,8 +1014,8 @@ class TwsApiClient(EWrapper, EClient):
             self.__historical_data_req_timestamp = datetime.datetime.now()
             logger.debug("End Function")
             return self.req_id
-        else:
-            raise Exception("Invalid Tick Type")
+
+        raise InvalidTickType("Invalid Tick Type")
 
     def set_server_loglevel(self, log_level: int = 2):
         """!
@@ -857,7 +1043,7 @@ class TwsApiClient(EWrapper, EClient):
     #
     # ==============================================================================================
     @iswrapper
-    def accountDownloadEnd(self, account: str):
+    def accountDownloadEnd(self, accountName: str):
         """!
         Notifies when all the account's information has finished.
 
@@ -865,15 +1051,15 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        logger.debug("Account Download Complete for Account: %s", account)
+        logger.debug("Account Download Complete for Account: %s", accountName)
 
     @iswrapper
-    def accountSummary(self, req_id: int, account: str, tag: str, value: str, currency: str):
+    def accountSummary(self, reqId: int, account: str, tag: str, value: str, currency: str):
         """!
         Receives the account information. This method will receive the account information just as
         it appears in the TWS' Account Summary Window.
 
-        @param req_id: The Requests Unique ID.
+        @param reqId: The Requests Unique ID.
         @param account: The Account ID.
         @param tag: The account's attribute being received.
             - AccountType — Identifies the IB account structure
@@ -929,30 +1115,30 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        self.data[req_id] = {"account": account, "tag": tag, "value": value, "currency": currency}
-        self.data_available[req_id].set()
+        self.data[reqId] = {"account": account, "tag": tag, "value": value, "currency": currency}
+        self.data_available[reqId].set()
 
         logger.debug("Account Summary. ReqId: %s\nAccount: %s, Tag: %s, Value: %s, Currency: %s",
-                     req_id, account, tag, value, currency)
+                     reqId, account, tag, value, currency)
 
     @iswrapper
-    def accountSummaryEnd(self, req_id: int):
+    def accountSummaryEnd(self, reqId: int):
         """!
         Notifies when all the accounts' information has been received.
 
-        @param req_id: The Request's identifier
+        @param reqId: The Request's identifier
 
         @return
         """
-        logger.debug("Account Summary Completed.  ReqId: %s", req_id)
+        logger.debug("Account Summary Completed.  ReqId: %s", reqId)
 
     @iswrapper
-    def accountUpdateMulti(self, req_id: int, account: str, model_code: str, key: str, value: str,
+    def accountUpdateMulti(self, reqId: int, account: str, modelCode: str, key: str, value: str,
                            currency: str):
         """!
         Provides the account updates.
 
-        @param req_id: The unique request identifier
+        @param reqId: The unique request identifier
         @param account: The account with updates
         @param model_code: The model code with updates
         @param key: The name of the parameter
@@ -961,37 +1147,38 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
+        logger.debug("ReqId: %s", reqId)
         logger.debug("Account Update for %s:", account)
-        logger.debug("Model Code: %s", model_code)
+        logger.debug("Model Code: %s", modelCode)
         logger.debug("Key: %s", key)
         logger.debug("Value: %s", value)
         logger.debug("Currency: %s", currency)
 
     @iswrapper
-    def accountUpdateMultiEnd(self, req_id: int):
+    def accountUpdateMultiEnd(self, reqId: int):
         """!
         Indicates all the account updates have been transmitted.
 
-        @param req_id: The Request's identifier
+        @param reqId: The Request's identifier
 
         @return
         """
-        logger.debug("Account Update Completed.  ReqId: %s", req_id)
+        logger.debug("Account Update Completed.  ReqId: %s", reqId)
 
     @iswrapper
-    def bondContractDetails(self, req_id: int, details: ContractDetails):
+    def bondContractDetails(self, reqId: int, contractDetails: ContractDetails):
         """!
         Delivers the Bond contract data after this has been requested via reqContractDetails.
 
-        @param req_id: The Unique Reuest Identifier
+        @param reqId: The Unique Reuest Identifier
         @param details: The details for the contract
 
         @return
         """
-        logger.debug("Bond Contract Details: %s\n%s", req_id, details)
+        logger.debug("Bond Contract Details: %s\n%s", reqId, contractDetails)
 
     @iswrapper
-    def commissionReport(self, commission_report: CommissionReport):
+    def commissionReport(self, commissionReport: CommissionReport):
         """!
         provides the CommissionReport of an Execution
 
@@ -999,10 +1186,10 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        logger.debug("Commission Report: %s", commission_report)
+        logger.debug("Commission Report: %s", commissionReport)
 
     @iswrapper
-    def completedOrder(self, contract: Contract, order: Order, order_state: OrderState):
+    def completedOrder(self, contract: Contract, order: Order, orderState: OrderState):
         """!
         Feeds in completed orders.
 
@@ -1012,7 +1199,7 @@ class TwsApiClient(EWrapper, EClient):
 
         @return
         """
-        logger.debug("Completed Order for %s\n\%s\n%s", contract, order, order_state)
+        logger.debug("Completed Order for %s\n%s\n%s", contract, order, orderState)
 
     @iswrapper
     def completedOrdersEnd(self):
@@ -1030,116 +1217,118 @@ class TwsApiClient(EWrapper, EClient):
         connection, this function is not called automatically but must be triggered by API client
         code.
 
-        @return
+        @return None
         """
         # send_item = "ConnectionClosed"
 
-        # req_id_list = list(self.bar_queue.keys())
+        # reqId_list = list(self.bar_queue.keys())
         # logger.debug("Sending Queue Item: %s", send_item)
-        # for item in req_id_list:
+        # for item in reqId_list:
         #     self.bar_queue[item].put(send_item)
 
-        logger.debug("End Function")
+        logger.debug("Connection Closed")
 
     @iswrapper
-    def contractDetails(self, req_id: int, details: ContractDetails):
+    def contractDetails(self, reqId: int, contractDetails: ContractDetails):
         """!
         Receives the full contract's definitions This method will return all contracts matching the
         requested via EClientSocket::reqContractDetails. For example, one can obtain the whole
         option chain with it.
 
-        @param req_id: The Unique Reuest Identifier
-        @param details: The details for the contract
+        @param reqId: The Unique Reuest Identifier
+        @param contractDetails: The details for the contract
 
         @return
         """
         logger.debug6("Contract Info Received")
-        logger.debug6("Contract ID: %s", details.contract.conId)
-        logger.debug6("Symbol: %s", details.contract.symbol)
-        logger.debug6("Security Type: %s", details.contract.secType)
-        logger.debug6("Exchange: %s", details.contract.exchange)
-        logger.debug6("Currency: %s", details.contract.currency)
-        logger.debug6("Local Symbol: %s", details.contract.localSymbol)
-        logger.debug6("Primary Exchange: %s", details.contract.primaryExchange)
-        logger.debug6("Trading Class: %s", details.contract.tradingClass)
-        logger.debug6("Security ID Type: %s", details.contract.secIdType)
-        logger.debug6("Security ID: %s", details.contract.secId)
-        #logger.debug("Description: %s", details.contract.description)
+        logger.debug6("Contract ID: %s", contractDetails.contract.conId)
+        logger.debug6("Symbol: %s", contractDetails.contract.symbol)
+        logger.debug6("Security Type: %s", contractDetails.contract.secType)
+        logger.debug6("Exchange: %s", contractDetails.contract.exchange)
+        logger.debug6("Currency: %s", contractDetails.contract.currency)
+        logger.debug6("Local Symbol: %s", contractDetails.contract.localSymbol)
+        logger.debug6("Primary Exchange: %s", contractDetails.contract.primaryExchange)
+        logger.debug6("Trading Class: %s", contractDetails.contract.tradingClass)
+        logger.debug6("Security ID Type: %s", contractDetails.contract.secIdType)
+        logger.debug6("Security ID: %s", contractDetails.contract.secId)
+        #logger.debug("Description: %s", contractDetails.contract.description)
 
         logger.debug6("Contract Detail Info")
-        logger.debug6("Market name: %s", details.marketName)
-        logger.debug6("Min Tick: %s", details.minTick)
-        logger.debug6("OrderTypes: %s", details.orderTypes)
-        logger.debug6("Valid Exchanges: %s", details.validExchanges)
-        logger.debug6("Underlying Contract ID: %s", details.underConId)
-        logger.debug6("Long name: %s", details.longName)
-        logger.debug6("Industry: %s", details.industry)
-        logger.debug6("Category: %s", details.category)
-        logger.debug6("Subcategory: %s", details.subcategory)
-        logger.debug6("Time Zone: %s", details.timeZoneId)
-        logger.debug6("Trading Hours: %s", details.tradingHours)
-        logger.debug6("Liquid Hours: %s", details.liquidHours)
-        logger.debug6("SecIdList: %s", details.secIdList)
-        logger.debug6("Underlying Symbol: %s", details.underSymbol)
-        logger.debug6("Stock Type: %s", details.stockType)
-        logger.debug6("Next Option Date: %s", details.nextOptionDate)
-        logger.debug6("Details: %s", details)
+        logger.debug6("Market name: %s", contractDetails.marketName)
+        logger.debug6("Min Tick: %s", contractDetails.minTick)
+        logger.debug6("OrderTypes: %s", contractDetails.orderTypes)
+        logger.debug6("Valid Exchanges: %s", contractDetails.validExchanges)
+        logger.debug6("Underlying Contract ID: %s", contractDetails.underConId)
+        logger.debug6("Long name: %s", contractDetails.longName)
+        logger.debug6("Industry: %s", contractDetails.industry)
+        logger.debug6("Category: %s", contractDetails.category)
+        logger.debug6("Subcategory: %s", contractDetails.subcategory)
+        logger.debug6("Time Zone: %s", contractDetails.timeZoneId)
+        logger.debug6("Trading Hours: %s", contractDetails.tradingHours)
+        logger.debug6("Liquid Hours: %s", contractDetails.liquidHours)
+        logger.debug6("SecIdList: %s", contractDetails.secIdList)
+        logger.debug6("Underlying Symbol: %s", contractDetails.underSymbol)
+        logger.debug6("Stock Type: %s", contractDetails.stockType)
+        logger.debug6("Next Option Date: %s", contractDetails.nextOptionDate)
+        logger.debug6("Details: %s", contractDetails)
 
-        self.data[req_id] = details
-        self.data_available[req_id].set()
+        self.data[reqId] = contractDetails
+        self.data_available[reqId].set()
 
-        # if details.contract.secType == "Bond":
-        #     logger.debug("Description: %s", details.contract.description)
-        #     logger.debug("Issuer ID: %s", details.contract.issuerId)
-        #     logger.debug("Cusip", details.cusip)
+        # if contractDetails.contract.secType == "Bond":
+        #     logger.debug("Description: %s", contractDetails.contract.description)
+        #     logger.debug("Issuer ID: %s", contractDetails.contract.issuerId)
+        #     logger.debug("Cusip", contractDetails.cusip)
 
-        # elif details.contract.secType == "IND":
+        # elif contractDetails.contract.secType == "IND":
         #     db = index_info.IndexInfo()
-        #     db.update_ibkr_info(details.contract.symbol,
-        #                         details.contract.conId,
-        #                         details.contract.primaryExchange,
-        #                         details.contract.exchange, details.longName)
+        #     db.update_ibkr_info(contractDetails.contract.symbol,
+        #                         contractDetails.contract.conId,
+        #                         contractDetails.contract.primaryExchange,
+        #                         contractDetails.contract.exchange, contractDetails.longName)
 
-        # if details.stockType == "ETF" or details.stockType == "ETN":
+        # if contractDetails.stockType == "ETF" or contractDetails.stockType == "ETN":
         #     db = etf_info.EtfInfo()
-        #     db.update_ibkr_info(details.contract.symbol,
-        #                         details.contract.conId,
-        #                         details.contract.primaryExchange,
-        #                         details.contract.exchange)
+        #     db.update_ibkr_info(contractDetails.contract.symbol,
+        #                         contractDetails.contract.conId,
+        #                         contractDetails.contract.primaryExchange,
+        #                         contractDetails.contract.exchange)
 
-        # elif details.stockType == "STK":
+        # elif contractDetails.stockType == "STK":
         #     db = stock_info.EtfInfo()
-        #     db.update_ibkr_info(details.contract.symbol,
-        #                         details.contract.conId,
-        #                         details.contract.primaryExchange,
-        #                         details.contract.exchange)
+        #     db.update_ibkr_info(contractDetails.contract.symbol,
+        #                         contractDetails.contract.conId,
+        #                         contractDetails.contract.primaryExchange,
+        #                         contractDetails.contract.exchange)
 
     @iswrapper
-    def contractDetailsEnd(self, req_id: int):
+    def contractDetailsEnd(self, reqId: int):
         """!
         After all contracts matching the request were returned, this method will mark the end of
         their reception.
 
-        @param req_id: The requests identifier.
+        @param reqId: The requests identifier.
 
         @return
         """
-        logger.debug6("Contract Details Received for request id: %s", req_id)
+        logger.debug6("Contract Details Received for request id: %s", reqId)
 
     @iswrapper
-    def currentTime(self, current_time: int):
+    def currentTime(self, time: int) -> None:
         """!
         TWS's current time. TWS is synchronized with the server (not local computer) using NTP and
         this function will receive the current time in TWS.
 
-        @param current_time: The current time in Unix timestamp format.
-        @return
+        @param time: The current time in Unix timestamp format.
+
+        @return None
         """
-        time_now = datetime.datetime.fromtimestamp(current_time)
+        time_now = datetime.datetime.fromtimestamp(time)
         logger.debug6("Current time: %s", time_now)
 
     @iswrapper
-    def deltaNeutralValidation(self, req_id: int, delta_neutral_contract: DeltaNeutralContract):
+    def deltaNeutralValidation(self, reqId: int,
+                               deltaNeutralContract: DeltaNeutralContract) -> None:
         """!
         Upon accepting a Delta-Neutral DN RFQ(request for quote), the server sends a
         deltaNeutralValidation() message with the DeltaNeutralContract structure. If the delta and
@@ -1147,60 +1336,59 @@ class TwsApiClient(EWrapper, EClient):
         values from the server. These values are locked when RFQ is processed and remain locked
         until the RFQ is cancelled.
 
-        @param req_id: The request's Identifier
+        @param reqId: The request's Identifier
         @param delta_neutural_contract: Delta-Neutral Contract
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s  Delta Neutral Contract: %s", reqId, deltaNeutralContract)
 
     @iswrapper
-    def displayGroupList(self, req_id: int, groups: str):
+    def displayGroupList(self, reqId: int, groups: str) -> None:
         """!
         A one-time response to querying the display groups.
 
-        IB API's Description.  TODO: Re-write
-
-        @param req_id: The request's Identifier
+        @param reqId: The request's Identifier
         @param groups: (IB API doesn't list a description, instead it lists a description for:
         @param lt: Returns a list of integers representing visible Group ID separated by the "|"
             character, and sorted by most used group first. )
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s  Groups: %s", reqId, groups)
 
     @iswrapper
-    def displayGroupUpdated(self, req_id: int, contract_info: str):
+    def displayGroupUpdated(self, reqId: int, contractInfo: str) -> None:
         """!
         Call triggered once after receiving the subscription request, and will be sent again if the
         selected contract in the subscribed * display group has changed.
 
-        @param req_id: The request's identifier
-        @param contract_info: TBD.
+        @param reqId: The request's identifier
+        @param contractInfo: FIXME: This is not documented by the TWSAPI
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s  ContractInfo: %s", reqId, contractInfo)
 
     @iswrapper
-    def error(self, req_id: int, code: int, msg: str, advanced_order_rejection: str = ""):
+    def error(self,
+              reqId: int,
+              errorCode: int,
+              errorString: str,
+              advanced_order_rejection: str = "") -> None:
         """!
         Errors sent by the TWS are received here.
 
         Error Code Descriptions can be found at:
         https://interactivebrokers.github.io/tws-api/message_codes.html
 
-        @param req_id: The request identifier which generated the error. Note: -1 will indicate a
+        @param reqId: The request identifier which generated the error. Note: -1 will indicate a
             notification and not true error condition.
         @param code: The Code identifying the error
         @param msg: The error's description
         @param advanced_order_rejection: Advanced Order Reject Description in JSON format.
 
-        @return
+        @return None
         """
         critical_codes = [1300]
         error_codes = [
@@ -1212,300 +1400,318 @@ class TwsApiClient(EWrapper, EClient):
         info_codes = [1102]
         debug_codes = [2104, 2106, 2158]
 
-        if code in critical_codes:
+        if errorCode in critical_codes:
             if advanced_order_rejection:
-                logger.critical("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id,
-                                code, msg, advanced_order_rejection)
+                logger.critical("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", reqId,
+                                errorCode, errorString, advanced_order_rejection)
             else:
-                logger.critical("ReqID# %s, Code: %s (%s)", req_id, code, msg)
-        elif code in error_codes:
+                logger.critical("ReqID# %s, Code: %s (%s)", reqId, errorCode, errorString)
+        elif errorCode in error_codes:
             if advanced_order_rejection:
-                logger.error("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id, code,
-                             msg, advanced_order_rejection)
+                logger.error("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", reqId,
+                             errorCode, errorString, advanced_order_rejection)
             else:
-                logger.error("ReqID# %s, Code: %s (%s)", req_id, code, msg)
+                logger.error("ReqID# %s, Code: %s (%s)", reqId, errorCode, errorString)
 
-            if code == 200:
-                self.data[req_id] = {"Error": msg}
-                self.data_available[req_id].set()
+            if errorCode == 200:
+                self.data[reqId] = {"Error": errorString}
+                self.data_available[reqId].set()
 
-            elif code in [103, 10147]:
-                msg = {"order_status": {req_id: {"status": "TWS_CLOSED"}}}
+            elif errorCode in [103, 10147]:
+                msg = {"order_status": {reqId: {"status": "TWS_CLOSED"}}}
                 self.queue.put(msg)
 
-        elif code in warning_codes:
+        elif errorCode in warning_codes:
             if advanced_order_rejection:
-                logger.warning("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id,
-                               code, msg, advanced_order_rejection)
+                logger.warning("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", reqId,
+                               errorCode, errorString, advanced_order_rejection)
             else:
-                logger.warning("ReqID# %s, Code: %s (%s)", req_id, code, msg)
-        elif code in info_codes:
+                logger.warning("ReqID# %s, Code: %s (%s)", reqId, errorCode, errorString)
+        elif errorCode in info_codes:
             if advanced_order_rejection:
-                logger.info("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id, code,
-                            msg, advanced_order_rejection)
+                logger.info("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", reqId,
+                            errorCode, errorString, advanced_order_rejection)
             else:
-                logger.info("ReqID# %s, Code: %s (%s)", req_id, code, msg)
-        elif code in debug_codes:
+                logger.info("ReqID# %s, Code: %s (%s)", reqId, errorCode, errorString)
+        elif errorCode in debug_codes:
             if advanced_order_rejection:
-                logger.debug("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id, code,
-                             msg, advanced_order_rejection)
+                logger.debug("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", reqId,
+                             errorCode, errorString, advanced_order_rejection)
             else:
-                logger.debug("ReqID# %s, Code: %s (%s)", req_id, code, msg)
+                logger.debug("ReqID# %s, Code: %s (%s)", reqId, errorCode, errorString)
         else:
             if advanced_order_rejection:
-                logger.error("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id, code,
-                             msg, advanced_order_rejection)
+                logger.error("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", reqId,
+                             errorCode, errorString, advanced_order_rejection)
             else:
-                logger.error("ReqID# %s, Code: %s (%s)", req_id, code, msg)
+                logger.error("ReqID# %s, Code: %s (%s)", reqId, errorCode, errorString)
 
     @iswrapper
-    def execDetails(self, req_id: int, contract: Contract, execution: Execution):
+    def execDetails(self, reqId: int, contract: Contract, execution: Execution) -> None:
         """!
         Provides the executions which happened in the last 24 hours.
 
-        @param req_id: The request's identifier
+        @param reqId: The request's identifier
         @param contract: The contract of the order
         @param execution: The execution details
 
-        @return
+        @return None
         """
-        msg = {"order_execution": {contract.localSymbol: execution}}
+        msg = {"order_execution": {reqId: {contract.localSymbol: execution}}}
         logger.debug(msg)
 
     @iswrapper
-    def execDetailsEnd(self, req_id: int):
+    def execDetailsEnd(self, reqId: int) -> None:
         """!
-        indicates the end of the Execution reception.
+        Indicates the end of the Execution reception.
 
-        @param req_id: The request's identifier
+        @param reqId: The request's identifier
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("Ending Execution for reqId: %s", reqId)
 
     @iswrapper
-    def familyCodes(self, family_codes: list):
+    def familyCodes(self, familyCodes: list) -> None:
         """!
         Returns an array of family codes
 
-        @param family_codes: List of Family Codes
+        @param familyCodes: List of Family Codes
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("Family Codes: %s", familyCodes)
 
     @iswrapper
-    def fundamentalData(self, req_id: int, data: str):
+    def fundamentalData(self, reqId: int, data: str) -> None:
         """!
         Returns fundamental data
 
-        @param req_id: The request's identifier
+        @param reqId: The request's identifier
         @param data: xml-formatted fundamental data
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s", reqId)
+        logger.debug("Data: %s", data)
 
     @iswrapper
-    def headTimestamp(self, req_id: int, head_time_stamp: str):
+    def headTimestamp(self, reqId: int, headTimestamp: str) -> None:
         """!
         Returns beginning of data for contract for specified data type.
 
-        @param req_id: The request's identifier
+        @param reqId: The request's identifier
         @param head_time_stamp: String Identifying the earliest data date.
 
-        @return
+        @return None
         """
         logger.debug("Begin Function")
-        logger.debug("ReqID: %s, IPO Date: %s", req_id, head_time_stamp)
-        self.data[req_id] = head_time_stamp
-        self.data_available[req_id].set()
+        logger.debug("ReqID: %s, IPO Date: %s", reqId, headTimestamp)
+        self.data[reqId] = headTimestamp
+        self.data_available[reqId].set()
 
         logger.debug("End Function")
 
     @iswrapper
-    def histogramData(self, req_id: int, data: list):
+    def histogramData(self, reqId: int, items: list) -> None:
         """!
         Returns data histogram
 
-        @param req_id: The request's identifier
-        @param data: Tuple of histogram data, number of trades at specified price level.
+        @param reqId: The request's identifier
+        @param items: Tuple of histogram data, number of trades at specified price level.
+                      NOTE: Who the fuck though this name was a good idea?  Looking at you IBKR!
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s", reqId)
+        logger.debug("Data: %s", items)
 
     @iswrapper
-    def historicalData(self, req_id: int, bar: BarData):
+    def historicalData(self, reqId: int, bar: BarData) -> None:
         """!
         Returns the requested historical data bars.
 
-        @param req_id: The request's identifier
+        @param reqId: The request's identifier
         @param bar: The OHLC historical data Bar.  The time zone of the bar is the time zone chosen
         on the TWS login screen. Smallest bar size is 1 second.
 
-        @return
+        @return None
         """
-        logger.debug6("ReqID: %s", req_id)
+        logger.debug6("ReqID: %s", reqId)
         logger.debug6("Bar: %s", bar)
 
-        self.data[req_id].append(bar)
+        self.data[reqId].append(bar)
 
     @iswrapper
-    def historicalDataEnd(self, req_id: int, start: str, end: str):
-        logger.debug6("Data Complete for ReqID: %s from: %s to: %s", req_id, start, end)
-        self.data_available[req_id].set()
+    def historicalDataEnd(self, reqId: int, start: str, end: str) -> None:
+        """!
+        Marks the ending of the historical bars reception.
+
+        @param reqId: FIXME: This is not documented by the TWSAPI
+        @param start: FIXME: This is not documented by the TWSAPI
+        @param end: FIXME: This is not documented by the TWSAPI
+
+        @return None
+        """
+        logger.debug6("Data Complete for ReqID: %s from: %s to: %s", reqId, start, end)
+        self.data_available[reqId].set()
         self.__active_historical_data_requests -= 1
 
     @iswrapper
-    def historicalDataUpdate(self, req_id: int, bar: BarData):
+    def historicalDataUpdate(self, reqId: int, bar: BarData) -> None:
         """!
         Receives bars in real time if keepUpToDate is set as True in reqHistoricalData. Similar to
         realTimeBars function, except returned data is a composite of historical data and real time
         data that is equivalent to TWS chart functionality to keep charts up to date. Returned bars
         are successfully updated using real time data.
 
-        @param req_id: The request's identifier
+        @param reqId: The request's identifier
         @param bar: The OHLC historical data Bar. The time zone of the bar is the time zone chosen
             on the TWS login screen. Smallest bar size is 1 second.
 
-        @return
+        @return None
         """
         logger.debug("Begin Function")
-        logger.debug("ReqID: %s", req_id)
+        logger.debug("ReqID: %s", reqId)
         logger.debug("Bar: %s", bar)
         self.__counter += 1
         date_time = datetime.datetime.now()
 
-        send_item = [req_id, self.__counter, date_time, bar]
+        send_item = [reqId, self.__counter, date_time, bar]
         logger.debug("Sending Queue Item: %s", send_item)
         self.queue.put(send_item)
 
         logger.debug("End Function")
 
     @iswrapper
-    def historicalNews(self, req_id: int, time: str, provider_code: str, article_id: str,
-                       headline: str):
+    def historicalNews(self, requestId: int, time: str, providerCode: str, articleId: str,
+                       headline: str) -> None:
         """!
         Ruturns news headlines
 
         IB API's description of the parameters is non-existant.
-        @param req_id: The request's identifier
-        @param time -
-        @param provider_code -
-        @param article_id -
-        @param headline -
+        @param requestId: The request's identifier
+                          NOTE: This matches the API.  The fucking API is not consistent in its
+                          naming conventions.
+        @param time: FIXME: This is not documented by the TWSAPI
+        @param provider_code: FIXME: This is not documented by the TWSAPI
+        @param article_id: FIXME: This is not documented by the TWSAPI
+        @param headline: FIXME: This is not documented by the TWSAPI
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("ReqId: %s", req_id)
-        logger.debug("End Function")
+        logger.debug("ReqId: %s", requestId)
+        logger.debug("Time: %s", time)
+        logger.debug("Provider Code: %s", providerCode)
+        logger.debug("ArticleId: %s", articleId)
+        logger.debug("Headline: %s", headline)
 
     @iswrapper
-    def historicalNewsEnd(self, req_id: int, has_more: bool):
+    def historicalNewsEnd(self, requestId: int, hasMore: bool) -> None:
         """!
         Returns news headlines end marker
 
-        @param req_id: The request's identifier
-        @param has_more: True if there are more results available, false otherwise.
+        @param requestId: The request's unique identifier
+                          NOTE: This matches the API.  The fucking API is not consistent in its
+                          naming conventions.
+        @param hasMore: True if there are more results available, false otherwise.
 
-        @return
+        @return None
         """
-        logger.debug("ReqId: %s", req_id)
-        logger.debug("End Function")
+        logger.debug("ReqId: %s", requestId)
+        logger.debug("Has More: %s", hasMore)
 
     @iswrapper
-    def historicalSchedule(self, req_id: int, start_date_time: str, end_date_time: str,
-                           timezone: str, sessions: list):
+    def historicalSchedule(self, reqId: int, startDateTime: str, endDateTime: str, timezone: str,
+                           sessions: list) -> None:
         """!
         Returns historical Schedule when reqHistoricalData whatToShow="SCHEDULE"
 
         IB API's description of the parameters is non-existant.
-        @param req_id: The request identifier used to call eClient.reqHistoricalData
-        @param start_date_time -
-        @param end_date_time -
-        @param time_zone -
-        @param sessions -
+        @param reqId: The request identifier used to call eClient.reqHistoricalData
+        @param start_date_time: FIXME: This is not documented by the TWSAPI
+        @param end_date_time: FIXME: This is not documented by the TWSAPI
+        @param time_zone: FIXME: This is not documented by the TWSAPI
+        @param sessions: FIXME: This is not documented by the TWSAPI
 
-        @return
+        @return None
         """
-        logger.debug("ReqId: %s", req_id)
-        logger.debug("End Function")
+        logger.debug("ReqId: %s", reqId)
+        logger.debug("Start DateTime: %s", startDateTime)
+        logger.debug("End DateTime: %s", endDateTime)
+        logger.debug("Timezone: %s", timezone)
+        logger.debug("Sessions: %s", sessions)
 
     @iswrapper
-    def historicalTicks(self, req_id: int, ticks: list, done: bool):
+    def historicalTicks(self, reqId: int, ticks: list, done: bool) -> None:
         """!
         Returns historical tick data when whatToShow="MIDPOINT"
 
-        @param req_id: The request identifier used to call eClient.reqHistoricalTicks
+        @param reqId: The request identifier used to call eClient.reqHistoricalTicks
         @param ticks: list of HistoricalTick data
         @param done: Flag to indicate if all historical tick data has been received.
 
-        @return
+        @return None
         """
-        logger.debug("ReqId: %s", req_id)
-        logger.debug("End Function")
+        logger.debug("ReqId: %s", reqId)
+        logger.debug("Ticks: %s", ticks)
+        logger.debug("Done: %s", done)
 
     @iswrapper
-    def historicalTicksBidAsk(self, req_id: int, ticks: list, done: bool):
+    def historicalTicksBidAsk(self, reqId: int, ticks: list, done: bool) -> None:
         """!
         Returns historical tick data when whatToShow="BID ASK"
 
-        @param req_id: The request identifier used to call eClient.reqHistoricalTicks
+        @param reqId: The request identifier used to call eClient.reqHistoricalTicks
         @param ticks: list of HistoricalTick data
         @param done: Flag to indicate if all historical tick data has been received.
 
-        @return
+        @return None
         """
-        logger.debug("ReqId: %s", req_id)
-        logger.debug("End Function")
+        logger.debug("ReqId: %s", reqId)
+        logger.debug("Ticks: %s", ticks)
+        logger.debug("Done: %s", done)
 
     @iswrapper
-    def historicalTicksLast(self, req_id: int, ticks: list, done: bool):
+    def historicalTicksLast(self, reqId: int, ticks: list, done: bool) -> None:
         """!
         Returns historical tick data when whatToShow="TRADES"
 
-        @param req_id: The request identifier used to call eClient.reqHistoricalTicks
+        @param reqId: The request identifier used to call eClient.reqHistoricalTicks
         @param ticks: list of HistoricalTick data
         @param done: Flag to indicate if all historical tick data has been received.
 
-        @return
+        @return None
         """
-        logger.debug("ReqId: %s", req_id)
-        logger.debug("End Function")
+        logger.debug("ReqId: %s", reqId)
+        logger.debug("Ticks: %s", ticks)
+        logger.debug("Done: %s", done)
 
     @iswrapper
-    def managedAccounts(self, accounts: str):
+    def managedAccounts(self, accountsList: str) -> None:
         """!
         Receives a comma-separated string with the managed account ids. Occurs automatically on
         initial API client connection.
 
-        IB API's description of the parameters is non-existant.
-        TODO: Write Descriptions
-        @param accounts -
+        @param accountsList: FIXME: This is not documented by the TWSAPI
 
-        @return
+        @return None
         """
-        logger.debug6("Accounts: %s", accounts)
-        self.accounts = accounts.split(",")
+        logger.debug6("Accounts: %s", accountsList)
+        self.accounts = accountsList.split(",")
         self.accounts_available.set()
         logger.debug("Accounts: %s", self.accounts)
 
     @iswrapper
-    def marketDataType(self, req_id: int, market_data_type: int):
+    def marketDataType(self, reqId: int, marketDataType: int):
         """!
         Returns the market data type (real-time, frozen, delayed, delayed-frozen) of ticker sent by
         EClientSocket::reqMktData when TWS switches from real-time to frozen and back and from
         delayed to delayed-frozen and back.
 
         IB API Descriptions: TODO: Validate
-        @param req_id: The ticker identifier used to call eClient.reqMktData (I suspect this is
-                       wrong, and that it should be the req_id for the request sent using
+        @param reqId: The ticker identifier used to call eClient.reqMktData (I suspect this is
+                       wrong, and that it should be the reqId for the request sent using
                        reqMktData)
         @param market_data_type: means that now API starts to tick with the following market data:
                      1 for real-time
@@ -1516,68 +1722,69 @@ class TwsApiClient(EWrapper, EClient):
         @return
         """
         data_type_string = {1: "Real Time", 2: "Frozen", 3: "Delayed", 4: "Delayed and Frozen"}
-        logger.debug6("Market Data type for req id %s currently set to '%s'", req_id,
-                      data_type_string[market_data_type])
+        logger.debug6("Market Data type for req id %s currently set to '%s'", reqId,
+                      data_type_string[marketDataType])
 
     @iswrapper
-    def marketRule(self, market_rule_id: int, price_increments: list):
+    def marketRule(self, marketRuleId: int, priceIncrements: list) -> None:
         """!
         Returns minimum price increment structure for a particular market rule ID market rule IDs
         for an instrument on valid exchanges can be obtained from the contractDetails object for
         that contract.
 
         IB API's description of the parameters is non-existant.
-        @param market_rule_id
-        @param price_increments
+        @param market_rule_id: FIXME: This is not documented by the TWSAPI
+        @param price_increments: FIXME: This is not documented by the TWSAPI
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("Market Rule Id: %s", marketRuleId)
+        logger.debug("Price Increments: %s", priceIncrements)
 
     @iswrapper
-    def mktDepthExchanges(self, depth_market_data_sescriptions: list):
+    def mktDepthExchanges(self, depthMktDataDescriptions: list) -> None:
         """!
         Called when receives Depth Market Data Descriptions.
 
         @param depth_market_data_descriptions: Stores a list of DepthMktDataDescription
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("Depth Market Data Descriptions: %s", depthMktDataDescriptions)
 
     @iswrapper
-    def newsArticle(self, req_id: int, article_type: int, article_text: str):
+    def newsArticle(self, requestId: int, articleType: int, articleText: str) -> None:
         """!
         called when receives News Article
 
-        @param req_id: The request identifier used to call eClient.reqNewsArticle()
+        @param requestId: The request identifier used to call eClient.reqNewsArticle()
+                          NOTE: This matches the API.  The fucking API is not consistent in its
+                          naming conventions.
         @param article_type: The type of news article:
               - 0 - Plain Text or HTML
               - 1 - Binary Data / PDF
         @param article_text: The body of the article (if article_type == 1: the binary data is
               encoded using the Base64 scheme)
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s", requestId)
+        logger.debug("Article Type: %s", articleType)
+        logger.debug("Article Text: %s", articleText)
 
     @iswrapper
-    def newsProviders(self, news_priveders: list):
+    def newsProviders(self, newsProviders: list) -> None:
         """!
         Returns array of subscribed API news providers for this user.
 
-        @param news_providers: Array of subscribed API news providers for this user.
+        @param newsProviders: Array of subscribed API news providers for this user.
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("News Providers: %s", newsProviders)
 
     @iswrapper
-    def nextValidId(self, order_id: int):
+    def nextValidId(self, orderId: int) -> None:
         """!
         Receives next valid order id. Will be invoked automatically upon successfull API client
         connection, or after call to EClient::reqIds Important: the next valid order ID is only
@@ -1585,69 +1792,72 @@ class TwsApiClient(EWrapper, EClient):
 
         @param order_id: The next order id.
 
-        @return
+        @return None
         """
         # Do I need this here?
-        super().nextValidId(order_id)
+        super().nextValidId(orderId)
 
-        self.next_order_id = order_id
+        self.next_order_id = orderId
 
-        msg = {"next_order_id": order_id}
+        msg = {"next_order_id": orderId}
         self.queue.put(msg)
 
         self.next_valid_id_available.set()
 
     @iswrapper
-    def openOrder(self, order_id: int, contract: Contract, order: Order, order_state: OrderState):
+    def openOrder(self, orderId: int, contract: Contract, order: Order,
+                  orderState: OrderState) -> None:
         """!
         Called in response to the submitted order.
 
-        @param order_id: The order's unique identifier
+        @param orderId: The order's unique identifier
         @param contract: The order's Contract
         @param order: The currently active Order
-        @param order_state: The order's OrderState
+        @param orderState: The order's OrderState
 
-        @return
+        @return None
         """
-        logger.debug9("Order Id: %s", order_id)
+        logger.debug9("Order Id: %s", orderId)
         logger.debug9("Contract: %s", contract.localSymbol)
         logger.debug9("Order: %s", order)
-        logger.debug9("Order state: %s", order_state)
+        logger.debug9("Order state: %s", orderState)
 
     @iswrapper
-    def openOrderEnd(self):
+    def openOrderEnd(self) -> None:
         """!
         Notifies the end of the open orders' reception.
 
-        @return
+        @return None
         """
         logger.debug("Begin Function")
         logger.debug("End Function")
 
     @iswrapper
-    def orderBound(self, order_id: int, api_client_id: int, api_order_id: int):
+    def orderBound(self, reqId: int, apiClientId: int, apiOrderId: int) -> None:
         """!
         Response to API Bind Order Control Message
 
-        @param order_id: permId
+        @param reqId: permId FIXME: TWSAPI is fucked.  API docs, the variable name is 'orderId'
+                      Also, the API docs description tells me nothing.
         @param api_client_id: API client Id.
         @param api_order_id: API order id.
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s", reqId)
+        logger.debug("ApiClientId: %s", apiClientId)
+        logger.debug("ApiOrderId: %s", apiOrderId)
 
     @iswrapper
-    def orderStatus(self, order_id: int, status: str, filled: Decimal, remaining: Decimal,
-                    avg_fill_price: float, perm_id: int, parent_id: int, last_fill_price: float,
-                    client_id: int, why_held: str, mkt_cap_price: float):
+    def orderStatus(self, orderId: int, status: str, filled: Decimal, remaining: Decimal,
+                    avgFillPrice: float, permId: int, parentId: int, lastFillPrice: float,
+                    clientId: int, whyHeld: str, mktCapPrice: float) -> None:
         """!
         Gives the up-to-date information of an order every time it changes. Often there are
         duplicate orderStatus messages.
 
         IB API Descriptions - TODO: Validate (I suspect they aren't accurate descriptions)
-        @param order_id: The order's client id
+        @param orderId: The order's client id
         @param status: The current status of the order. Possible values:
             - PendingSubmit - indicates that you have transmitted the order, but have not yet
               received confirmation that it has been accepted by the order destination.
@@ -1671,279 +1881,278 @@ class TwsApiClient(EWrapper, EClient):
               because it was rejected or canceled
         @param filled: The number of filled positions
         @param remaining: The remnant positions
-        @param avg_fill_price: The Average filling price
-        @param perm_id: The order's permId used by the TWS to identify orders
-        @param parent_id: Parent's id.  Used for bracket and auto trailing stop orders.
-        @param last_fill_price: Price at which the last position was filled.
-        @param client_id: API client that submitted the order.
-        @param why_held: this field is used to identify an order held when TWS is trying to locate
+        @param avgFillPrice: The Average filling price
+        @param permId: The order's permId used by the TWS to identify orders
+        @param parentId: Parent's id.  Used for bracket and auto trailing stop orders.
+        @param lastFillPrice: Price at which the last position was filled.
+        @param clientId: API client that submitted the order.
+        @param whyHeld: this field is used to identify an order held when TWS is trying to locate
             shares for a short sell. The value used to indicate this is 'locate'.
-        @param mkt_cap_price: If an order has been capped, this indicates the current capped price.
+        @param mktCapPrice: If an order has been capped, this indicates the current capped price.
 
-        @return
+        @return None
         """
-        logger.debug9("Order Id: %s", order_id)
+        logger.debug9("Order Id: %s", orderId)
         logger.debug9("Status: %s", status)
         logger.debug9("Number of filled positions: %s", filled)
         logger.debug9("Number of unfilled positions: %s", remaining)
-        logger.debug9("Average fill price: %s", avg_fill_price)
-        logger.debug9("TWS ID: %s", perm_id)
-        logger.debug9("Parent Id: %s", parent_id)
-        logger.debug9("Last Fill Price: %s", last_fill_price)
-        logger.debug9("Client Id: %s", client_id)
-        logger.debug9("Why Held: %s", why_held)
-        logger.debug9("Market Cap Price: %s", mkt_cap_price)
+        logger.debug9("Average fill price: %s", avgFillPrice)
+        logger.debug9("TWS ID: %s", permId)
+        logger.debug9("Parent Id: %s", parentId)
+        logger.debug9("Last Fill Price: %s", lastFillPrice)
+        logger.debug9("Client Id: %s", clientId)
+        logger.debug9("Why Held: %s", whyHeld)
+        logger.debug9("Market Cap Price: %s", mktCapPrice)
 
         msg = {
             "order_status": {
-                order_id: {
+                orderId: {
                     "status": status,
                     "filled": filled,
                     "remaining": remaining,
-                    "average_fill_price": avg_fill_price,
-                    "perm_id": perm_id,
-                    "parent_id": parent_id,
-                    "last_fill_price": last_fill_price,
-                    "client_id": client_id,
-                    "why_held": why_held,
-                    "market_cap_price": mkt_cap_price
+                    "average_fill_price": avgFillPrice,
+                    "perm_id": permId,
+                    "parent_id": parentId,
+                    "last_fill_price": lastFillPrice,
+                    "client_id": clientId,
+                    "why_held": whyHeld,
+                    "market_cap_price": mktCapPrice
                 }
             }
         }
         self.queue.put(msg)
 
     @iswrapper
-    def pnl(self, req_id: int, daily_pnl: float, unrealized_pnl: float, realized_pnl: float):
+    def pnl(self, reqId: int, dailyPnL: float, unrealizedPnL: float, realizedPnL: float) -> None:
         """!
         Receives PnL updates in real time for the daily PnL and the total unrealized PnL for an
         account.
 
-        IB API's descriptions are incomplete.  TODO: Write full descriptions
-
-        @param req_id -
+        @param reqId: FIXME: This is not documented by the TWSAPI
         @param daily_pnl: dailyPnL updates for the account in real time
         @param unrealized_pnl: total unRealized PnL updates for the account in real time
-        @param realized_pnl -
+        @param realized_pnl: FIXME: This is not documented by the TWSAPI
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId %s", reqId)
+        logger.debug("Daily PnL: %s", dailyPnL)
+        logger.debug("Unrealized PnL: %s", unrealizedPnL)
+        logger.debug("RealizedPnl: %s", realizedPnL)
 
     @iswrapper
-    def pnlSingle(self, req_id: int, pos: Decimal, daily_pnl: float, unrealized_pnl: float,
-                  realized_pnl: float, value: float):
+    def pnlSingle(self, reqId: int, pos: Decimal, dailyPnL: float, unrealizedPnL: float,
+                  realizedPnL: float, value: float) -> None:
         """!
         Receives real time updates for single position daily PnL values.
 
-        @param req_id -
+        @param reqId: FIXME: This is not documented by the TWSAPI
         @param pos: The current size of the position
-        @param daily_pnl: daily PnL for the position
-        @param unrealized_pnl -
-        @param realized_pnl: total unrealized PnL for the position (since inception) updating in
+        @param dailyPnL: daily PnL for the position
+        @param unrealizedPnL: FIXME: This is not documented by the TWSAPI
+        @param realizedPnL: total unrealized PnL for the position (since inception) updating in
             real time
         @param value: Current market value of the position.
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId %s", reqId)
+        logger.debug("Position: %s", pos)
+        logger.debug("Daily PnL: %s", dailyPnL)
+        logger.debug("Unrealized PnL: %s", unrealizedPnL)
+        logger.debug("RealizedPnl: %s", realizedPnL)
+        logger.debug("Value: %s", value)
 
     @iswrapper
-    def position(self, account: str, contract: Contract, pos: Decimal, avg_cost: float):
+    def position(self, account: str, contract: Contract, position: Decimal, avgCost: float) -> None:
         """!
         Provides the portfolio's open positions.
 
         IB API's description.  TODO: Verify
         @param account: The account holding the position.
         @param contract: The position's Contract
-        @param pos: The number of positions held
+        @param position: The number of positions held
         @param avg_cost: The average cost of the position
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.info("Position in {}: {}".format(contract.symbol, pos))
-        logger.debug("End Function")
+        logger.debug("%s Position in %s: %s (%s)", account, contract.symbol, position, avgCost)
 
     @iswrapper
-    def positionEnd(self, req_id: int):
+    def positionEnd(self) -> None:
         """!
         Indicates all positions have been transmitted.
 
-        @param req_id -
-
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("All Positions Received")
 
     @iswrapper
-    def positionMulti(self, req_id: int, account: str, model_code: str, contract: Contract,
-                      pos: Decimal, avg_cost: float):
+    def positionMulti(self, reqId: int, account: str, modelCode: str, contract: Contract,
+                      pos: Decimal, avgCost: float) -> None:
         """!
         provides the portfolio's open positions.
 
-        @param req_id: the id of request
+        @param reqId: the id of request
         @param account: the account holding the position.
-        @param model_code: the model code holding the position.
+        @param modelCode: the model code holding the position.
         @param contract: the position's Contract
         @param pos: the number of positions held.
         @param avgCost: the average cost of the position.
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s", reqId)
+        logger.debug("Account: %s", account)
+        logger.debug("Model Code: %s", modelCode)
+        logger.debug("Contract: %s", contract)
+        logger.debug("Positions: %s", pos)
+        logger.debug("Ave Cost: %s", avgCost)
 
     @iswrapper
-    def positionMultiEnd(self, req_id: int):
+    def positionMultiEnd(self, reqId: int) -> None:
         """!
         Indicates all positions have been transmitted.
 
-        @param req_id -
+        @param reqId: FIXME: This is not documented by the TWSAPI
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("Position Multi End for ReqId: %s", reqId)
 
     @iswrapper
-    def realtimeBar(self, req_id: int, timestamp: int, bar_open: float, bar_high: float,
-                    bar_low: float, bar_close: float, bar_volume: Decimal, bar_wap: Decimal,
-                    bar_count: int):
+    def realtimeBar(self, reqId: int, time: int, open_: float, high: float, low: float,
+                    close: float, volume: Decimal, wap: Decimal, count: int) -> None:
         """!
         Updates the real time 5 seconds bars
 
-        @param req_id: the request's identifier
-        @param timestamp: the bar's date and time (Epoch/Unix time)
-        @param bar_open: the bar's open point
-        @param bar_high: the bar's high point
-        @param bar_low: the bar's low point
-        @param bar_close: the bar's closing point
-        @param bar_volume: the bar's traded volume (only returned for TRADES data)
-        @param bar_wap: the bar's Weighted Average Price rounded to minimum increment (only
+        @param reqId: the request's identifier
+        @param time: the bar's date and time (Epoch/Unix time)
+        @param open_: the bar's open point
+        @param high: the bar's high point
+        @param low: the bar's low point
+        @param close: the bar's closing point
+        @param volume: the bar's traded volume (only returned for TRADES data)
+        @param wap: the bar's Weighted Average Price rounded to minimum increment (only
             available for TRADES).
-        @param bar_count: the number of trades during the bar's timespan (only available for TRADES)
+        @param count: the number of trades during the bar's timespan (only available for TRADES)
 
-        @return
+        @return None
         """
-        bar = [timestamp, bar_open, bar_high, bar_low, bar_close, bar_volume, bar_wap, bar_count]
-        msg = {"real_time_bars": {req_id: bar}}
+        ohlc_bar = [time, open_, high, low, close, volume, wap, count]
+        msg = {"real_time_bars": {reqId: ohlc_bar}}
         self.queue.put(msg)
 
     @iswrapper
-    def receiveFA(self, fa_data_type: int, fa_xml_data: str):
+    def receiveFA(self, faData: int, cxml: str) -> None:
         """!
-        receives the Financial Advisor's configuration available in the TWS
+        Receives the Financial Advisor's configuration available in the TWS
 
-        @param faDataType: one of:
+        @param faData: one of:
             1. Groups: offer traders a way to create a group of accounts and apply a single
                allocation method to all accounts in the group.
             2. Profiles: let you allocate shares on an account-by-account basis using a predefined
                calculation value.
             3. Account Aliases: let you easily identify the accounts by meaningful names rather than
                account numbers.
-        @param faXmlData: the xml-formatted configuration
+        @param cxml: the xml-formatted configuration
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("FA DataType: %s", faData)
+        logger.debug("FA XML Data: %s", cxml)
 
     @iswrapper
-    def replaceFAEnd(self, req_id: int, text: str):
+    def replaceFAEnd(self, reqId: int, text: str):
         """!
         Notifies the end of the FA replace.
 
-        @param req_id: The request's id.
+        @param reqId: The request's id.
         @param text: The message text.
 
         @return
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s  Text: %s", reqId, text)
 
     @iswrapper
-    def rerouteMktDataReq(self, req_id: int, con_id: int, exchange: str):
+    def rerouteMktDataReq(self, reqId: int, conId: int, exchange: str) -> None:
         """!
         Returns con_id and exchange for CFD market data request re-route.
 
-        @param req_id -
+        @param reqId: FIXME: This is not documented by the TWSAPI
         @param con_id: The underlying instrument which has market data.
         @param exchange: The underlying's exchange.
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s  ConId: %s  Exchange: %s", reqId, conId, exchange)
 
     @iswrapper
-    def rerouteMktDepthReq(self, req_id: int, con_id: int, exchange: str):
+    def rerouteMktDepthReq(self, reqId: int, conId: int, exchange: str) -> None:
         """!
         Returns the conId and exchange for an underlying contract when a request is made for level 2
         data for an instrument which does not have data in IB's database. For example stock CFDs and
         index CFDs.
 
-        IB API's descriptions are non-existant
-        TODO: Write descriptions (Presumably similar to rerouteMktDataReq)
-        @param req_id -
-        @param con_id -
-        @param exchange -
+        @param reqId: FIXME: This is not documented by the TWSAPI
+        @param conId: FIXME: This is not documented by the TWSAPI
+        @param exchange: FIXME: This is not documented by the TWSAPI
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s  ConId: %s  Exchange: %s", reqId, conId, exchange)
 
     @iswrapper
-    def scannerData(self, req_id: int, rank: int, contract_details: ContractDetails, distance: str,
-                    benchmark: str, projection: str, legs_str: str):
+    def scannerData(self, reqId: int, rank: int, contractDetails: ContractDetails, distance: str,
+                    benchmark: str, projection: str, legsStr: str) -> None:
         """!
         provides the data resulting from the market scanner request.
 
         @param reqid: the request's identifier.
         @param rank: the ranking within the response of this bar.
-        @param contract_details: the data's ContractDetails
+        @param contractDetails: the data's ContractDetails
         @param distance: according to query.
         @param benchmark: according to query.
         @param projection: according to query.
-        @param legs_str: describes the combo legs when the scanner is returning EFP
+        @param legsStr: describes the combo legs when the scanner is returning EFP
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s", reqId)
+        logger.debug("Rank: %s", rank)
+        logger.debug("Contract Details: %s", contractDetails)
+        logger.debug("Distance: %s", distance)
+        logger.debug("Benchmark: %s", benchmark)
+        logger.debug("Projection: %s", projection)
+        logger.debug("Legs String: %s", legsStr)
 
     @iswrapper
-    def scannerDataEnd(self, req_id: int):
+    def scannerDataEnd(self, reqId: int) -> None:
         """!
         Indicates the scanner data reception has terminated.
 
-        @param req_id: The request's id.
+        @param reqId: The request's id.
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("Scanner Data Ended for ReqId: %s", reqId)
 
     @iswrapper
-    def scannerParameters(self, xml: str):
+    def scannerParameters(self, xml: str) -> None:
         """!
         Provides the xml-formatted parameters available from TWS market scanners (not all available
         in API).
 
         @param xml: The xml-formatted string with the available parameters.
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("Scanner Parameters: %s", xml)
 
     @iswrapper
-    def securityDefinitionOptionParameter(self, req_id: int, exchange: str, underlying_con_id: int,
+    def securityDefinitionOptionParameter(self, reqId: int, exchange: str, underlyingConId: int,
                                           tradingClass: str, multiplier: str, expirations: set,
-                                          strikes: set):
+                                          strikes: set) -> None:
         """!
         Returns the option chain for an underlying on an exchange specified in reqSecDefOptParams
         There will be multiple callbacks to securityDefinitionOptionParameter if multiple exchanges
@@ -1958,50 +2167,53 @@ class TwsApiClient(EWrapper, EClient):
         @param strikes: a list of the possible strikes for options of this underlying on this
             exchange
 
-        @return
+        @return None
         """
-        logger.debug6(
-            "Security Definition Option Parameter:\nReqId: %s\nExchange: %s\nUnderlying conId: %s\nTrading Class: %s\nMultiplier: %s\nExpirations: %s\nStrikes: %s",
-            req_id, exchange, underlying_con_id, tradingClass, multiplier, expirations, strikes)
+        logger.debug6("Security Definition Option Parameter:")
+        logger.debug6("ReqId: %s", reqId)
+        logger.debug6("Exchange: %s", exchange)
+        logger.debug6("Underlying conId: %s", underlyingConId)
+        logger.debug6("Trading Class: %s", tradingClass)
+        logger.debug6("Multiplier: %s", multiplier)
+        logger.debug6("Expirations: %s", expirations)
+        logger.debug6("Strikes: %s", strikes)
 
         opt_params = {
             "exchange": exchange,
-            "underlying_contract_id": underlying_con_id,
+            "underlying_contract_id": underlyingConId,
             "trading_class": tradingClass,
             "mulitplier": multiplier,
             "expirations": expirations,
             "strikes": strikes
         }
-        self.data[req_id] = opt_params
+        self.data[reqId] = opt_params
 
     @iswrapper
-    def securityDefinitionOptionParameterEnd(self, req_id: int):
+    def securityDefinitionOptionParameterEnd(self, reqId: int) -> None:
         """!
         called when all callbacks to securityDefinitionOptionParameter are complete
 
-        @param req_id: the ID used in the call to securityDefinitionOptionParameter
+        @param reqId: the ID used in the call to securityDefinitionOptionParameter
 
-        @return
+        @return None
         """
-        logger.debug6("SecurityDefinitionOptionParameterEnd. ReqId: %s", req_id)
-        self.data_available[req_id].set()
+        logger.debug9("SecurityDefinitionOptionParameterEnd. ReqId: %s", reqId)
+        self.data_available[reqId].set()
 
     @iswrapper
-    def smartComponents(self, req_id: int, the_map: dict):
+    def smartComponents(self, reqId: int, smartComponentMap: dict) -> None:
         """!
         bit number to exchange + exchange abbreviation dictionary
 
-        IB API's descriptions aren't helpful
-        @param req_id:
-        @param the_map: sa eclient.reqSmartComponents
+        @param reqId: FIXME: This is not documented by the TWSAPI
+        @param smartComponentMap: sa eclient.reqSmartComponents
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s   Tiers: %s", reqId, smartComponentMap)
 
     @iswrapper
-    def softDollarTiers(self, req_id: int, tiers: list):
+    def softDollarTiers(self, reqId: int, tiers: list) -> None:
         """!
         Called when receives Soft Dollar Tier configuration information
 
@@ -2009,83 +2221,81 @@ class TwsApiClient(EWrapper, EClient):
         @param tiers: Stores a list of SoftDollarTier that contains all Soft Dollar Tiers
                       information
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s   Tiers: %s", reqId, tiers)
 
     @iswrapper
-    def symbolSamples(self, req_id: int, contract_descriptions: list):
+    def symbolSamples(self, reqId: int, contractDescriptions: list) -> None:
         """!
         Returns array of sample contract descriptions.
 
-        FIXME: IB API's descriptions are non-existant
-        @param req_id:
-        @param contract_descriptions:
+        @param reqId: FIXME: This is not documented by the TWSAPI
+        @param contractDescriptions: FIXME: This is not documented by the TWSAPI
 
-        @return
+        @return None
         """
         logger.debug("Begin Function")
-        logger.info("Number of descriptions: %s", len(contract_descriptions))
+        logger.info("Number of descriptions: %s", len(contractDescriptions))
 
-        self.data[req_id] = []
-        for description in contract_descriptions:
-            self.data[req_id].append(description)
+        self.data[reqId] = []
+        for description in contractDescriptions:
+            self.data[reqId].append(description)
             logger.info("Symbol: %s", description.contract.symbol)
 
         logger.debug("End Function")
 
     @iswrapper
-    def tickByTickAllLast(self, req_id: int, tick_type: int, timestamp: int, price: float,
-                          size: Decimal, tick_attrib_last: TickAttribLast, exchange: str,
-                          special_conditions: str):
+    def tickByTickAllLast(self, reqId: int, tickType: int, time: int, price: float, size: Decimal,
+                          tickAttribLast: TickAttribLast, exchange: str,
+                          specialConditions: str) -> None:
         """!
         Returns "Last" or "AllLast" tick-by-tick real-time tick
 
         @param reqId: unique identifier of the request
         @param tickType: tick-by-tick real-time tick type: "Last" or "AllLast"
-        @param timestamp: tick-by-tick real-time tick timestamp
+        @param time: tick-by-tick real-time tick timestamp
         @param price: tick-by-tick real-time tick last price
         @param size: tick-by-tick real-time tick last size
-        @param tick_attrib_last: tick-by-tick real-time last tick attribs
+        @param tickAttribLast: tick-by-tick real-time last tick attribs
             - bit 0 - past limit
             - bit 1 - unreported
         @param exchange: tick-by-tick real-time tick exchange
-        @special_conditions: tick-by-tick real-time tick special conditions
+        @specialConditions: tick-by-tick real-time tick special conditions
 
-        @return
+        @return None
         """
-        tick = [tick_type, timestamp, price, size, tick_attrib_last, exchange, special_conditions]
+        tick = [tickType, time, price, size, tickAttribLast, exchange, specialConditions]
 
-        msg = {"tick": {req_id: tick}}
+        msg = {"tick": {reqId: tick}}
         self.queue.put(msg)
 
     @iswrapper
-    def tickByTickBidAsk(self, req_id: int, timestamp: int, bid_price: float, ask_price: float,
-                         bid_size: Decimal, ask_size: Decimal,
-                         tick_attrib_bid_ask: TickAttribBidAsk):
+    def tickByTickBidAsk(self, reqId: int, time: int, bidPrice: float, askPrice: float,
+                         bidSize: Decimal, askSize: Decimal,
+                         tickAttribBidAsk: TickAttribBidAsk) -> None:
         """!
         Returns "BidAsk" tick-by-tick real-time tick
 
-        @param req_id: unique identifier of the request
-        @param timestamp: tick-by-tick real-time tick timestamp
-        @param bid_price: tick-by-tick real-time tick bid price
-        @param ask_price: tick-by-tick real-time tick ask price
-        @param bid_size: tick-by-tick real-time tick bid size
-        @param ask_size: tick-by-tick real-time tick ask size
-        @param tick_attrib_bid_ask:  tick-by-tick real-time bid/ask tick attribs
+        @param reqId: unique identifier of the request
+        @param time: tick-by-tick real-time tick timestamp
+        @param bidPrice: tick-by-tick real-time tick bid price
+        @param askPrice: tick-by-tick real-time tick ask price
+        @param bidSize: tick-by-tick real-time tick bid size
+        @param askSize: tick-by-tick real-time tick ask size
+        @param tickAttribBidAsk:  tick-by-tick real-time bid/ask tick attribs
             - bit 0 - bid past low
             - bit 1 - ask past high
 
-        @return
+        @return None
         """
-        tick = [timestamp, bid_price, ask_price, bid_size, ask_size, tick_attrib_bid_ask]
+        tick = [time, bidPrice, askPrice, bidSize, askSize, tickAttribBidAsk]
 
-        msg = {"tick": {req_id: tick}}
+        msg = {"tick": {reqId: tick}}
         self.queue.put(msg)
 
     @iswrapper
-    def tickByTickMidPoint(self, req_id: int, timestamp: int, mid_point: float):
+    def tickByTickMidPoint(self, reqId: int, time: int, midPoint: float) -> None:
         """!
         Returns "MidPoint" tick-by-tick real-time tick
 
@@ -2093,175 +2303,171 @@ class TwsApiClient(EWrapper, EClient):
         @param timestamp: tick-by-tick real-time tick timestamp
         @param mid_point: tick-by-tick real-time tick mid_point
 
-        @return
+        @return None
         """
-        tick = [timestamp, mid_point]
-        msg = {"tick": {req_id: tick}}
+        tick = [time, midPoint]
+        msg = {"tick": {reqId: tick}}
         self.queue.put(msg)
 
     @iswrapper
-    def tickEFP(self, req_id: int, tick_type: int, basis_points: float, formatted_basis_points: str,
-                implied_future: float, hold_days: int, future_last_trade_date: str,
-                dividend_impact: float, dividends_to_last_trade_date: float):
+    def tickEFP(self, reqId: int, tickType: int, basisPoints: float, formattedBasisPoints: str,
+                totalDividends: float, holdDays: int, futureLastTradeDate: str,
+                dividendImpact: float, dividendsToLastTradeDate: float) -> None:
         """!
         Exchange for Physicals.
 
         IB API's descriptions. TODO: Verify
-        @param req_id: The request's identifier.
-        @param tick_type: The type of tick being received.
-        @param basis_points: Annualized basis points, which is representative of the financing rate
+        @param reqId: The request's identifier.
+        @param tickType: The type of tick being received.
+        @param basisPoints: Annualized basis points, which is representative of the financing rate
             that can be directly compared to broker rates.
-        @param formatted_basis_points: Annualized basis points as a formatted string that depicts
+        @param formattedBasisPoints: Annualized basis points as a formatted string that depicts
             them in percentage form.
-        @param implied_future: The implied Futures price.
-        @param hold_days: The number of hold days until the lastTradeDate of the EFP.
-        @param future_last_trade_date: The expiration date of the single stock future.
-        @param dividend_impact: The dividend impact upon the annualized basis points interest rate.
-        @param dividends_to_last_trade_date: The dividends expected until the expiration of the
+        @param totalDividends: FIXME: TWSAPI docs state the variable name is 'impliedFuture' however
+                               the parameter in the API is totalDividends
+        @param holdDays: The number of hold days until the lastTradeDate of the EFP.
+        @param futureLastTradeDate: The expiration date of the single stock future.
+        @param dividendImpact: The dividend impact upon the annualized basis points interest rate.
+        @param dividendsToLastTradeDate: The dividends expected until the expiration of the
             single stock future.
 
-        @return
+        @return None
         """
         tick = [
-            "tick_efp", tick_type, basis_points, formatted_basis_points, implied_future, hold_days,
-            future_last_trade_date, dividend_impact, dividends_to_last_trade_date
+            "tick_efp", tickType, basisPoints, formattedBasisPoints, totalDividends, holdDays,
+            futureLastTradeDate, dividendImpact, dividendsToLastTradeDate
         ]
-        msg = {"market_data": {req_id: tick}}
+        msg = {"market_data": {reqId: tick}}
         self.queue.put(msg)
 
     @iswrapper
-    def tickGeneric(self, req_id: int, field: int, value: float):
+    def tickGeneric(self, reqId: int, tickType: int, value: float) -> None:
         """!
         Market data callback.
 
-        IB API's description is incomplete and of questionable accuracy.
-        TODO: Verify
-        @param ticker_id: The request's identifier
-        @param field: The type of tick being recieved
-        @param value:
+        @param reqId: The request's unique identifier.
+        @param tickType: The type of tick being received
+        @param value: FIXME: This is not documented by the TWSAPI
 
-        @return
+        @return None
         """
-        tick = ["tick_generic", field, value]
-        msg = {"market_data": {req_id: tick}}
+        tick = ["tick_generic", tickType, value]
+        msg = {"market_data": {reqId: tick}}
         self.queue.put(msg)
 
     @iswrapper
-    def tickNews(self, req_id: int, timestamp: int, provider_code: str, article_id: str,
-                 headline: str, extra_data: str):
+    def tickNews(self, tickerId: int, timeStamp: int, providerCode: str, articleId: str,
+                 headline: str, extraData: str) -> None:
         """!
         Ticks with news headlines
 
-        IB API's descriptions are non-existant.
-        @param ticker_id:
-        @param timestamp:
-        @param provider_code:
-        @param article_id:
-        @param headline:
-        @param extra_data:
+        @param tickerId: The request's unique identifier.  NOTE: While TWSAPI has named this
+                         'tickerId' it's really the 'reqId'.
+        @param timeStamp: FIXME: This is not documented by the TWSAPI
+        @param providerCode: FIXME: This is not documented by the TWSAPI
+        @param articleId: FIXME: This is not documented by the TWSAPI
+        @param headline: FIXME: This is not documented by the TWSAPI
+        @param extraData: FIXME: This is not documented by the TWSAPI
 
-        @return
+        @return None
         """
-        tick = ["tick_news", timestamp, provider_code, article_id, headline, extra_data]
-        msg = {"market_data": {req_id: tick}}
+        tick = ["tick_news", timeStamp, providerCode, articleId, headline, extraData]
+        msg = {"market_data": {tickerId: tick}}
         self.queue.put(msg)
 
     @iswrapper
-    def tickOptionComputation(self, req_id: int, field: int, tick_attrib: int,
-                              implied_volatility: float, delta: float, opt_price: float,
-                              pv_dividend: float, gamma: float, vega: float, theta: float,
-                              und_price: float):
+    def tickOptionComputation(self, reqId: int, tickType: int, tickAttrib: int, impliedVol: float,
+                              delta: float, optPrice: float, pvDividend: float, gamma: float,
+                              vega: float, theta: float, undPrice: float) -> None:
         """!
         Receive's option specific market data. This method is called when the market in an option or
         its underlier moves. TWS’s option model volatilities, prices, and deltas, along with the
         present value of dividends expected on that options underlier are received.
 
         IB API's descriptions.  TODO: Verify
-        @param tickerId: The request's unique identifier.
-        @param field: Specifies the type of option computation. Pass the field value into
+        @param reqId: The request's unique identifier.
+        @param tickType: Specifies the type of option computation. Pass the field value into
             TickType.getField(int tickType) to retrieve the field description. For example, a field
             value of 13 will map to modelOptComp, etc. 10 = Bid 11 = Ask 12 = Last
-        @param implied_volatility: The implied volatility calculated by the TWS option modeler,
+        @param impliedVol: The implied volatility calculated by the TWS option modeler,
             using the specified tick type value.
         @param tick_attrib:
             - 0 - return based
             - 1 - price based
         @param delta: The option delta value.
-        @param opt_price: The option price.
-        @param pv_dividend: The present value of dividends expected on the option's underlying.
+        @param optPrice: The option price.
+        @param pvDividend: The present value of dividends expected on the option's underlying.
         @param gamma: The option gamma value.
         @param vega: The option vega value.
         @param theta: The option theta value.
-        @param und_price: The price of the underlying.
+        @param undPrice: The price of the underlying.
 
-        @return
+        @return None
         """
         tick = [
-            "tick_option_computation", field, tick_attrib, implied_volatility, delta, opt_price,
-            pv_dividend, gamma, vega, theta, und_price
+            "tick_option_computation", tickType, tickAttrib, impliedVol, delta, optPrice,
+            pvDividend, gamma, vega, theta, undPrice
         ]
-        msg = {"market_data": {req_id: tick}}
+        msg = {"market_data": {reqId: tick}}
         self.queue.put(msg)
 
     @iswrapper
-    def tickPrice(self, req_id: int, field: int, price: float, attrib: TickAttrib):
+    def tickPrice(self, reqId: int, tickType: int, price: float, attrib: TickAttrib) -> None:
         """!
         Market data tick price callback. Handles all price related ticks. Every tickPrice callback
         is followed by a tickSize. A tickPrice value of -1 or 0 followed by a tickSize of 0
         indicates there is no data for this field currently available, whereas a tickPrice with a
         positive tickSize indicates an active quote of 0 (typically for a combo contract).
 
-        @param req_id: the request's unique identifier.
-        @param field: The type of the price being received (i.e. ask price).
+        @param reqId: The request's unique identifier.
+        @param tickType: The type of the price being received (i.e. ask price).
         @param price: The actual price.
         @param attribs: An TickAttrib object that contains price attributes such as:
             - TickAttrib.CanAutoExecute
             - TickAttrib.PastLimit
             - TickAttrib.PreOpen
 
-        @return
+        @return None
         """
-        tick = ["tick_price", field, price, attrib]
-        msg = {"market_data": {req_id: tick}}
+        tick = ["tick_price", tickType, price, attrib]
+        msg = {"market_data": {reqId: tick}}
         self.queue.put(msg)
 
     @iswrapper
-    def tickReqParams(self, req_id: int, min_tick: float, bbo_exchange: str,
-                      snapshot_permissions: int):
+    def tickReqParams(self, tickerId: int, minTick: float, bboExchange: str,
+                      snapshotPermissions: int) -> None:
         """!
         Tick with BOO exchange and snapshot permissions.
 
-        IB API's description is non-existant.
-        TODO: Verify parameters
-        @param ticker_id -
-        @param min_tick -
-        @param bbo_exchange -
-        @param snampshot_permissions -
+        @param tickerId: FIXME: This is not documented by the TWSAPI
+        @param minTick: FIXME: This is not documented by the TWSAPI
+        @param bboExchange: FIXME: This is not documented by the TWSAPI
+        @param snapshotPermissions: FIXME: This is not documented by the TWSAPI
 
-        @return
+        @return None
         """
-        tick = ["tick_req_params", min_tick, bbo_exchange, snapshot_permissions]
-        msg = {"market_data": {req_id: tick}}
+        tick = ["tick_req_params", minTick, bboExchange, snapshotPermissions]
+        msg = {"market_data": {tickerId: tick}}
         self.queue.put(msg)
 
     @iswrapper
-    def tickSize(self, req_id: int, field: int, size: Decimal):
+    def tickSize(self, reqId: int, tickType: int, size: Decimal) -> None:
         """!
         Market data tick size callback.  Handles all size-related ticks.
 
         TODO: Verify parameters
         @param ticker_id: The request's identifier.
-        @param field: The type of size being received (i.e. bid size)
+        @param tickType: The type of size being received (i.e. bid size)
         @param size: The actual size.  US Stocks have a multiplier of 100.
 
-        @return
+        @return None
         """
-        tick = ["tick_size", field, size]
-        msg = {"market_data": {req_id: tick}}
+        tick = ["tick_size", tickType, size]
+        msg = {"market_data": {reqId: tick}}
         self.queue.put(msg)
 
     @iswrapper
-    def tickString(self, req_id: int, field: int, value: str):
+    def tickString(self, reqId: int, tickType: int, value: str) -> None:
         """!
         Market data callback. Every tickPrice is followed by a tickSize. There are also independent
         tickSize callbacks anytime the tickSize changes, and so there will be duplicate tickSize
@@ -2269,33 +2475,29 @@ class TwsApiClient(EWrapper, EClient):
 
         WTF is the point of this callback? The data provided is complete gibberish!
 
-        IB API's description is incomplete.
-        TODO: Write descriptions
-        TODO: Verify parameters
-        @param ticker_id: The request's identifier
-        @param field: The type of tick being received.
-        @param value:
+        @param reqId: The request's identifier
+        @param tickType: The type of tick being received.
+        @param value: FIXME: This is not documented by the TWSAPI
 
-        @return
+        @return None
         """
-        tick = ["tick_string", field, value]
-        msg = {"market_data": {req_id: tick}}
+        tick = ["tick_string", tickType, value]
+        msg = {"market_data": {reqId: tick}}
         self.queue.put(msg)
 
     @iswrapper
-    def updateAccountTime(self, timestamp: str):
+    def updateAccountTime(self, timeStamp: str) -> None:
         """!
         Receives the last time on which the account was updated.
 
-        @param timestamp: The last update system time.
+        @param timeStamp: The last update system time.
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("Time Stamp: %s", timeStamp)
 
     @iswrapper
-    def updateAccountValue(self, key: str, value: str, currency: str, account_name: str):
+    def updateAccountValue(self, key: str, val: str, currency: str, accountName: str) -> None:
         """!
         Receives the subscribed account's information. Only one account can be subscribed at a time.
         After the initial callback to updateAccountValue, callbacks only occur for values which have
@@ -2303,201 +2505,191 @@ class TwsApiClient(EWrapper, EClient):
         frequency cannot be adjusted.
 
         @param key: the value being updated:
-            - AccountCode — The account ID number
-            - AccountOrGroup — "All" to return account summary data for all accounts, or set to a
-              specific Advisor Account Group name that has already been created in TWS Global
-              Configuration
-            - AccountReady — For internal use only
-            - AccountType — Identifies the IB account structure
-            - AccruedCash — Total accrued cash value of stock, commodities and securities
-            - AccruedCash-C — Reflects the current's month accrued debit and credit interest to
-                              date, updated daily in commodity segment
-            - AccruedCash-S — Reflects the current's month accrued debit and credit interest to
-                              date, updated daily in security segment
-            - AccruedDividend — Total portfolio value of dividends accrued
-            - AccruedDividend-C — Dividends accrued but not paid in commodity segment
-            - AccruedDividend-S — Dividends accrued but not paid in security segment
-            - AvailableFunds — This value tells what you have available for trading
-            - AvailableFunds-C — Net Liquidation Value - Initial Margin
-            - AvailableFunds-S — Equity with Loan Value - Initial Margin
-            - Billable — Total portfolio value of treasury bills
-            - Billable-C — Value of treasury bills in commodity segment
-            - Billable-S — Value of treasury bills in security segment
+            - AccountCode: The account ID number
+            - AccountOrGroup: "All" to return account summary data for all accounts, or set to a
+                              specific Advisor Account Group name that has already been created in
+                              TWS Global Configuration
+            - AccountReady: For internal use only
+            - AccountType: Identifies the IB account structure
+            - AccruedCash: Total accrued cash value of stock, commodities and securities
+            - AccruedCash-C: Reflects the current's month accrued debit and credit interest to date,
+                             updated daily in commodity segment
+            - AccruedCash-S: Reflects the current's month accrued debit and credit interest to date,
+                             updated daily in security segment
+            - AccruedDividend: Total portfolio value of dividends accrued
+            - AccruedDividend-C: Dividends accrued but not paid in commodity segment
+            - AccruedDividend-S: Dividends accrued but not paid in security segment
+            - AvailableFunds: This value tells what you have available for trading
+            - AvailableFunds-C: Net Liquidation Value - Initial Margin
+            - AvailableFunds-S: Equity with Loan Value - Initial Margin
+            - Billable: Total portfolio value of treasury bills
+            - Billable-C: Value of treasury bills in commodity segment
+            - Billable-S: Value of treasury bills in security segment
             - BuyingPower:
-               - Cash Account: Minimum (Equity with Loan Value, Previous Day Equity with Loan Value)
-                               - Initial Margin
+               - Cash Account: Minimum(EquityWithLoanValue, PreviousDayEquityWithLoanValue) -
+                              Initial Margin
                - Standard Margin Account: Minimum (Equity with Loan Value, Previous Day Equity with
-                               Loan Value) - Initial Margin *4
-            - CashBalance — Cash recognized at the time of trade + futures PNL
-            - CorporateBondValue — Value of non-Government bonds such as corporate bonds and
-                                   municipal bonds
-            - Currency — Open positions are grouped by currency
-            - Cushion — Excess liquidity as a percentage of net liquidation value
-            - DayTradesRemaining — Number of Open/Close trades one could do before Pattern Day
-                                   Trading is detected
-            - DayTradesRemainingT+1 — Number of Open/Close trades one could do tomorrow before
-                                      Pattern Day Trading is detected
-            - DayTradesRemainingT+2 — Number of Open/Close trades one could do two days from today
+                                          Loan Value) - Initial Margin *4
+            - CashBalance: Cash recognized at the time of trade + futures PNL
+            - CorporateBondValue: Value of non-Government bonds such as corporate bonds and
+                                  municipal bonds
+            - Currency: Open positions are grouped by currency
+            - Cushion: Excess liquidity as a percentage of net liquidation value
+            - DayTradesRemaining: Number of Open/Close trades one could do before Pattern Day
+                                  Trading is detected
+            - DayTradesRemainingT+1: Number of Open/Close trades one could do tomorrow before
+                                     Pattern Day Trading is detected
+            - DayTradesRemainingT+2: Number of Open/Close trades one could do two days from today
+                                     before Pattern Day Trading is detected
+            - DayTradesRemainingT+3: Number of Open/Close trades one could do three days from today
                                       before Pattern Day Trading is detected
-            - DayTradesRemainingT+3 — Number of Open/Close trades one could do three days from today
+            - DayTradesRemainingT+4: Number of Open/Close trades one could do four days from today
                                       before Pattern Day Trading is detected
-            - DayTradesRemainingT+4 — Number of Open/Close trades one could do four days from today
-                                      before Pattern Day Trading is detected
-            - EquityWithLoanValue — Forms the basis for determining whether a client has the
+            - EquityWithLoanValue: Forms the basis for determining whether a client has the
                                     necessary assets to either initiate or maintain security
                                     positions
-            - EquityWithLoanValue-C —
-                Cash account:
-                    Total cash value
-                  + commodities option value
-                  - futures maintenance margin requirement
-                  + minimum (0, futures PNL)
-                Margin account:
-                    Total cash value
-                  + commodities option value
-                 - futures maintenance margin requirement
-            - EquityWithLoanValue-S —
-                 Cash account: Settled Cash
-                 Margin Account:
-                    Total cash value
-                  + stock value + bond value
-                  + (non-U.S. & Canada securities options value)
-            - ExcessLiquidity — This value shows your margin cushion, before liquidation
-            - ExcessLiquidity-C — Equity with Loan Value - Maintenance Margin
-            - ExcessLiquidity-S — Net Liquidation Value - Maintenance Margin
-            - ExchangeRate — The exchange rate of the currency to your base currency
-            - FullAvailableFunds — Available funds of whole portfolio with no discounts or intraday
+            - EquityWithLoanValue-C:
+                - Cash account:
+                    Total cash value + commodities option value - futures maintenance margin
+                    requirement + minimum (0, futures PNL)
+                - Margin account:
+                    Total cash value + commodities option value - futures maintenance margin
+                    requirement
+            - EquityWithLoanValue-S:
+                 - Cash account: Settled Cash
+                 - Margin Account: Total cash value + stock value + bond value + (non-U.S. & Canada
+                                   securities options value)
+            - ExcessLiquidity: This value shows your margin cushion, before liquidation
+            - ExcessLiquidity-C: Equity with Loan Value - Maintenance Margin
+            - ExcessLiquidity-S: Net Liquidation Value - Maintenance Margin
+            - ExchangeRate: The exchange rate of the currency to your base currency
+            - FullAvailableFunds: Available funds of whole portfolio with no discounts or intraday
                                    credits
-            - FullAvailableFunds-C — Net Liquidation Value - Full Initial Margin
-            - FullAvailableFunds-S — Equity with Loan Value - Full Initial Margin
-            - FullExcessLiquidity — Excess liquidity of whole portfolio with no discounts or
+            - FullAvailableFunds-C: Net Liquidation Value - Full Initial Margin
+            - FullAvailableFunds-S: Equity with Loan Value - Full Initial Margin
+            - FullExcessLiquidity: Excess liquidity of whole portfolio with no discounts or
                                     intraday credits
-            - FullExcessLiquidity-C — Net Liquidation Value - Full Maintenance Margin
-            - FullExcessLiquidity-S — Equity with Loan Value - Full Maintenance Margin
-            - FullInitMarginReq — Initial Margin of whole portfolio with no discounts or intraday
+            - FullExcessLiquidity-C: Net Liquidation Value - Full Maintenance Margin
+            - FullExcessLiquidity-S: Equity with Loan Value - Full Maintenance Margin
+            - FullInitMarginReq: Initial Margin of whole portfolio with no discounts or intraday
                                   credits
-            - FullInitMarginReq-C — Initial Margin of commodity segment's portfolio with no
+            - FullInitMarginReq-C: Initial Margin of commodity segment's portfolio with no
                                     discounts or intraday credits
-            - FullInitMarginReq-S — Initial Margin of security segment's portfolio with no discounts
+            - FullInitMarginReq-S: Initial Margin of security segment's portfolio with no discounts
                                     or intraday credits
-            - FullMaintMarginReq — Maintenance Margin of whole portfolio with no discounts or
+            - FullMaintMarginReq: Maintenance Margin of whole portfolio with no discounts or
                                    intraday credits
-            - FullMaintMarginReq-C — Maintenance Margin of commodity segment's portfolio with no
+            - FullMaintMarginReq-C: Maintenance Margin of commodity segment's portfolio with no
                                      discounts or intraday credits
-            - FullMaintMarginReq-S — Maintenance Margin of security segment's portfolio with no
+            - FullMaintMarginReq-S: Maintenance Margin of security segment's portfolio with no
                                      discounts or intraday credits
-            - FundValue — Value of funds value (money market funds + mutual funds)
-            - FutureOptionValue — Real-time market-to-market value of futures options
-            - FuturesPNL — Real-time changes in futures value since last settlement
-            - FxCashBalance — Cash balance in related IB-UKL account
-            - GrossPositionValue — Gross Position Value in securities segment
-            - GrossPositionValue-S —
-                   Long Stock Value
-                 + Short Stock Value
-                 + Long Option Value
-                 + Short Option Value
-            - IndianStockHaircut — Margin rule for IB-IN accounts
-            - InitMarginReq — Initial Margin requirement of whole portfolio
-            - InitMarginReq-C — Initial Margin of the commodity segment in base currency
-            - InitMarginReq-S — Initial Margin of the security segment in base currency
-            - IssuerOptionValue — Real-time mark-to-market value of Issued Option
-            - Leverage-S — GrossPositionValue / NetLiquidation in security segment
-            - LookAheadNextChange — Time when look-ahead values take effect
-            - LookAheadAvailableFunds — This value reflects your available funds at the next margin
-                                        change
-            - LookAheadAvailableFunds-C — Net Liquidation Value - look ahead Initial Margin
-            - LookAheadAvailableFunds-S — Equity with Loan Value - look ahead Initial Margin
-            - LookAheadExcessLiquidity — This value reflects your excess liquidity at the next
-                                         margin change
-            - LookAheadExcessLiquidity-C — Net Liquidation Value - look ahead Maintenance Margin
-            - LookAheadExcessLiquidity-S — Equity with Loan Value - look ahead Maintenance Margin
-            - LookAheadInitMarginReq — Initial margin requirement of whole portfolio as of next
+            - FundValue: Value of funds value (money market funds + mutual funds)
+            - FutureOptionValue: Real-time market-to-market value of futures options
+            - FuturesPNL: Real-time changes in futures value since last settlement
+            - FxCashBalance: Cash balance in related IB-UKL account
+            - GrossPositionValue: Gross Position Value in securities segment
+            - GrossPositionValue-S: Long Stock Value + Short Stock Value + Long Option Value + Short
+                                    Option Value
+            - IndianStockHaircut: Margin rule for IB-IN accounts
+            - InitMarginReq: Initial Margin requirement of whole portfolio
+            - InitMarginReq-C: Initial Margin of the commodity segment in base currency
+            - InitMarginReq-S: Initial Margin of the security segment in base currency
+            - IssuerOptionValue: Real-time mark-to-market value of Issued Option
+            - Leverage-S: GrossPositionValue / NetLiquidation in security segment
+            - LookAheadNextChange: Time when look-ahead values take effect
+            - LookAheadAvailableFunds: This value reflects your available funds at the next margin
+                                       change
+            - LookAheadAvailableFunds-C: Net Liquidation Value - look ahead Initial Margin
+            - LookAheadAvailableFunds-S: Equity with Loan Value - look ahead Initial Margin
+            - LookAheadExcessLiquidity: This value reflects your excess liquidity at the next
+                                        margin change
+            - LookAheadExcessLiquidity-C: Net Liquidation Value - look ahead Maintenance Margin
+            - LookAheadExcessLiquidity-S: Equity with Loan Value - look ahead Maintenance Margin
+            - LookAheadInitMarginReq: Initial margin requirement of whole portfolio as of next
+                                      period's margin change
+            - LookAheadInitMarginReq-C: Initial margin requirement as of next period's margin
+                                        change in the base currency of the account
+            - LookAheadInitMarginReq-S: Initial margin requirement as of next period's margin
+                                        change in the base currency of the account
+            - LookAheadMaintMarginReq: Maintenance margin requirement of whole portfolio as of next
                                        period's margin change
-            - LookAheadInitMarginReq-C — Initial margin requirement as of next period's margin
+            - LookAheadMaintMarginReq-C: Maintenance margin requirement as of next period's margin
                                          change in the base currency of the account
-            - LookAheadInitMarginReq-S — Initial margin requirement as of next period's margin
+            - LookAheadMaintMarginReq-S: Maintenance margin requirement as of next period's margin
                                          change in the base currency of the account
-            - LookAheadMaintMarginReq — Maintenance margin requirement of whole portfolio as of next
-                                        period's margin change
-            - LookAheadMaintMarginReq-C — Maintenance margin requirement as of next period's margin
-                                          change in the base currency of the account
-            - LookAheadMaintMarginReq-S — Maintenance margin requirement as of next period's margin
-                                          change in the base currency of the account
-            - MaintMarginReq — Maintenance Margin requirement of whole portfolio
-            - MaintMarginReq-C — Maintenance Margin for the commodity segment
-            - MaintMarginReq-S — Maintenance Margin for the security segment
-            - MoneyMarketFundValue — Market value of money market funds excluding mutual funds
-            - MutualFundValue — Market value of mutual funds excluding money market funds
-            - NetDividend — The sum of the Dividend Payable/Receivable Values for the securities and
+            - MaintMarginReq: Maintenance Margin requirement of whole portfolio
+            - MaintMarginReq-C: Maintenance Margin for the commodity segment
+            - MaintMarginReq-S: Maintenance Margin for the security segment
+            - MoneyMarketFundValue: Market value of money market funds excluding mutual funds
+            - MutualFundValue: Market value of mutual funds excluding money market funds
+            - NetDividend: The sum of the Dividend Payable/Receivable Values for the securities and
                             commodities segments of the account
-            - NetLiquidation — The basis for determining the price of the assets in your account
-            - NetLiquidation-C — Total cash value + futures PNL + commodities options value
-            - NetLiquidation-S —
-                   Total cash value
-                 + stock value
-                 + securities options value
-                 + bond value
-            - NetLiquidationByCurrency — Net liquidation for individual currencies
-            - OptionMarketValue — Real-time mark-to-market value of options
-            - PASharesValue — Personal Account shares value of whole portfolio
-            - PASharesValue-C — Personal Account shares value in commodity segment
-            - PASharesValue-S — Personal Account shares value in security segment
-            - PostExpirationExcess — Total projected "at expiration" excess liquidity
-            - PostExpirationExcess-C — Provides a projected "at expiration" excess liquidity based
-                                       on the soon-to expire contracts in your portfolio in
-                                       commodity segment
-            - PostExpirationExcess-S — Provides a projected "at expiration" excess liquidity based
-                                       on the soon-to expire contracts in your portfolio in security
-                                       segment
-            - PostExpirationMargin — Total projected "at expiration" margin
-            - PostExpirationMargin-C — Provides a projected "at expiration" margin value based on
-                                       the soon-to expire contracts in your portfolio in commodity
-                                       segment
-            - PostExpirationMargin-S — Provides a projected "at expiration" margin value based on
-                                       the soon-to expire contracts in your portfolio in security
-                                       segment
-            - PreviousDayEquityWithLoanValue — Marginable Equity with Loan value as of 16:00 ET the
-                                               previous day in securities segment
-            - PreviousDayEquityWithLoanValue-S — IMarginable Equity with Loan value as of 16:00 ET
-                                                 the previous day
-            - RealCurrency — Open positions are grouped by currency
-            - RealizedPnL — Shows your profit on closed positions, which is the difference between
-                            your entry execution cost and exit execution costs:
-                            execution price to open the positions
-                          + commissions to open the positions
-                          - execution price to close the position
-                          + commissions to close the position
-            - RegTEquity — Regulation T equity for universal account
-            - RegTEquity-S — Regulation T equity for security segment
-            - RegTMargin — Regulation T margin for universal account
-            - RegTMargin-S — Regulation T margin for security segment
-            - SMA — Line of credit created when the market value of securities in a Regulation T
+            - NetLiquidation: The basis for determining the price of the assets in your account
+            - NetLiquidation-C: Total cash value + futures PNL + commodities options value
+            - NetLiquidation-S: Total cash value + stock value + securities options value + bond
+                                value
+            - NetLiquidationByCurrency: Net liquidation for individual currencies
+            - OptionMarketValue: Real-time mark-to-market value of options
+            - PASharesValue: Personal Account shares value of whole portfolio
+            - PASharesValue-C: Personal Account shares value in commodity segment
+            - PASharesValue-S: Personal Account shares value in security segment
+            - PostExpirationExcess: Total projected "at expiration" excess liquidity
+            - PostExpirationExcess-C: Provides a projected "at expiration" excess liquidity based
+                                      on the soon-to expire contracts in your portfolio in
+                                      commodity segment
+            - PostExpirationExcess-S: Provides a projected "at expiration" excess liquidity based
+                                      on the soon-to expire contracts in your portfolio in security
+                                      segment
+            - PostExpirationMargin: Total projected "at expiration" margin
+            - PostExpirationMargin-C: Provides a projected "at expiration" margin value based on
+                                      the soon-to expire contracts in your portfolio in commodity
+                                      segment
+            - PostExpirationMargin-S: Provides a projected "at expiration" margin value based on
+                                      the soon-to expire contracts in your portfolio in security
+                                      segment
+            - PreviousDayEquityWithLoanValue: Marginable Equity with Loan value as of 16:00 ET the
+                                              previous day in securities segment
+            - PreviousDayEquityWithLoanValue-S: IMarginable Equity with Loan value as of 16:00 ET
+                                                the previous day
+            - RealCurrency: Open positions are grouped by currency
+            - RealizedPnL: Shows your profit on closed positions, which is the difference between
+                           your entry execution cost and exit execution costs:
+                           execution price to open the positions + commissions to open the
+                           positions - execution price to close the position + commissions to close
+                           the position
+            - RegTEquity: Regulation T equity for universal account
+            - RegTEquity-S: Regulation T equity for security segment
+            - RegTMargin: Regulation T margin for universal account
+            - RegTMargin-S: Regulation T margin for security segment
+            - SMA: Line of credit created when the market value of securities in a Regulation T
                     account increase in value
-            - SMA-S — Regulation T Special Memorandum Account balance for security segment
-            - SegmentTitle — Account segment name
-            - StockMarketValue — Real-time mark-to-market value of stock
-            - TBondValue — Value of treasury bonds
-            - TBillValue — Value of treasury bills
-            - TotalCashBalance — Total Cash Balance including Future PNL
-            - TotalCashValue — Total cash value of stock, commodities and securities
-            - TotalCashValue-C — CashBalance in commodity segment
-            - TotalCashValue-S — CashBalance in security segment
-            - TradingType-S — Account Type
-            - UnrealizedPnL — The difference between the current market value of your open positions
-                              and the average cost, or Value - Average Cost
-            - WarrantValue — Value of warrants
-            - WhatIfPMEnabled — To check projected margin requirements under Portfolio Margin model
-        @param value: up-to-date value
+            - SMA-S: Regulation T Special Memorandum Account balance for security segment
+            - SegmentTitle: Account segment name
+            - StockMarketValue: Real-time mark-to-market value of stock
+            - TBondValue: Value of treasury bonds
+            - TBillValue: Value of treasury bills
+            - TotalCashBalance: Total Cash Balance including Future PNL
+            - TotalCashValue: Total cash value of stock, commodities and securities
+            - TotalCashValue-C: CashBalance in commodity segment
+            - TotalCashValue-S: CashBalance in security segment
+            - TradingType-S: Account Type
+            - UnrealizedPnL: The difference between the current market value of your open positions
+                             and the average cost, or Value - Average Cost
+            - WarrantValue: Value of warrants
+            - WhatIfPMEnabled: To check projected margin requirements under Portfolio Margin model
+        @param val: up-to-date value
         @param currency: the currency on which the value is expressed.
-        @param account_name: the account
+        @param accountName: the account
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("Key: %s", key)
+        logger.debug("Value: %s", val)
+        logger.debug("Currency: %s", currency)
+        logger.debug("Account Name: %s", accountName)
 
     @iswrapper
-    def updateMktDepth(self, ticker_id: int, position: int, operation: int, side: int, price: float,
+    def updateMktDepth(self, reqId: int, position: int, operation: int, side: int, price: float,
                        size: Decimal):
         """!
         Returns the order book.
@@ -2514,20 +2706,24 @@ class TwsApiClient(EWrapper, EClient):
         @param price - The order's price
         @param size - The order's size
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s", reqId)
+        logger.debug("Position: %s", position)
+        logger.debug("Operation: %s", operation)
+        logger.debug("Side: %s", side)
+        logger.debug("Price: %s", price)
+        logger.debug("Size: %s", size)
 
     @iswrapper
-    def updateMktDepthL2(self, ticker_id: int, position: int, market_maker: str, operation: int,
-                         side: int, price: float, size: Decimal, is_smart_depth: bool):
+    def updateMktDepthL2(self, reqId: int, position: int, marketMaker: str, operation: int,
+                         side: int, price: float, size: Decimal, isSmartDepth: bool):
         """!
         Returns the order book.
 
-        @param ticker_id: The request's identifier
+        @param reqId: The request's identifier
         @param position: The Order book's row being updated
-        @param market_maker: The Exchange holding the order if is_smart_depth is True, otherwise
+        @param marketMaker: The Exchange holding the order if is_smart_depth is True, otherwise
             the MPID of the market maker
         @param operation: How to refresh the row:
             - 0 = insert (insert this new order into the row identified by 'position')
@@ -2538,96 +2734,104 @@ class TwsApiClient(EWrapper, EClient):
             - 1 for bid
         @param price: The order's price
         @param size: The order's size
-        @param is_smart_depth: flag indicating if this is smart depth response (aggregate data from
+        @param isSmartDepth: flag indicating if this is smart depth response (aggregate data from
             multiple exchanges)
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s", reqId)
+        logger.debug("Position: %s", position)
+        logger.debug("Market Maker: %s", marketMaker)
+        logger.debug("Operation: %s", operation)
+        logger.debug("Side: %s", side)
+        logger.debug("Price: %s", price)
+        logger.debug("Size: %s", size)
+        logger.debug("Is Smart Depth: %s", isSmartDepth)
 
     @iswrapper
-    def updateNewsBulletin(self, msg_id: int, msg_type: int, message: str, orig_exchange: str):
+    def updateNewsBulletin(self, msgId: int, msgType: int, newsMessage: str, originExch: str):
         """!
         Provides IB's bulletins
 
-        @param msg_id: The Builtin's identifier
-        @param msg_type:
+        @param msgId: The Builtin's identifier
+        @param msgType:
             - 1 - Regular news bulletin
             - 2 - Exchange no longer available for trading
             - 3 - Exchange is available for trading
-        @param message - The message
-        @param orig_exchange: The exchange where the message comes from.
+        @param newsMessage - The message
+        @param originExch: The exchange where the message comes from.
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("MsgId: %s  MsgType: %s  Msg: %s  OriginExch: %s", msgId, msgType, newsMessage,
+                     originExch)
 
     @iswrapper
-    def updatePortfolio(self, contract: Contract, position: float, market_price: float,
-                        market_value: float, average_cost: float, unrealized_pnl: float,
-                        realized_pnl: float, account_name: str):
+    def updatePortfolio(self, contract: Contract, position: float, marketPrice: float,
+                        marketValue: float, averageCost: float, unrealizedPNL: float,
+                        realizedPNL: float, accountName: str):
         """!
         Receives the subscribed account's portfolio. This function will receive only the portfolio
         of the subscribed account. If the portfolios of all managed accounts are needed, refer to
         EClientSocket.reqPosition After the initial callback to updatePortfolio, callbacks only
         occur for positions which have changed.
 
-        IB API's description is incomplete.  TODO: Complete descriptions.
+        IB API's description is incomplete.
         @param contract: the Contract for which a position is held.
         @param position: the number of positions held.
-        @param market_price: instrument's unitary price
-        @param market_value: total market value of the instrument.
-        @param average_cost:
-        @param unrealized_pnl:
-        @param realized_pnl:
-        @param account_name:
+        @param marketPrice: instrument's unitary price
+        @param marketValue: total market value of the instrument.
+        @param averageCost: FIXME: This is not documented by the TWSAPI
+        @param unrealizedPNL: FIXME: This is not documented by the TWSAPI
+        @param realizedPNL: FIXME: This is not documented by the TWSAPI
+        @param accountName: FIXME: This is not documented by the TWSAPI
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("Contract: %s", contract)
+        logger.debug("Position: %s", position)
+        logger.debug("Market Price: %s", marketPrice)
+        logger.debug("Market Value: %s", marketValue)
+        logger.debug("Average Cost: %s", averageCost)
+        logger.debug("Unrealized PnL: %s", unrealizedPNL)
+        logger.debug("Realized PnL: %s", realizedPNL)
+        logger.debug("Account Name: %s", accountName)
 
     @iswrapper
-    def userinfo(self, req_id: int, white_branding_id: str):
+    def userinfo(self, reqId: int, whiteBrandingId: str):
         """!
         Return user info
 
-        IB API's description is in complete.  TODO: Complete descriptions.
-        @param req_id: The request's identifier
-        @param white_branding_id: FIXME: IB API does not provide a description
+        @param reqId: The request's identifier
+        @param whiteBrandingId: FIXME: This is not documented by the TWSAPI
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s  White Branding Id: %s", reqId, whiteBrandingId)
 
     @iswrapper
-    def wshEventData(self, req_id: int, datajson: str):
+    def wshEventData(self, reqId: int, dataJson: str) -> None:
         """!
         Returns calendar events from the WSH.
 
-        @param req_id: The request's identifier
-        @param datajson: Event data in JSON format.
+        @param reqId: The request's identifier
+        @param dataJson: Event data in JSON format.
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s  Data: %s", reqId, dataJson)
 
     @iswrapper
-    def wshMetaData(self, req_id: int, datajson: str):
+    def wshMetaData(self, reqId: int, dataJson: str) -> None:
         """!
         Returns meta data from the WSH calendar.
 
-        @param req_id: The request's identifier
+        @param reqId: The request's identifier
         @param datajson: Event data in JSON format.
 
-        @return
+        @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("End Function")
+        logger.debug("ReqId: %s  Data: %s", reqId, dataJson)
 
     # ==============================================================================================
     #
@@ -2637,7 +2841,7 @@ class TwsApiClient(EWrapper, EClient):
     def _data_wait(self, timestamp, sleep_time):
         time_diff = datetime.datetime.now() - timestamp
 
-        # TODO: Why is this a loop?
+        # FIXME: Why is this a loop?
         while time_diff.total_seconds() < sleep_time:
 
             logger.debug6("Now: %s", datetime.datetime.now())
@@ -2645,7 +2849,7 @@ class TwsApiClient(EWrapper, EClient):
             logger.debug6("Time Difference: %s seconds", time_diff.total_seconds())
             remaining_sleep_time = sleep_time - time_diff.total_seconds()
             logger.debug6("Sleep Time: %s", remaining_sleep_time)
-            time.sleep(sleep_time - time_diff.total_seconds())
+            sleep(sleep_time - time_diff.total_seconds())
             time_diff = datetime.datetime.now() - timestamp
 
     def _historical_data_wait(self):
@@ -2693,3 +2897,5 @@ class TwsApiClient(EWrapper, EClient):
             self.__available_deep_data_allotment = max_allotment
         else:
             self.__available_deep_data_allotment = basic_allotment
+
+        logger.debug("Deep Data Allotment: %s", self.__available_deep_data_allotment)

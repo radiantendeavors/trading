@@ -1,2 +1,11 @@
 [flake8]
 max_line_length = 100
+
+# Ignored Rules:
+# E266: too many leading ‘#’ for block comment - Ignored because we are using doxygen, which uses '##' to comment a variable
+extend_ignore = E266
+
+per-file-ignores =
+    # Ignored Rules (These are ignored because the TWSAPI does not follow these rules, and we are required to follow TWSAPI to implement it):
+    # R0913: Refactor (Too Many arguments)
+    pytrader/libs/clients/broker/ibkr/tws/__init__.py:N802,N803,R0913

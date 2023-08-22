@@ -61,8 +61,8 @@ def broker_address(args, conf):
     """
     if args.address:
         return args.address
-    else:
-        return conf.brokerclient_address
+
+    return conf.brokerclient_address
 
 
 def init(args):
@@ -127,7 +127,7 @@ def init(args):
         return 0
 
     except argparse.ArgumentError as msg:
-        logger.critical("Invalid Argument")
+        logger.critical("Invalid Argument: %s", msg)
         parser.print_help()
         return 2
 

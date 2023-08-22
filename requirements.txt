@@ -6,6 +6,7 @@ certifi==2022.12.7
 cffi==1.15.1
 charset-normalizer==3.0.1
 cryptography==39.0.0
+et-xmlfile==1.1.0
 exceptiongroup==1.1.0
 frozendict==2.3.4
 html5lib==1.1
@@ -14,9 +15,11 @@ idna==3.4
 lxml==4.9.2
 multitasking==0.0.11
 numpy==1.24.1
+openpyxl==3.1.2
 pandas==1.5.3
 polygon-api-client==1.6.2
 pycparser==2.21
+pygit2==1.12.2
 PyMySQL==1.0.2
 python-dateutil==2.8.2
 pytz==2022.7.1
@@ -29,4 +32,5 @@ url-normalize==1.4.3
 urllib3==1.26.14
 webencodings==0.5.1
 websockets==10.4
+XlsxWriter==3.1.2
 yfinance==0.2.4

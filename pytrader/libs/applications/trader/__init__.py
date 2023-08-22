@@ -25,6 +25,8 @@ The main user interface for the trading program.
 # System libraries
 import multiprocessing
 
+from typing import Optional
+
 # 3rd Party libraries
 
 # System Library Overrides
@@ -55,7 +57,7 @@ class ProcessManager():
     This class is responsible for managing the various processes that are running.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.cmd_queue = multiprocessing.Queue()
         self.data_queue = {}
         self.broker_process = None
@@ -65,7 +67,7 @@ class ProcessManager():
                       address,
                       broker_id: str = BROKER_ID,
                       client_id: int = CLIENT_ID,
-                      strategy_list: list = []):
+                      strategy_list: Optional[list] = None) -> None:
         """!
         Runs the various subprocesses.
 
@@ -82,7 +84,7 @@ class ProcessManager():
                 if message.get("next_order_id"):
                     next_order_id = message["next_order_id"]
 
-            if len(strategy_list) > 0:
+            if strategy_list is not None and len(strategy_list) > 0:
                 self._run_strategy_process(strategy_list, next_order_id)
         except BrokerNotAvailable as msg:
             logger.critical("Broker Not Available. %s", msg)
@@ -100,23 +102,23 @@ class ProcessManager():
                             address: str,
                             broker_id: str,
                             client_id: int,
-                            strategy_list: list = []):
+                            strategy_list: Optional[list] = None) -> None:
         self.data_queue["Main"] = multiprocessing.Queue()
 
-        if len(strategy_list) > 0:
+        if strategy_list is not None and len(strategy_list) > 0:
             for strategy_id in strategy_list:
                 strategy_data_queue = multiprocessing.Queue()
                 self.data_queue[strategy_id] = strategy_data_queue
 
         broker_client = broker.BrokerProcess(self.cmd_queue, self.data_queue, address, broker_id,
                                              client_id)
-        if len(strategy_list) > 0:
+        if strategy_list is not None and len(strategy_list) > 0:
             broker_client.set_strategies(strategy_list)
 
         self.broker_process = multiprocessing.Process(target=broker_client.run)
         self.broker_process.start()
 
-    def _run_strategy_process(self, strategy_list: list, next_order_id: int):
+    def _run_strategy_process(self, strategy_list: list, next_order_id: int) -> None:
         strat = strategy.StrategyProcess(self.cmd_queue, self.data_queue, next_order_id)
         self.strategy_process = multiprocessing.Process(target=strat.run, args=(strategy_list, ))
         self.strategy_process.start()

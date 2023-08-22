@@ -3,7 +3,7 @@
 
 Provides an Example Strategy
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -20,7 +20,7 @@ Provides an Example Strategy
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file pytrader/strategies/example_strategy/__init__.py
+@file pytrader/strategies/example1/__init__.py
 
 Provides an Example Strategy
 
@@ -53,14 +53,19 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class Strategy(strategies.Strategy):
+    """!
+    Example Strategy to demonstrate how to create a strategy.
 
-    def __init__(self, send_queue: Queue, recv_queue: Queue, next_order_id: int):
-        super().__init__(send_queue, recv_queue, next_order_id)
+    Do NOT use with actual money.
+    """
+
+    def __init__(self, cmd_queue: Queue, data_queue: Queue, next_order_id: int, strategy_id: str):
+        super().__init__(cmd_queue, data_queue, next_order_id, strategy_id)
         self.security = ["SPY", "QQQ", "IWM"]
-        self.bar_sizes = ["5 mins"]
+        self.bar_sizes = ["5 mins", "1 hour"]
         self.short_period = 3
         self.long_period = 8
-        self.quantity = 200
+        self.quantity = 100
         self.use_options = True
         self.days_to_expiration = 1
         self.num_strikes = 14
@@ -78,21 +83,22 @@ class Strategy(strategies.Strategy):
         logger.debug10("Begin Function")
 
         cur_time = datetime.datetime.now()
-        condition1 = (cur_time < self.endtime)
+        condition1 = cur_time < self.endtime
         logger.debug4("Curent Time: %s", cur_time)
         logger.debug4("End Time: %s", self.endtime)
         logger.debug4("Condition 1: %s", condition1)
 
         if condition1:
             return True
-        else:
-            return False
+
+        return False
 
     def on_5sec_rtb(self, ticker, bar):
-        logger.debug10("Begin Function")
         logger.debug4("Run On 5sec RTB")
         logger.debug4("Ticker: %s, Bar: %s", ticker, bar)
-        logger.debug10("End Function")
+
+    def on_10min_volume(self, ticker, tick):
+        logger.debug9("10 Min Volume for %s: %s", ticker, tick)
 
     def on_ask(self, ticker, tick):
         logger.debug10("Begin Function")

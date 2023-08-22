@@ -3,7 +3,7 @@
 
 Provides a baseline BrokerDataThread common to all brokers.
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -24,20 +24,15 @@ Provides a baseline BrokerDataThread common to all brokers.
 @file pytrader/libs/applications/broker/common/__init__.py
 """
 # Standard libraries
-import datetime
-import queue
-
 from abc import ABCMeta, abstractmethod
 from queue import Queue
 
 # 3rd Party libraries
-from ibapi.contract import Contract
 
 # System Library Overrides
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs import bars
 
 # ==================================================================================================
 #
@@ -58,7 +53,7 @@ class BrokerDataThread():
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         """!
         Initializes the Broker Data Thread.
         """
@@ -90,18 +85,16 @@ class BrokerDataThread():
                 self._parse_data(response_data)
 
     @abstractmethod
-    def create_order(self, order_request):
+    def create_order(self, order_request: dict, strategy_id: str) -> None:
         """!
         Creates an order from an order request.
         """
-        pass
 
     @abstractmethod
-    def request_bar_history(self):
+    def request_bar_history(self) -> None:
         """!
         Abstract method to request bar history.
         """
-        pass
 
     def request_global_cancel(self):
         """!
@@ -114,21 +107,18 @@ class BrokerDataThread():
         """!
         Abstract method to request for option details.
         """
-        pass
 
     @abstractmethod
     def request_market_data(self, strategy_id: str):
         """!
         Abstract method to request streaming market data.
         """
-        pass
 
     @abstractmethod
     def request_real_time_bars(self, strategy_id: str):
         """!
         Abstract method to request real time bars.
         """
-        pass
 
     @abstractmethod
     def send_market_data_ticks(self, market_data: dict):
@@ -137,7 +127,6 @@ class BrokerDataThread():
 
         @param market_data: The market data to send.
         """
-        pass
 
     def send_order_id(self):
         """!
@@ -153,7 +142,6 @@ class BrokerDataThread():
 
         @param order_status: The current order status.
         """
-        pass
 
     @abstractmethod
     def send_real_time_bars(self, real_time_bar: dict):
@@ -164,7 +152,6 @@ class BrokerDataThread():
 
         @return None
         """
-        pass
 
     def set_attributes(self, brokerclient, data_queue: dict, broker_queue: Queue) -> None:
         """!
@@ -179,14 +166,12 @@ class BrokerDataThread():
         """!
         Abstract method to set bar sizes.
         """
-        pass
 
     @abstractmethod
     def set_contracts(self, contracts: dict, strategy_id: str):
         """!
         Abstract method to set the contracts.
         """
-        pass
 
     # def send_ticks(self, contract: Contract, tick):
     #     """!

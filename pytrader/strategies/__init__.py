@@ -777,11 +777,11 @@ class Strategy():
                     logger.debug9("Orders for %s", local_symbol)
                     logger.debug9("Orders: %s", self.orders[local_symbol])
 
-        if status in list(func_map.keys()):
-            func = func_map.get(status)
-            func(local_symbol, order_id, order_status[order_id])
-        else:
-            logger.warning("Order Status '%s' processing has not been implemented.")
+            if status in list(func_map.keys()):
+                func = func_map.get(status)
+                func(local_symbol, order_id, order_status[order_id])
+            else:
+                logger.warning("Order Status '%s' processing has not been implemented.")
 
     def _process_ticks(self, new_ticks):
         ticker = None

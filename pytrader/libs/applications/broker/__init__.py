@@ -1,8 +1,8 @@
 """!@package pytrader.libs.applications.broker
 
-The main user interface for the trading program.
+Manages the broker processes
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -66,7 +66,7 @@ class BrokerProcess():
                  data_queue: dict,
                  address: str = "127.0.0.1",
                  broker_id: str = BROKER_ID,
-                 client_id: int = CLIENT_ID):
+                 client_id: int = CLIENT_ID) -> None:
         """!
         Creates an instance of the BrokerProcess.
         """
@@ -85,7 +85,7 @@ class BrokerProcess():
         self.data_thread = threading.Thread(target=self.data_response.run, daemon=True)
         self.strategies = []
 
-    def run(self):
+    def run(self) -> None:
         """!
         Run the broker process as long as the broker is connected.
 
@@ -102,6 +102,7 @@ class BrokerProcess():
 
                 if cmd == "Quit":
                     broker_connection = False
+                    self.brokerclient.stop_thread()
                 else:
                     strategy_id = list(cmd.keys())[0]
                     self._process_commands(cmd[strategy_id], strategy_id)
@@ -109,7 +110,14 @@ class BrokerProcess():
         except KeyboardInterrupt:
             logger.critical("Received Keyboard Interrupt! Shutting down the Broker Client.")
 
-    def set_strategies(self, strategy_list: list):
+    def set_strategies(self, strategy_list: list) -> None:
+        """!
+        Set's the strategies observers for message passing.
+
+        @param strategy_list: A list of strategies
+
+        @return None
+        """
         self.strategies = strategy_list
         self.data_response.set_strategies(strategy_list)
 
@@ -157,6 +165,14 @@ class BrokerProcess():
         self.data_response.create_order(order_request, strategy_id)
 
     def _process_commands(self, cmd: dict, strategy_id: str) -> None:
+        """!
+        Processes command received from other processes.
+
+        @param cmd: The command received.
+        @param strategy_id: The strategy that sent the command.
+
+        @return None
+        """
         logger.debug4("Processing Command: %s", cmd)
         if cmd.get("set"):
             self._set_cmd(cmd["set"], strategy_id)

@@ -84,6 +84,7 @@ class StrategyProcess():
 
         except KeyboardInterrupt as msg:
             logger.critical("Received Keyboard Interupt! Ending strategy processeses!")
+            logger.debug9("Message: %s", msg)
         finally:
             for strategy_id in strategy_list:
                 self.strategy_process[strategy_id].join()

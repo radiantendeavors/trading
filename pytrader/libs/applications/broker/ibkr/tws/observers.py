@@ -1,8 +1,9 @@
-"""!@package pytrader.libs.applications.broker.ibkr.tws.observers
+"""!
+@package pytrader.libs.applications.broker.ibkr.tws.observers
 
-The main user interface for the trading program.
+Provides the observer classes for Interactive Brokers TWS
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -50,6 +51,9 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class BarDataObserver(Observer):
+    """!
+    Provides the bar data observer class.
+    """
 
     def __init__(self, msg_queue: Queue):
         self.ticker_bar_sizes = {}

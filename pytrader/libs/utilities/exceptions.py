@@ -54,3 +54,15 @@ class BrokerWarning(Warning):
     """!
     Used for Broker Related Warnings
     """
+
+
+class BrokerTooManyRequests(BrokerWarning):
+    """!
+    Used when there are too many outstanding data requests.
+    """
+
+
+class InvalidTickType(BrokerWarning):
+    """!
+    Used for invalid tick types.
+    """

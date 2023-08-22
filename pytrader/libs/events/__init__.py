@@ -2,7 +2,7 @@
 
 The main user interface for the trading program.
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 

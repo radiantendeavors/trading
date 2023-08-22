@@ -70,7 +70,7 @@ LOGLEVEL = 20
 BROKER_ID = "twsapi"
 
 ## Client ID
-CLIENT_ID = 2007
+CLIENT_ID = 2008
 
 ## An instance of the logging class
 logger = logging.getLogger(__name__)

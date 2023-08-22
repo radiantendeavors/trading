@@ -1,8 +1,9 @@
-"""!@package pytrader.libs.applications.broker.ibkr.tws
+"""!
+@package pytrader.libs.applications.broker.ibkr.tws
 
-The main user interface for the trading program.
+Provides the data response thread for Interactive Brokers TWS
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -94,7 +95,7 @@ class TwsDataThread(BrokerDataThread):
         """
         self.order_subjects.cancel_order(order_id)
 
-    def create_order(self, order_request: dict, strategy_id: str):
+    def create_order(self, order_request: dict, strategy_id: str) -> None:
         """!
         Create a new order from an order request.
 
@@ -109,7 +110,7 @@ class TwsDataThread(BrokerDataThread):
         self.order_subjects.create_order(order_contract, new_order, order_id)
         self.order_observers[strategy_id].add_order_id(order_id)
 
-    def request_bar_history(self):
+    def request_bar_history(self) -> None:
         self.bar_subjects.request_bars()
         self.bar_subjects.notify()
 
@@ -147,7 +148,14 @@ class TwsDataThread(BrokerDataThread):
     def send_real_time_bars(self, real_time_bar: dict):
         self.rtb_subjects.send_real_time_bars(real_time_bar)
 
-    def set_strategies(self, strategy_list: list):
+    def set_strategies(self, strategy_list: list) -> None:
+        """!
+        Sets the subject and observers for each strategy.
+
+        @param strategy_list: List of strategies to use.
+
+        @return None
+        """
         for strategy in strategy_list:
             # Add Bar Observers
             self.bar_observers[strategy] = StrategyBarDataObserver(self.data_queue[strategy])

@@ -30,7 +30,7 @@ Installation and Usage
 This program exists twice.  C++ is the production version.  The prototype is developed using python.
 Read the relevant README files for their installation and usage instructions.
 
-Both C++ and Python target TWSAPI v10.19.
+Both C++ and Python target TWSAPI v10.20.
 
 - [C++](src/README.md)
 - [Python](pytrader/README.md)
