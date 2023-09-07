@@ -24,11 +24,23 @@ Provides the Base Class for a Strategy.
     Provides the Base Class for a Strategy
 
 """
+# ==================================================================================================
+#
+# This file requires special pylint rules...
+#
+# C0302: too many lines
+# R0904: too many public methods
+#
+# pylint: disable=C0302,R0904
+#
+# ==================================================================================================
 # System libraries
 import datetime
 from abc import ABCMeta, abstractmethod
 from multiprocessing import Queue
-from threading import Event
+from time import sleep
+
+from typing import Optional
 
 # 3rd Party libraries
 from ibapi import contract
@@ -60,7 +72,18 @@ class Strategy():
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, cmd_queue: Queue, data_queue: Queue, next_order_id: int, strategy_id: str):
+    def __init__(self, cmd_queue: Queue, data_queue: Queue, next_order_id: int,
+                 strategy_id: str) -> None:
+        """!
+        Initializes the strategy class.
+
+        @param cmd_queue:
+        @param data_queue:
+        @param next_order_id:
+        @param strategy_id
+
+        @return None
+        """
         self.cmd_queue = cmd_queue
         self.data_queue = data_queue
         self.next_order_id = next_order_id
@@ -100,245 +123,368 @@ class Strategy():
         """
         # TODO: Experiment with Return False, and Raise if for if the strategy does not have this
         # defined.
-        pass
 
     @abstractmethod
-    def on_5sec_rtb(self, ticker, bar):
-        pass
+    def on_5sec_rtb(self, ticker, ohlc_bar):
+        """!
+        Runs upon receiving a 5sec real time bar from the broker.
+        """
 
     @abstractmethod
     def on_3min_volume(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving 3 min volume market data from the broker.
+        """
 
     @abstractmethod
     def on_5min_volume(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving 5 min volume market data from the broker.
+        """
 
     @abstractmethod
     def on_10min_volume(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving 10 min volume market data from the broker.
+        """
 
     @abstractmethod
     def on_13week_high(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving 13 week high market data from the broker.
+        """
 
     @abstractmethod
     def on_13week_low(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving 13 week low market data from the broker.
+        """
 
     @abstractmethod
     def on_26week_high(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving 26 week high market data from the broker.
+        """
 
     @abstractmethod
     def on_26week_low(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving 26 week low market data from the broker.
+        """
 
     @abstractmethod
     def on_52week_high(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving 52 week high market data from the broker.
+        """
 
     @abstractmethod
     def on_52week_low(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving 52 week low market data from the broker.
+        """
 
     @abstractmethod
     def on_ask(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the ask price market data from the broker.
+        """
 
     @abstractmethod
     def on_ask_exchange(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the ask exchange market data from the broker.
+        """
 
     @abstractmethod
     def on_ask_option_computation(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the ask option computation market data from the broker.
+        """
 
     @abstractmethod
     def on_ask_size(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the ask size market data from the broker.
+        """
 
     @abstractmethod
     def on_auction_imbalance(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the auction imbalance market data from the broker.
+        """
 
     @abstractmethod
     def on_auction_price(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the auction price market data from the broker.
+        """
 
     @abstractmethod
     def on_auction_volume(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the auction volume market data from the broker.
+        """
 
     @abstractmethod
     def on_average_option_volume(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the average option volume market data from the broker.
+        """
 
     @abstractmethod
     def on_average_volume(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the average volume market data from the broker.
+        """
 
     @abstractmethod
     def on_bar(self, ticker, bar_size):
-        pass
+        """!
+        Runs upon receiving a new bar, either directly from the broker, or as a rescale of the 5sec
+        real time bars.
+        """
 
     @abstractmethod
     def on_bid(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the bid price market data from the broker.
+        """
 
     @abstractmethod
     def on_bid_exchange(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the bid exchange market data from the broker.
+        """
 
     @abstractmethod
     def on_bid_option_computation(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the bid option computation market data from the broker.
+        """
 
     @abstractmethod
     def on_bid_size(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the bid size market data from the broker.
+        """
 
     @abstractmethod
     def on_close(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the closing price market data from the broker.
+        """
 
     @abstractmethod
     def on_creditman_slow_mark_price(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the <WTF> market data from the broker.
+        """
 
     @abstractmethod
     def on_dividends(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving dividend market data from the broker.
+        """
 
     @abstractmethod
     def on_end(self):
-        pass
+        """!
+        Runs when the strategy is shutting down.
+        """
 
     @abstractmethod
     def on_halt(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving ticker halt market data from the broker.
+        """
 
     @abstractmethod
     def on_high(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the daily high price market data from the broker.
+        """
 
     @abstractmethod
     def on_last(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the last price market data from the broker.
+        """
 
     @abstractmethod
     def on_last_exchange(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the last exchange market data from the broker.
+        """
 
     @abstractmethod
     def on_last_option_computation(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the last option computation market data from the broker.
+        """
 
     @abstractmethod
     def on_last_rth_trade(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the last regular trading hours trade market data from the broker.
+        """
 
     @abstractmethod
     def on_last_size(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the last size market data from the broker.
+        """
 
     @abstractmethod
     def on_last_timestamp(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the last timestamp market data from the broker.
+        """
 
     @abstractmethod
     def on_low(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the daily low price market data from the broker.
+        """
 
     @abstractmethod
     def on_mark(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the mark price market data from the broker.
+        """
 
     @abstractmethod
     def on_model_option_computation(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the model option computation market data from the broker.
+        """
 
     @abstractmethod
     def on_news(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving news market data from the broker.
+        """
 
     @abstractmethod
     def on_open(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the opening price market data from the broker.
+        """
 
     @abstractmethod
     def on_option_historical_volatility(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the option historical volatility market data from the broker.
+        """
 
     @abstractmethod
     def on_option_implied_volatility(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the option implied volatility market data from the broker.
+        """
 
     @abstractmethod
     def on_option_call_open_interest(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the option call open interest market data from the broker.
+        """
 
     @abstractmethod
     def on_option_put_open_interest(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the option put open interest market data from the broker.
+        """
 
     @abstractmethod
     def on_option_call_volume(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the option call volume market data from the broker.
+        """
 
     @abstractmethod
     def on_option_put_volume(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the option put volume market data from the broker.
+        """
 
     @abstractmethod
-    def on_order_cancelled(self, local_symbol, order_id, order_status):
-        pass
+    def on_order_canceled(self, local_symbol, order_id, order_status):
+        """!
+        Runs upon receiving the order canceled notification from the broker.
+        """
 
     @abstractmethod
     def on_order_filled(self, local_symbol, order_id, order_status):
-        pass
+        """!
+        Runs upon receiving the order filled notification from the broker.
+        """
 
     @abstractmethod
     def on_rt_volume(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the rt volume market data from the broker.
+        """
 
     @abstractmethod
     def on_rt_trade_volume(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the rt trade volume market data from the broker.
+        """
 
     @abstractmethod
     def on_shortable(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving shortable market data from the broker.
+        """
 
     @abstractmethod
     def on_shortable_shares(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving shortable shares market data from the broker.
+        """
 
     @abstractmethod
     def on_start(self):
-        pass
+        """!
+        Runs upon starting the strategy.
+        """
 
     @abstractmethod
     def on_tick(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving tick data from the broker.
+        """
 
     @abstractmethod
     def on_trade_count(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the trade count market data from the broker.
+        """
 
     @abstractmethod
     def on_trade_rate(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving the trade rate market data from the broker.
+        """
 
     @abstractmethod
     def on_volume(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving volume market data from the broker.
+        """
 
     @abstractmethod
     def on_volume_per_minute(self, ticker, tick):
-        pass
+        """!
+        Runs upon receiving volume per minute market data from the broker.
+        """
 
-    def run(self):
+    def run(self) -> None:
+        """!
+        The strategy process loop.
+
+        @return None
+        """
         logger.debug10("Begin Function")
 
         try:
@@ -347,6 +493,7 @@ class Strategy():
 
             logger.debug9("Use Options: %s", self.use_options)
             if self.use_options:
+                sleep(15)
                 self._req_option_details()
 
             self._send_bar_sizes()
@@ -366,6 +513,7 @@ class Strategy():
         except KeyboardInterrupt as msg:
             logger.critical("Received Keyboard Interupt! Ending Strategy '%s'.",
                             self.strategy_id.capitalize())
+            logger.debug("Message: %s", msg)
         # except Exception as msg:
         #     logger.critical("We fucked up: %s", msg)
 
@@ -373,12 +521,18 @@ class Strategy():
             self.on_end()
 
     def cancel_orders(self, order_id: int = 0):
+        """!
+        Cancels all orders.
+        """
         if order_id == 0:
             self._req_global_cancel()
         else:
             logger.warning("Order Cancelation not implemented")
 
     def select_options(self, ticker, tick):
+        """!
+        Selects Options.
+        """
         if self.use_options:
             if not self.strikes.get(ticker):
                 self.select_option_strikes(ticker, tick)
@@ -391,8 +545,11 @@ class Strategy():
                 self._req_real_time_bars()
 
     def select_option_strikes(self, ticker, price):
-        x = 0
-        y = 1
+        """!
+        Select option strikes
+        """
+        counter1 = 0
+        counter2 = 1
 
         if ticker in self.security:
 
@@ -403,22 +560,21 @@ class Strategy():
 
             strikes_len = len(self.all_strikes[ticker])
 
-            while y < strikes_len:
+            while counter2 < strikes_len:
 
-                lower_price = float(self.all_strikes[ticker][x])
-                upper_price = float(self.all_strikes[ticker][y])
+                lower_price = float(self.all_strikes[ticker][counter1])
+                upper_price = float(self.all_strikes[ticker][counter2])
 
                 if lower_price <= price_f <= upper_price:
-                    begin_ = x - num_strikes
-                    end_ = y + num_strikes
-
+                    begin_ = counter1 - num_strikes
+                    end_ = counter2 + num_strikes
                     begin_ = max(begin_, 0)
                     logger.debug9("All strikes for ticker: %s, %s", ticker,
                                   self.all_strikes[ticker])
                     self.strikes[ticker] = self.all_strikes[ticker][begin_:end_]
 
-                x += 1
-                y += 1
+                counter1 += 1
+                counter2 += 1
 
             logger.debug2("Selected Strikes for %s: %s", ticker, self.strikes[ticker])
 
@@ -432,9 +588,9 @@ class Strategy():
                          sec_type: str = "STK",
                          exchange: str = "SMART",
                          currency: str = "USD",
-                         expiry: str = "",
-                         strike: float = 0.0,
-                         right: str = ""):
+                         expiry: Optional[str] = "",
+                         strike: Optional[float] = 0.0,
+                         right: Optional[str] = ""):
         """!
         Creates a contract
         """
@@ -477,7 +633,7 @@ class Strategy():
             self._send_contracts(contracts)
 
     def _gen_option_contract_name(self, ticker, right, strike):
-        strike_left = str(strike).split(".")[0]
+        strike_left = str(strike).split(".", maxsplit=1)[0]
         strike_right = str(strike).split(".")[1]
 
         strike_str = strike_left.rjust(5, "0") + strike_right.ljust(3, "0")
@@ -500,13 +656,13 @@ class Strategy():
 
     def _process_bars(self, bar_data):
         # TODO: This is an ugly way to extract key value pairs for dicts with single item
-        ticker = list(bar_data.keys())[0]
+        ticker = list(bar_data)[0]
         bar_size_dict = bar_data[ticker]
 
-        if ticker not in list(self.bars.keys()):
+        if ticker not in list(self.bars):
             self.bars[ticker] = {}
 
-        bar_size = list(bar_size_dict.keys())[0]
+        bar_size = list(bar_size_dict)[0]
         bar_list = bar_size_dict[bar_size]
 
         if bar_size == "rtb":
@@ -514,7 +670,7 @@ class Strategy():
         else:
             logger.debug8("%s: %s - %s Bars received", self.strategy_id, ticker, bar_size)
 
-        if bar_size in list(self.bars[ticker].keys()):
+        if bar_size in list(self.bars[ticker]):
             self.bars[ticker][bar_size].append_bar(bar_list)
         else:
             self.bars[ticker][bar_size] = bars.Bars(ticker, bar_size=bar_size, bar_list=bar_list)
@@ -525,7 +681,7 @@ class Strategy():
     def _process_contracts(self, contracts):
         self.contracts = contracts
 
-        for item in list(self.contracts.keys()):
+        for item in list(self.contracts):
             self.market_data[item] = {
                 "bid": 0,
                 "ask": 0,
@@ -722,7 +878,7 @@ class Strategy():
                 self.market_data[ticker]["open"] = market_data[2]
                 func = func_map.get(market_data[1])
                 func(ticker, market_data[2])
-        elif market_data[1] in list(func_map.keys()):
+        elif market_data[1] in list(func_map):
             func = func_map.get(market_data[1])
             func(ticker, market_data[2])
 
@@ -751,16 +907,16 @@ class Strategy():
 
     def _process_order_status(self, order_status):
         logger.debug8("Order Status: %s", order_status)
-        order_id = list(order_status.keys())[0]
+        order_id = list(order_status)[0]
 
         func_map = {
             "Filled": self.on_order_filled,
-            "Cancelled": self.on_order_cancelled,
-            "ApiCancelled": self.on_order_cancelled,
-            "TWS_CLOSED": self.on_order_cancelled
+            "Cancelled": self.on_order_canceled,
+            "ApiCancelled": self.on_order_canceled,
+            "TWS_CLOSED": self.on_order_canceled
         }
 
-        if order_id in list(self.order_ids.keys()):
+        if order_id in list(self.order_ids):
             local_symbol = self.order_ids[order_id]
             status = order_status[order_id]["status"]
 
@@ -768,7 +924,7 @@ class Strategy():
                 self.orders[local_symbol].pop(order_id, None)
                 self.order_ids.pop(order_id, None)
             else:
-                if order_id in list(self.orders[local_symbol].keys()):
+                if order_id in list(self.orders[local_symbol]):
                     self.orders[local_symbol][order_id].set_status(status)
                     logger.debug9("Order Status: %s",
                                   self.orders[local_symbol][order_id].get_status())
@@ -777,16 +933,16 @@ class Strategy():
                     logger.debug9("Orders for %s", local_symbol)
                     logger.debug9("Orders: %s", self.orders[local_symbol])
 
-            if status in list(func_map.keys()):
+            if status in list(func_map):
                 func = func_map.get(status)
                 func(local_symbol, order_id, order_status[order_id])
             else:
-                logger.warning("Order Status '%s' processing has not been implemented.")
+                logger.warning("Order Status '%s' processing has not been implemented.", status)
 
     def _process_ticks(self, new_ticks):
         ticker = None
         for ticker, tick in new_ticks.items():
-            if ticker not in list(self.ticks.keys()):
+            if ticker not in list(self.ticks):
                 self.ticks[ticker] = ticks.Ticks()
 
             self.ticks[ticker].append_tick(tick)
@@ -839,7 +995,7 @@ class Strategy():
         message = {self.strategy_id: {"set": {"bar_sizes": self.bar_sizes}}}
         self.cmd_queue.put(message)
 
-    def _send_contracts(self, contracts: dict = {}):
+    def _send_contracts(self, contracts: Optional[dict] = None):
         if contracts:
             contracts_to_send = contracts
         else:

@@ -23,6 +23,9 @@ The main user interface for the trading program.
 """
 # System Libraries
 import datetime
+import threading
+
+from time import sleep
 
 # 3rd Party Libraries
 from ibapi.contract import Contract
@@ -56,11 +59,11 @@ class BrokerBarData(BarData):
 
     def request_bars(self):
         for contract_ in list(self.contracts.values()):
-            if contract_.localSymbol not in list(self.ohlc_bars.keys()):
+            if contract_.localSymbol not in list(self.ohlc_bars):
                 self.ohlc_bars[contract_.localSymbol] = {}
 
             for bar_size in self.bar_sizes:
-                if bar_size not in list(self.ohlc_bars[contract_.localSymbol].keys()):
+                if bar_size not in list(self.ohlc_bars[contract_.localSymbol]):
                     self._retrieve_bar_history(contract_, bar_size)
 
     # ==============================================================================================
@@ -131,19 +134,19 @@ class BrokerBarData(BarData):
 class BrokerContractData(ContractData):
 
     def request_contract_data(self, ticker, contract_):
-        if ticker not in list(self.contracts.keys()):
-            logger.debug9("Requesting Contract Details for contract: %s", ticker)
+        if ticker not in list(self.contracts):
+            logger.debug("Requesting Contract Details for contract: %s", ticker)
             req_id = self.brokerclient.req_contract_details(contract_)
-            contract_details = self.brokerclient.get_data(req_id)
+            self.tickers.append(ticker)
+            self.contract_ids[req_id] = ticker
+            self.contracts[ticker] = None
 
-            if isinstance(contract_details, (dict, set)):
-                logger.error("Failed to obtain contract details for %s: %s", ticker,
-                             contract_details["Error"])
-            else:
-                logger.debug2("Received Contract Details for Ticker: %s", ticker)
-                new_contract = contract_details.contract
-                self.tickers.append(new_contract.localSymbol)
-                self.contracts[new_contract.localSymbol] = new_contract
+    def set_contract_details(self, contract_details: dict):
+        req_id = list(contract_details)[0]
+        details = contract_details[req_id]
+        ticker = details.contract.localSymbol
+        self.contracts[ticker] = details.contract
+        logger.debug("Contracts: %s", self.contracts)
 
 
 class BrokerMarketData(MarketData):
@@ -156,7 +159,7 @@ class BrokerMarketData(MarketData):
                 self.rtmd_ids[req_id] = ticker
 
     def send_market_data_ticks(self, market_data: dict):
-        req_id = list(market_data.keys())[0]
+        req_id = list(market_data)[0]
         self.ticker = self.rtmd_ids[req_id]
         self.market_data = market_data[req_id]
         self.notify()
@@ -190,7 +193,7 @@ class BrokerOrderData(OrderData):
         self.brokerclient.place_order(order_contract, new_order, order_id)
 
     def send_order_status(self, order_status: dict):
-        self.order_id = list(order_status.keys())[0]
+        self.order_id = list(order_status)[0]
         self.order_status = order_status
         status = order_status[self.order_id]["status"]
 
@@ -212,7 +215,7 @@ class BrokerRealTimeBarData(RealTimeBarData):
 
     def send_real_time_bars(self, real_time_bar: dict):
         # There should really only be one key.
-        req_id = list(real_time_bar.keys())[0]
+        req_id = list(real_time_bar)[0]
         self.ticker = self.rtb_ids[req_id]
 
         rtb = real_time_bar[req_id]

@@ -1,6 +1,10 @@
-"""!@package pytrader.libs.utilities.config
+"""!
+@package pytrader.libs.clients.broker
+Creates a basic interface for interacting with a broker
 
-General Utility functions for pytrader
+@file pytrader/libs/clients/broker/__init__.py
+
+Creates a basic interface for interacting with a broker
 
 @author G. S. Derber
 @date 2022-2023
@@ -19,15 +23,22 @@ General Utility functions for pytrader
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
-@file pytrader/libs/utilities/config/__init__.py
 """
-import os
+# System Libraries
+import threading
 
-import yaml
+from queue import Queue
+
+# 3rd Party Libraries
+
+# Application Libraries
+# System Library Overrides
 from pytrader.libs.system import logging
-from pytrader.libs.utilities.config import (broker, database, logconfig,
-                                            polygon, redditconfig)
+
+# Other Application Libraries
+from pytrader.libs.clients.broker.ibkr.tws.reader import TwsReader
+
+# Conditional Libraries
 
 # ==================================================================================================
 #
@@ -37,28 +48,39 @@ from pytrader.libs.utilities.config import (broker, database, logconfig,
 ## The Base Logger
 logger = logging.getLogger(__name__)
 
-home = os.path.expanduser("~") + "/"
-config_dir = home + ".config/investing"
-config_file = config_dir + "/config.yaml"
-config_stream = open(config_file)
-config = yaml.safe_load(config_stream)
-
 
 # ==================================================================================================
 #
 # Classes
 #
 # ==================================================================================================
-class Config(database.DatabaseConfig, logconfig.LogConfig, polygon.PolygonConfig,
-             redditconfig.RedditConfig):
+class TwsThreadMngr(TwsReader):
+    """!
+    Manages the thread for the TWS API Client.
+    """
 
-    def __init__(self, *args, **kwargs):
-        self.nasdaq_client_key = None
-        self.nasdaq_client_secret = None
+    def __init__(self):
         super().__init__()
-        return None
+        self.api_thread = threading.Thread(target=self.run, daemon=True)
 
-    def read_config(self, *args, **kwargs):
-        logconfig.LogConfig.read_config(self, config=config)
-        database.DatabaseConfig.read_config(self, config=config)
-        polygon.PolygonConfig.read_config(self, config=config)
+    def start(self, thread_queue: Queue) -> None:
+        """!
+        Starts the api thread.
+
+        @param thread_queue: The thread message passing queue.
+
+        @return None
+        """
+        self.queue = thread_queue
+        self.api_thread.start()
+
+    def stop(self) -> None:
+        """!
+        Stops the api thread.
+
+        @return None.
+        """
+        try:
+            self.api_thread.join()
+        except AttributeError as msg:
+            logger.error("AttributeError Stopping TwsApiClient Thread: %s", msg)

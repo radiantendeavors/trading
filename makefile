@@ -27,6 +27,9 @@ PYTHON := /usr/bin/python3
 VENV := $(PYTHON) -m venv $(VENV_DIR)
 PIP := $(VENV_DIR)/bin/pip
 
+PYFILES := $(shell git ls-files '*.py')
+CPPFILES := $(shell git ls-files '*.cpp' '*.hpp')
+
 #COLORS
 GREEN  := $(shell tput -Txterm setaf 2)
 WHITE  := $(shell tput -Txterm setaf 7)
@@ -70,13 +73,23 @@ setup: venv ##@Python Installs required packages
 requirements: ##@Python Creates requirements.txt
 	@$(PIP) freeze > requirements.txt
 
-clean_venv:
+cleanpyvenv: ##@Clean Cleans up Python venv
 	@rm -rf $(VENV_DIR)
 
 cleanpython: ##@Clean Cleans up python cache files
 	@find . -type f -name '*.py[co]' -delete -o -type d -name __pycache__ -delete
 
+# Documentation related targets
+# FIXME: This fails to run if 'cleandocs' has been run and no source files have been modified.
+docs: $(PYFILES) $(CPPFILES) docs/Doxyfile ##@Docs Generate Documentation
+	@cd docs && doxygen
+
+cleandocs: ##@Clean Cleans up documentation
+	@cd docs && rm -rf html
+	@cd docs && rm -rf latex
+	@cd docs && rm -rf man
+
 # Combined targets
-clean: cleancpp cleanpython ##@Clean
+clean: cleancpp cleanpython cleanpyvenv cleandocs ##@Clean Cleans up everything
 
 .PHONY: all clean

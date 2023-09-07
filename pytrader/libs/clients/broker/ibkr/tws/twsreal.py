@@ -1,8 +1,9 @@
-"""!@package pytrader.libs.utilities.config
+"""!
+@package pytrader.libs.clients.broker.ibkr.tws.twsreal
 
-General Utility functions for pytrader
+Creates the interface for connecting to Tws trading account.
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -19,15 +20,22 @@ General Utility functions for pytrader
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+@file pytrader/libs/clients/broker/ibkr/tws/twsreal.py
 
-@file pytrader/libs/utilities/config/__init__.py
+Creates the interface for connecting to Tws trading account.
 """
-import os
+# System Libraries
 
-import yaml
+# 3rd Party Libraries
+
+# Application Libraries
+# System Library Overrides
 from pytrader.libs.system import logging
-from pytrader.libs.utilities.config import (broker, database, logconfig,
-                                            polygon, redditconfig)
+
+# Other Application Libraries
+from pytrader.libs.clients.broker.ibkr.tws.twsaccount import TwsAccountClient
+
+# Conditional Libraries
 
 # ==================================================================================================
 #
@@ -37,28 +45,17 @@ from pytrader.libs.utilities.config import (broker, database, logconfig,
 ## The Base Logger
 logger = logging.getLogger(__name__)
 
-home = os.path.expanduser("~") + "/"
-config_dir = home + ".config/investing"
-config_file = config_dir + "/config.yaml"
-config_stream = open(config_file)
-config = yaml.safe_load(config_stream)
-
 
 # ==================================================================================================
 #
 # Classes
 #
 # ==================================================================================================
-class Config(database.DatabaseConfig, logconfig.LogConfig, polygon.PolygonConfig,
-             redditconfig.RedditConfig):
+class TwsRealAccountClient(TwsAccountClient):
+    """!
+    This class provides functionality for connections with TWS Demo Accounts.
+    """
 
-    def __init__(self, *args, **kwargs):
-        self.nasdaq_client_key = None
-        self.nasdaq_client_secret = None
-        super().__init__()
-        return None
-
-    def read_config(self, *args, **kwargs):
-        logconfig.LogConfig.read_config(self, config=config)
-        database.DatabaseConfig.read_config(self, config=config)
-        polygon.PolygonConfig.read_config(self, config=config)
+    def __init__(self, data_queue: dict) -> None:
+        super().__init__(data_queue)
+        self.port = 7497

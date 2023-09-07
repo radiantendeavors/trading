@@ -1,8 +1,8 @@
-"""!@package pytrader.libs.utilities.config
+"""!@package pytrader.libs.applications.broker
 
-General Utility functions for pytrader
+Manages the broker processes
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -19,15 +19,20 @@ General Utility functions for pytrader
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
-@file pytrader/libs/utilities/config/__init__.py
+@file pytrader/libs/applications/broker/__init__.py
 """
-import os
+# System Libraries
+from abc import ABCMeta, abstractmethod
 
-import yaml
+# 3rd Party Libraries
+
+# Application Libraries
+# System Library Overrides
 from pytrader.libs.system import logging
-from pytrader.libs.utilities.config import (broker, database, logconfig,
-                                            polygon, redditconfig)
+
+# Other Application Libraries
+
+# Conditional Libraries
 
 # ==================================================================================================
 #
@@ -37,28 +42,24 @@ from pytrader.libs.utilities.config import (broker, database, logconfig,
 ## The Base Logger
 logger = logging.getLogger(__name__)
 
-home = os.path.expanduser("~") + "/"
-config_dir = home + ".config/investing"
-config_file = config_dir + "/config.yaml"
-config_stream = open(config_file)
-config = yaml.safe_load(config_stream)
-
 
 # ==================================================================================================
 #
 # Classes
 #
 # ==================================================================================================
-class Config(database.DatabaseConfig, logconfig.LogConfig, polygon.PolygonConfig,
-             redditconfig.RedditConfig):
+class AbstractBrokerConfig():
 
-    def __init__(self, *args, **kwargs):
-        self.nasdaq_client_key = None
-        self.nasdaq_client_secret = None
-        super().__init__()
-        return None
+    __metaclass__ = ABCMeta
 
-    def read_config(self, *args, **kwargs):
-        logconfig.LogConfig.read_config(self, config=config)
-        database.DatabaseConfig.read_config(self, config=config)
-        polygon.PolygonConfig.read_config(self, config=config)
+    @abstractmethod
+    def identify_clients(self):
+        """!
+        Identifies available clients.
+        """
+
+    @abstractmethod
+    def get_client_address(self):
+        """!
+        Identifies Client Addresses
+        """

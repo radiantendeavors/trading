@@ -22,10 +22,7 @@ Manages the broker processes
 @file pytrader/libs/applications/broker/__init__.py
 """
 # System Libraries
-import queue
-import threading
-
-from multiprocessing import Queue
+from multiprocessing import Process, Queue
 
 # 3rd Party Libraries
 
@@ -34,10 +31,8 @@ from multiprocessing import Queue
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader import BROKER_ID, CLIENT_ID, git_branch
-from pytrader.libs.applications.broker.ibkr.tws import TwsDataThread
-from pytrader.libs.clients.broker.ibkr.tws import TwsApiClient
-from pytrader.libs.utilities.exceptions import BrokerNotAvailable
+from pytrader.libs.clients.broker import BrokerClient
+from pytrader.libs.utilities.config.broker import BrokerConfig
 
 # Conditional Libraries
 
@@ -55,44 +50,69 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class BrokerProcess():
+class BrokerProcessManager():
     """!
-    The Process for interacting with the broker.
-
+    The Manages the Broker Processes
     """
 
-    def __init__(self,
-                 cmd_queue: Queue,
-                 data_queue: dict,
-                 address: str = "127.0.0.1",
-                 broker_id: str = BROKER_ID,
-                 client_id: int = CLIENT_ID) -> None:
+    address = {}
+    brokers = {}
+    broker_configs = {}
+    broker_processes = {}
+    broker_clients = {}
+    broker_cmd_queues = {}
+
+    def __init__(self, broker_list: list, client_id: int, cmd_queue: Queue,
+                 data_queue: dict) -> None:
         """!
         Creates an instance of the BrokerProcess.
+
+        @return None
         """
-        self.address = address
+        self.broker_list = broker_list
+        self.client_id = client_id
         self.cmd_queue = cmd_queue
         self.data_queue = data_queue
-        self.available_ports = []
-        self.contracts = {}
-        self.client_id = client_id
-        broker_client_class = {"twsapi": TwsApiClient()}
-        broker_class = {"twsapi": TwsDataThread()}
-        self.brokerclient = broker_client_class.get(broker_id)
-        self.data_response = broker_class.get(broker_id)
-        self.broker_queue = queue.Queue()
-        self.data_response.set_attributes(self.brokerclient, self.data_queue, self.broker_queue)
-        self.data_thread = threading.Thread(target=self.data_response.run, daemon=True)
-        self.strategies = []
+        self.strategies = None
+
+    def configure_brokers(self) -> None:
+        """!
+        Configures the various broker options
+
+        @return None
+        """
+        # This function is written to allow multiple brokers be connected to simultaniously.  For
+        # example, twsapi, and ibkrweb.  In addition, twsapi, can connect to multiple instances of
+        # TraderWorkstation, or IBGateway.  So for each broker in the list, it gets a dictionary of
+        # the possible connection settings for each broker, and appends it to the previously
+        # gathered dictionaries of brokers.
+        brokers = {}
+        addresses = {}
+        for broker in self.broker_list:
+            self.broker_configs[broker] = BrokerConfig(broker)
+            brokers.update(self.broker_configs[broker].identify_clients())
+            addresses[broker] = self.broker_configs[broker].get_client_address()
+
+        # Once all potential brokers are identified, create an instance of each broker client.
+        for broker in list(brokers):
+            self.broker_cmd_queues[broker] = Queue()
+            self.brokers[broker] = brokers[broker](self.data_queue)
+            # FIXME: This is so fucked up.
+            self.address[broker] = addresses[self.broker_list[0]]
+
+        for broker in list(self.brokers):
+            self.broker_clients[broker] = BrokerClient(self.brokers[broker],
+                                                       self.broker_cmd_queues[broker],
+                                                       self.data_queue)
+            self.broker_clients[broker].connect(self.address[broker], self.client_id)
 
     def run(self) -> None:
         """!
         Run the broker process as long as the broker is connected.
 
-        @param client_id: The ID number to use for the broker connection.
+        @return None
         """
-        self._set_broker_ports()
-        self._start_threads()
+        self._start_processes()
 
         try:
             broker_connection = True
@@ -102,13 +122,43 @@ class BrokerProcess():
 
                 if cmd == "Quit":
                     broker_connection = False
-                    self.brokerclient.stop_thread()
                 else:
-                    strategy_id = list(cmd.keys())[0]
-                    self._process_commands(cmd[strategy_id], strategy_id)
-                    broker_connection = self.brokerclient.is_connected()
+                    # TODO: Determine how to distribute the cmd requests among the different broker
+                    # clients.
+                    #
+                    # For order placement, this will be dependent upon which account to send the
+                    # order to as long as there is only one client connected to that account.
+                    #
+                    # For streaming market data, it makes sense to consolidate strategies that use
+                    # the same ticker symbols together, so we aren't requesting duplicate data.
+                    #
+                    # At the same time, some duplication may help with failover.
+                    #
+                    # Because of the limits on the number of tickers that can be requested for
+                    # streaming data, it also makes sense to distribute the different tickers among
+                    # the different clients.
+                    #
+                    # For historical data, it may make sense to load balance among available
+                    # clients.
+                    #
+                    # To make it more complicated, if you have two clients for TwsApi connected to
+                    # the real account, that has the same limitations as a single client.  Whereas,
+                    # one client connected to the real account, and one client connected to a demo
+                    # account, may have separate limitations.  May be because it depends on how the
+                    # user has set up their paper trading account data permissions.
+                    #
+                    # In addition, each client may have different limits on the number of data
+                    # requests it can make.  So we'll need to track how many outstanding requests
+                    # each client has.
+                    #
+                    # Figuring out how to do this properly is a fucking mess.
+                    #
+                    # For now, we send all data requests to the 1st client.
+                    broker = list(self.broker_clients)[0]
+                    self.broker_cmd_queues[broker].put(cmd)
+
         except KeyboardInterrupt:
-            logger.critical("Received Keyboard Interrupt! Shutting down the Broker Client.")
+            logger.critical("Received Keyboard Interrupt! Shutting down the Broker Clients.")
 
     def set_strategies(self, strategy_list: list) -> None:
         """!
@@ -119,149 +169,41 @@ class BrokerProcess():
         @return None
         """
         self.strategies = strategy_list
-        self.data_response.set_strategies(strategy_list)
+
+        for broker in list(self.brokers):
+            self.broker_clients[broker].set_strategies(strategy_list)
+
+    def stop(self) -> None:
+        """!
+        Stops the brokerclient thread.
+
+        @return None
+        """
+        for broker_id in list(self.broker_clients):
+            logger.debug("Broker Id: %s", broker_id)
+            logger.debug("Broker Processes: %s", self.broker_processes)
+
+            # FIXME: The program doesn't always have broker_id in self.broker_processes.
+            if broker_id in self.broker_processes:
+                self.broker_processes[broker_id].join()
 
     # ==============================================================================================
     #
     # Private Functions
     #
     # ==============================================================================================
-    def _cancel_order(self, order_id: int) -> None:
+    def _start_processes(self) -> None:
         """!
-        Send Cancel Order to data_response thread.
-        """
-        self.data_response.cancel_order(order_id)
-
-    def _check_if_ports_available(self, port: int) -> bool:
-        """!
-        Checks if a given port is available
-
-        @param port: The port to check
-
-        @return bool: True if the port is available, False if it is not available.
-        """
-
-        # try:
-        #     tws_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #     connection = (tws_socket.connect_ex((self.address, port)) == 0)
-        #     tws_socket.shutdown()
-
-        #     return connection
-        # except:
-        #     return False
-        if git_branch == "main" and port in [7496, 7497]:
-            return True
-
-        if git_branch != "main" and port in [7497]:
-            return True
-
-        return False
-
-    def _place_order(self, order_request: dict, strategy_id: str):
-        """!
-        Send place order to data_response thread.
-        """
-        logger.debug9("Order Received: %s", order_request)
-        self.data_response.create_order(order_request, strategy_id)
-
-    def _process_commands(self, cmd: dict, strategy_id: str) -> None:
-        """!
-        Processes command received from other processes.
-
-        @param cmd: The command received.
-        @param strategy_id: The strategy that sent the command.
+        Starts the broker client processes.
 
         @return None
         """
-        logger.debug4("Processing Command: %s", cmd)
-        if cmd.get("set"):
-            self._set_cmd(cmd["set"], strategy_id)
-        if cmd.get("req"):
-            self._req_cmd(cmd["req"], strategy_id)
-        if cmd.get("place_order"):
-            self._place_order(cmd["place_order"], strategy_id)
-        if cmd.get("cancel_order"):
-            self._cancel_order(cmd["cancel_order"])
-
-    def _req_cmd(self, subcommand: dict, strategy_id: str):
-        logger.debug4("Request Command: %s", subcommand)
-        if subcommand == "bar_history":
-            self.data_response.request_bar_history()
-        elif subcommand == "option_details":
-            self.data_response.request_option_details(strategy_id)
-        elif subcommand == "real_time_bars":
-            self.data_response.request_real_time_bars(strategy_id)
-        elif subcommand == "real_time_market_data":
-            self.data_response.request_market_data(strategy_id)
-        # elif subcommand == "tick_by_tick_data":
-        #     self._request_tick_by_tick_data()
-        elif subcommand == "global_cancel":
-            self.data_response.request_global_cancel()
-        else:
-            logger.error("Command Not Implemented: %s", subcommand)
-
-    # def _request_tick_by_tick_data(self):
-    #     for key in self.contracts.keys():
-    #         self.ticks[key] = ticks.BrokerTicks(contract=self.contracts[key],
-    #                                             brokerclient=self.brokerclient,
-    #                                             data_queue=self.data_queue)
-    #         self.ticks[key].request_ticks()
-    #         self.tick_thread[key] = threading.Thread(
-    #             target=self.ticks[key].run, daemon=True)
-    #         self.tick_thread[key].start()
-
-    def _set_broker_ports(self):
-        """!
-        Creates a list of available ports to connect to the broker.
-        """
-        allowed_ports = self.brokerclient.get_allowed_ports()
-
-        for port in allowed_ports:
-            if self._check_if_ports_available(int(port)):
-                self.available_ports.append(int(port))
-        logger.debug9("Available ports: %s", self.available_ports)
-
-    def _set_cmd(self, subcommand: dict, strategy_id: str) -> None:
-        """!
-        Processes any subcommand from the 'set' command received from the strategy process.
-        """
-        logger.debug4("Subcommand received: %s", subcommand)
-        if subcommand.get("tickers"):
-            self.data_response.set_contracts(subcommand["tickers"], strategy_id)
-            self.data_queue[strategy_id].put("Contracts Created")
-        if subcommand.get("bar_sizes"):
-            self.data_response.set_bar_sizes(subcommand["bar_sizes"], strategy_id)
-            self.data_queue[strategy_id].put("Bar Sizes Set")
-
-    def _start_threads(self):
-        """!
-
-        @param client_id: The id of the client to be used.
-
-        @return None
-        """
-        # TODO: Configure to connect to multiple available clients
         logger.debug("Client Id: %s", self.client_id)
+        logger.debug("Broker Clients: %s", self.broker_clients)
 
-        if len(self.available_ports) > 0:
-            for port in self.available_ports:
-                self.brokerclient.connect(self.address, port, self.client_id)
-                logger.debug9("Client '%s' connected on %s:%s", self.client_id, self.address, port)
+        for broker_id, brokerclient in self.broker_clients.items():
+            logger.debug("Brokerclient: %s", brokerclient)
+            self.broker_processes[broker_id] = Process(target=brokerclient.run, args=())
+            self.broker_processes[broker_id].start()
 
-                self.brokerclient.start_thread(self.broker_queue)
-
-            self.data_thread.start()
-        else:
-            raise BrokerNotAvailable("No ports detected.")
-
-    def _stop(self):
-        """!
-        Alias for _stop_thread
-        """
-        self._stop_thread()
-
-    def _stop_thread(self):
-        """!
-        Stops the brokerclient thread.
-        """
-        self.brokerclient.stop_thread()
+        logger.debug("Broker Processes: %s", self.broker_processes)

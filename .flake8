@@ -8,4 +8,6 @@ extend_ignore = E266
 per-file-ignores =
     # Ignored Rules (These are ignored because the TWSAPI does not follow these rules, and we are required to follow TWSAPI to implement it):
     # R0913: Refactor (Too Many arguments)
-    pytrader/libs/clients/broker/ibkr/tws/__init__.py:N802,N803,R0913
+    pytrader/libs/clients/broker/ibkr/tws/reader.py:N802,N803,R0913
+    pytrader/libs/system/argparse.py:F401
+    pytrader/libs/system/logging.py:F403

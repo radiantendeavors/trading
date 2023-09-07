@@ -1,5 +1,5 @@
 """!
-@package pytrader.libs.applications.broker.common
+@package pytrader.libs.clients.broker.abstractclient
 
 Provides a baseline BrokerDataThread common to all brokers.
 
@@ -21,11 +21,12 @@ Provides a baseline BrokerDataThread common to all brokers.
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file pytrader/libs/applications/broker/common/__init__.py
+@file pytrader/libs/clients/broker/abstractclient.py
 """
 # Standard libraries
 from abc import ABCMeta, abstractmethod
 from queue import Queue
+from typing import Optional
 
 # 3rd Party libraries
 
@@ -33,6 +34,8 @@ from queue import Queue
 from pytrader.libs.system import logging
 
 # Other Application Libraries
+
+# Conditional Libraries
 
 # ==================================================================================================
 #
@@ -47,27 +50,47 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class BrokerDataThread():
+class AbstractBrokerClient():
     """!
     Provides the Broker Data Response thread.
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self):
+    def __init__(self, data_queue: dict) -> None:
         """!
         Initializes the Broker Data Thread.
         """
-        ## Broker Client
-        self.brokerclient = None
-
-        ## Multiprocessing Data Queue
-        self.data_queue = None
+        ## Dictionary of Multiprocessing Data Queues
+        self.data_queue = data_queue
 
         ## Broker Thread Queue
-        self.queue = None
+        self.queue = Queue()
 
         ## Next Order Id
         self.next_order_id = 0
+
+        # Port number
+        self.port = 0
+
+        self.connection_status = True
+
+    @abstractmethod
+    def connect(self, address: str = "", port: Optional[int] = 0, client_id: Optional[int] = 0):
+        """!
+        Connect to a broker client.
+        """
+
+    @abstractmethod
+    def start(self):
+        """!
+        Starts the broker client thread.
+        """
+
+    @abstractmethod
+    def stop(self):
+        """!
+        Stops the broker client thread.
+        """
 
     def run(self):
         """!
@@ -78,11 +101,16 @@ class BrokerDataThread():
         broker_connection = True
         while broker_connection:
             response_data = self.queue.get()
-            #logger.debug("Response Data: %s", response_data)
             if response_data == "Disconnected":
                 broker_connection = False
             else:
                 self._parse_data(response_data)
+
+    @abstractmethod
+    def calculate_implied_volatility(self):
+        """!
+        Calculate the implied volatility of an option.
+        """
 
     @abstractmethod
     def create_order(self, order_request: dict, strategy_id: str) -> None:
@@ -90,17 +118,25 @@ class BrokerDataThread():
         Creates an order from an order request.
         """
 
+    def is_connected(self):
+        """!
+        Returns the current connection status.
+
+        @return connection_status: True if connected, False if not connected
+        """
+        return self.connection_status
+
     @abstractmethod
     def request_bar_history(self) -> None:
         """!
         Abstract method to request bar history.
         """
 
+    @abstractmethod
     def request_global_cancel(self):
         """!
         Request to cancel all open orders.
         """
-        self.brokerclient.req_global_cancel()
 
     @abstractmethod
     def request_option_details(self, strategy_id: str):
@@ -121,6 +157,12 @@ class BrokerDataThread():
         """
 
     @abstractmethod
+    def set_contract_details(self, contract_details: dict):
+        """!
+        Abstract method to send contract details.
+        """
+
+    @abstractmethod
     def send_market_data_ticks(self, market_data: dict):
         """!
         Abstract method to send streaming market data to the strategies.
@@ -133,7 +175,7 @@ class BrokerDataThread():
         Sends the next order id to the strategy.
         """
         message = {"next_order_id": self.next_order_id}
-        self.data_queue["Main"].put(message)
+        self.data_queue["main"].put(message)
 
     @abstractmethod
     def send_order_status(self, order_status: dict):
@@ -152,14 +194,6 @@ class BrokerDataThread():
 
         @return None
         """
-
-    def set_attributes(self, brokerclient, data_queue: dict, broker_queue: Queue) -> None:
-        """!
-        Sets class attributes.
-        """
-        self.brokerclient = brokerclient
-        self.data_queue = data_queue
-        self.queue = broker_queue
 
     @abstractmethod
     def set_bar_sizes(self, bar_sizes: list, strategy_id: str):
@@ -200,6 +234,7 @@ class BrokerDataThread():
 
         @return None
         """
+
         if response_data.get("real_time_bars"):
             self.send_real_time_bars(response_data["real_time_bars"])
         elif response_data.get("market_data"):
@@ -212,3 +247,7 @@ class BrokerDataThread():
                 self.send_order_id()
         elif response_data.get("order_status"):
             self.send_order_status(response_data["order_status"])
+        elif response_data.get("contract_details"):
+            self.set_contract_details(response_data["contract_details"])
+        elif response_data.get("connection_closed"):
+            self.connection_status = False

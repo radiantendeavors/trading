@@ -62,7 +62,25 @@ class BrokerTooManyRequests(BrokerWarning):
     """
 
 
+class InvalidExchange(BrokerWarning):
+    """!
+    Used when an invalid exchange is requeusted.
+    """
+
+
 class InvalidTickType(BrokerWarning):
     """!
     Used for invalid tick types.
+    """
+
+
+class RuntimeWarning(Warning):
+    """!
+    Used to track run time warnings.
+    """
+
+
+class NotImplementedWarning(RuntimeWarning):
+    """!
+    Used to raise a warning when a feature is not implemented and can be safely ignored.
     """

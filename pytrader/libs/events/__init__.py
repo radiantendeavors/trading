@@ -105,7 +105,7 @@ class BarData(Subject):
                 self.bar_sizes.append(bar_size)
 
         for ticker, contract_ in contracts.items():
-            if ticker not in list(self.contracts.keys()):
+            if ticker not in list(self.contracts):
                 self.contracts[ticker] = contract_
 
     def attach(self, observer: Observer, brokerclient):
@@ -128,6 +128,8 @@ class ContractData(Subject):
 
     _observers: List[Observer] = []
     contracts = {}
+    contract_ids = {}
+    contract_events = {}
 
     def __init__(self):
         self.tickers = []
@@ -135,6 +137,7 @@ class ContractData(Subject):
 
     def add_tickers(self, tickers: list):
         for ticker in tickers:
+            logger.debug("Existing Tickers: %s", self.tickers)
             if ticker not in self.tickers:
                 self.tickers.append(ticker)
 
@@ -152,6 +155,7 @@ class ContractData(Subject):
         return self.tickers
 
     def get_contracts(self):
+        logger.debug("Contracts: %s", self.contracts)
         return self.contracts
 
     def notify(self, modifier=None):
@@ -178,7 +182,7 @@ class MarketData(Subject):
                 self.tickers.append(ticker)
 
         for ticker, contract_ in contracts.items():
-            if ticker not in list(self.contracts.keys()):
+            if ticker not in list(self.contracts):
                 self.contracts[ticker] = contract_
 
     def attach(self, observer: Observer, brokerclient):
@@ -212,7 +216,7 @@ class OptionData(Subject):
                 self.tickers.append(ticker)
 
         for ticker, contract_ in contracts.items():
-            if ticker not in list(self.contracts.keys()):
+            if ticker not in list(self.contracts):
                 self.contracts[ticker] = contract_
 
     def attach(self, observer: Observer, brokerclient):
@@ -271,7 +275,7 @@ class RealTimeBarData(Subject):
                 self.tickers.append(ticker)
 
         for ticker, contract_ in contracts.items():
-            if ticker not in list(self.contracts.keys()):
+            if ticker not in list(self.contracts):
                 self.contracts[ticker] = contract_
 
     def attach(self, observer: Observer, brokerclient):

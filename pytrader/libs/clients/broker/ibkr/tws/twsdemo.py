@@ -1,8 +1,9 @@
-"""!@package pytrader.libs.utilities.config.brokerconfig
+"""!
+@package pytrader.libs.clients.broker.ibkr.tws.twsaccount
 
-Parse the config settings for the broker.
+Creates the interface for connecting to a Tws Account.
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -19,19 +20,29 @@ Parse the config settings for the broker.
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+@file pytrader/libs/clients/broker/ibkr/tws/twsaccount.py
 
-@file pytrader/libs/utilities/config/brokerconfig.py
+Creates the interface for connecting to a Tws Account.
 """
-from pytrader import CLIENT_ID, git_branch
+# System Libraries
+
+# 3rd Party Libraries
+
+# Application Libraries
+# System Library Overrides
 from pytrader.libs.system import logging
+
+# Other Application Libraries
+from pytrader.libs.clients.broker.ibkr.tws.twsaccount import TwsAccountClient
+
+# Conditional Libraries
 
 # ==================================================================================================
 #
 # Global Variables
 #
 # ==================================================================================================
-# Enable Logging
-# create logger
+## The Base Logger
 logger = logging.getLogger(__name__)
 
 
@@ -40,25 +51,11 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class BrokerConfig():
+class TwsDemoAccountClient(TwsAccountClient):
+    """!
+    This class provides functionality for connections with TWS Demo Accounts.
+    """
 
-    def __init__(self, *args, **kwargs):
-        self.brokerclient_address = "127.0.0.1"
-        self.brokerclient_id = CLIENT_ID
-        self.brokerclient_account = None
-
-    def read_config(self, *args, **kwargs):
-        config = kwargs["config"]
-
-        if "brokerclient_address" in config:
-            self.brokerclient_address = config["brokerclient_address"]
-
-        if git_branch == "main":
-            if "ibkr_real_account" in config:
-                self.brokerclient_account = config["ibkr_real_account"]
-        else:
-            if "ibkr_demo_account" in config:
-                self.brokerclient_address = config["ibkr_demo_account"]
-
-    def get_brokerclient_address(self):
-        return self.brokerclient_address
+    def __init__(self, data_queue: dict) -> None:
+        super().__init__(data_queue)
+        self.port = 7497

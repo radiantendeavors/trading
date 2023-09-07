@@ -1,7 +1,7 @@
 """!
-@package pytrader.libs.applications.broker.ibkr.tws
+@package pytrader.libs.clients.broker.ibkr.tws.twsdemo
 
-Provides the data response thread for Interactive Brokers TWS
+Creates the interface for connecting to Tws Demo account.
 
 @author G S Derber
 @date 2022-2023
@@ -20,9 +20,12 @@ Provides the data response thread for Interactive Brokers TWS
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file pytrader/libs/applications/broker/ibkr/tws/__init__.py
+@file pytrader/libs/clients/broker/ibkr/tws/twsdemo.py
+
+Creates the interface for connecting to Tws Demo account.
 """
 # System Libraries
+import threading
 
 # 3rd Party Libraries
 
@@ -31,14 +34,17 @@ Provides the data response thread for Interactive Brokers TWS
 from pytrader.libs.system import logging
 
 # Other Application Libraries
-from pytrader.libs.applications.broker.common import BrokerDataThread
-from pytrader.libs.applications.broker.ibkr.tws.observers import (
+from pytrader import CLIENT_ID
+from pytrader.libs.clients.broker.abstractclient import AbstractBrokerClient
+from pytrader.libs.clients.broker.ibkr.tws import TwsApiClient
+
+from pytrader.libs.clients.broker.observers import (
     StrategyBarDataObserver, StrategyContractDataObserver, StrategyMarketDataObserver,
     StrategyOptionDataObserver, StrategyOrderDataObserver, StrategyRealTimeBarObserver)
-from pytrader.libs.applications.broker.ibkr.tws.subjects import (BrokerBarData, BrokerContractData,
-                                                                 BrokerMarketData, BrokerOptionData,
-                                                                 BrokerOrderData,
-                                                                 BrokerRealTimeBarData)
+from pytrader.libs.clients.broker.subjects import (BrokerBarData, BrokerContractData,
+                                                   BrokerMarketData, BrokerOptionData,
+                                                   BrokerOrderData, BrokerRealTimeBarData)
+
 # Conditional Libraries
 
 # ==================================================================================================
@@ -55,37 +61,51 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class TwsDataThread(BrokerDataThread):
+class TwsAccountClient(AbstractBrokerClient):
     """!
-    Serves as the client interface for Interactive Brokers
+    Base Class common to all account types:
+      - TwsReal
+      - TwsDemo
+      - IbgReal
+      - IbgDemo
     """
+    brokerclient = TwsApiClient()
 
-    def __init__(self, *args, **kwargs):
+    contract_subjects = BrokerContractData()
+    bar_subjects = BrokerBarData()
+    mkt_data_subjects = BrokerMarketData()
+    option_subjects = BrokerOptionData()
+    order_subjects = BrokerOrderData()
+    rtb_subjects = BrokerRealTimeBarData()
+
+    def __init__(self, data_queue: dict) -> None:
         """!
         Initializes the TwsDataThread class.
         """
         # Contract Subjects and Observers
-        self.contract_subjects = BrokerContractData()
         self.contract_observers = {}
-
-        self.bar_subjects = BrokerBarData()
         self.bar_observers = {}
-
-        self.mkt_data_subjects = BrokerMarketData()
         self.mkt_data_observers = {}
-
-        self.option_subjects = BrokerOptionData()
         self.option_observers = {}
-
-        self.order_subjects = BrokerOrderData()
         self.order_observers = {}
-
-        self.rtb_subjects = BrokerRealTimeBarData()
         self.rtb_observers = {}
+        self.client_thread = threading.Thread(target=self.run, daemon=True)
 
-        super().__init__(*args, **kwargs)
+        super().__init__(data_queue)
 
-    def cancel_order(self, order_id: int):
+    def connect(self, address: str = "127.0.0.1", port: int = 0, client_id: int = CLIENT_ID):
+        if port == 0:
+            port = self.port
+        self.brokerclient.connect(address, port, client_id)
+
+    def start(self):
+        self.client_thread.start()
+        self.brokerclient.start(self.queue)
+
+    def stop(self):
+        self.brokerclient.stop()
+
+    def cancel_order(self, order_id: int) -> None:
         """!
         Cancels a specific order.
 
@@ -94,6 +114,9 @@ class TwsDataThread(BrokerDataThread):
         @return None.
         """
         self.order_subjects.cancel_order(order_id)
+
+    def calculate_implied_volatility(self):
+        logger.debug("Calculate Implied Volatility")
 
     def create_order(self, order_request: dict, strategy_id: str) -> None:
         """!
@@ -113,6 +136,9 @@ class TwsDataThread(BrokerDataThread):
     def request_bar_history(self) -> None:
         self.bar_subjects.request_bars()
         self.bar_subjects.notify()
+
+    def request_global_cancel(self) -> None:
+        self.brokerclient.req_global_cancel()
 
     def request_option_details(self, strategy_id):
         tickers = self.contract_observers[strategy_id].get_tickers()
@@ -147,6 +173,9 @@ class TwsDataThread(BrokerDataThread):
 
     def send_real_time_bars(self, real_time_bar: dict):
         self.rtb_subjects.send_real_time_bars(real_time_bar)
+
+    def set_contract_details(self, contract_details: dict):
+        self.contract_subjects.set_contract_details(contract_details)
 
     def set_strategies(self, strategy_list: list) -> None:
         """!
@@ -203,7 +232,9 @@ class TwsDataThread(BrokerDataThread):
         # We do this after requesting contract detail, so we can check if the ticker has a valid
         # contract.
         valid_tickers = self.contract_subjects.get_tickers()
-        tickers = set(valid_tickers).intersection(list(contracts.keys()))
+        tickers = set(valid_tickers).intersection(list(contracts))
 
         self.contract_observers[strategy_id].add_tickers(tickers)
+
+        logger.debug("Contracts: %s", valid_tickers)
         self.contract_subjects.notify()

@@ -32,7 +32,7 @@ from pytrader.libs.system import argparse
 from pytrader.libs.system import logging
 
 # Application Libraries
-from pytrader import BROKER_ID, CLIENT_ID, DEBUG
+from pytrader import DEBUG
 from pytrader.libs.applications import trader
 from pytrader.libs.utilities import config
 
@@ -50,22 +50,20 @@ logger = logging.getLogger(__name__)
 # Functions
 #
 # ==================================================================================================
-def broker_address(args, conf):
+def start_process_manager(args) -> None:
     """!
-    Returns the address to be used by the broker.
+    Starts the Overall Process Manager.
 
-    @param args - Provides the arguments from the command line
-    @param conf - Provides the configuration information from config files.
+    @param args: The arguments received from the command line.
 
-    @return address - The brokeclient's address
+    @return None
     """
-    if args.address:
-        return args.address
+    process_manager = trader.ProcessManager(args.broker, args.strategies, args.client_id)
+    process_manager.config_brokers()
+    process_manager.run()
 
-    return conf.brokerclient_address
 
-
-def init(args):
+def init(args) -> int:
     """! Initializates the program.
 
     @param args
@@ -84,7 +82,7 @@ def init(args):
     parser = argparse.ArgParser(description="Automated trading system", epilog=epilog_text)
 
     parser.add_version_option()
-    parser.add_ibapi_connection_options()
+    parser.add_broker_options()
     parser.add_logging_option()
 
     parser.add_argument("-s",
@@ -92,8 +90,6 @@ def init(args):
                         nargs="+",
                         default=[],
                         help="Strategies to run.  If not specified no strategies will run.")
-    parser.add_argument("-b", "--broker", choices=["twsapi"], default=BROKER_ID, help="Broker")
-    parser.add_argument("-c", "--client-id", default=CLIENT_ID, help="Broker Client Id")
 
     parser.set_defaults(debug=False, verbosity=0, loglevel='INFO')
 
@@ -112,18 +108,13 @@ def init(args):
         if DEBUG is False:
             logger.debug8("Attempting to start client")
             try:
-                address = broker_address(args, conf)
-                process_manager = trader.ProcessManager()
-
-                process_manager.run_processes(address, args.broker, args.client_id, args.strategies)
+                start_process_manager(args)
             except Exception as msg:
                 parser.print_help()
                 logger.critical(msg)
         else:
             logger.debug8("Starting Client")
-            address = broker_address(args, conf)
-            process_manager = trader.ProcessManager()
-            process_manager.run_processes(address, args.broker, args.client_id, args.strategies)
+            start_process_manager(args)
         return 0
 
     except argparse.ArgumentError as msg:
@@ -132,7 +123,7 @@ def init(args):
         return 2
 
 
-def main(args=None):
+def main(args=None) -> int:
     """! The main program.
 
     @param args - The input from the command line.

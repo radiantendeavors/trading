@@ -20,4 +20,4 @@ jobs:
         pip install ibapi pandas pylint requests requests-cache sqlalchemy yfinance PyYAML pygit2
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files '*.py')
+        pylint -d W0511 $(git ls-files '*.py')

@@ -61,11 +61,11 @@ class BarDataObserver(Observer):
 
     def add_ticker_bar_sizes(self, tickers, bar_sizes):
         for ticker in tickers:
-            if ticker not in list(self.ticker_bar_sizes.keys()):
+            if ticker not in list(self.ticker_bar_sizes):
                 self.ticker_bar_sizes[ticker] = {}
 
             for bar_size in bar_sizes:
-                if bar_size not in list(self.ticker_bar_sizes[ticker].keys()):
+                if bar_size not in list(self.ticker_bar_sizes[ticker]):
                     self.ticker_bar_sizes[ticker][bar_size] = False
 
 
@@ -78,7 +78,7 @@ class StrategyBarDataObserver(BarDataObserver):
 
                     # Ensure we only send a bar size if it is available.
                     # Avoids KeyError for missing bar sizes.
-                    if bar_size in list(subject.ohlc_bars[ticker].keys()):
+                    if bar_size in list(subject.ohlc_bars[ticker]):
                         ohlc_bars = subject.ohlc_bars[ticker][bar_size]
 
                         msg = {"bars": {ticker: {bar_size: ohlc_bars}}}

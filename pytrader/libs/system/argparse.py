@@ -1,8 +1,8 @@
 """!@package pytrader.libs.system.argparse
 
-Provides additional functionality to the Argparse library from Python.
+Provides a wrapper arround pythons argparse library, with additional functionality.
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -21,14 +21,22 @@ Provides additional functionality to the Argparse library from Python.
 
 @file pytrader/libs/system/argparse.py
 """
-
+# ==================================================================================================
+#
+# This file requires special pylint rules to match the API format.
+#
+# W0611: Unused import (ArgumentError)
+#
+# pylint: disable=W0611
+#
+# ==================================================================================================
 # ==================================================================================================
 #
 # Libraries
 #
 # ==================================================================================================
 # System Libraries
-from argparse import *
+from argparse import ArgumentParser, ArgumentError
 
 # 3rd Party Libraries
 
@@ -36,8 +44,8 @@ from argparse import *
 # System Library Overrides
 
 # Other Application Libraries
-from pytrader import __version__, DEBUG
-from pytrader.libs.utilities import config
+from pytrader import __version__, DEBUG, CLIENT_ID
+from pytrader.libs.utilities.config.broker import BROKERS
 
 # ==================================================================================================
 #
@@ -54,132 +62,87 @@ from pytrader.libs.utilities import config
 # ArgParser
 #
 # ==================================================================================================
-class CommonParser(ArgumentParser):
-    """
-    class CommonParser
-
-    @param *args: tbd
-    @param **kwargs: tbd
-
-    @return None
+class ArgParser(ArgumentParser):
+    """!
+    Adds default options for all pytrader commands
     """
 
-    def __init__(self, *args, **kwargs):
-        super(CommonParser, self).__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs) -> None:
+        """!
+        Initializes ArgParser
 
-    # ==============================================================================================
-    #
-    # Function create_subparsers
-    #
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    # ==============================================================================================
+        @return None
+        """
+        super().__init__(*args, **kwargs)
+        self.subparser = None
+        self.parent = None
+        self.logging = None
+
     def create_subparsers(self):
         """!
         Creates the subparser for the subcommands of the program.
 
-        @param: self
-
         @return: self.subparser: tbd
         """
-        self.subparser = self.add_subparsers(title='commands',
-                                             metavar='Command',
-                                             help='Description')
+        self.subparser = self.add_subparsers(title="commands",
+                                             metavar="Command",
+                                             help="Description")
+
         return self.subparser
 
-    # ==============================================================================================
-    #
-    # Function add_version_option
-    #
-    # Adds the argument '--version' which is common to all Sorcery
-    # commands.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    # ==============================================================================================
-    def add_version_option(self):
-        self.add_argument('-V',
-                          '--version',
+    def add_version_option(self) -> None:
+        """!
+        Adds the argument '--version' which is common to all commands.
+
+        @return None
+        """
+        self.add_argument("-V",
+                          "--version",
                           action='version',
                           help='Print version information and exit',
                           version='%(prog)s ' + __version__)
-        return None
 
-    # ==============================================================================================
-    #
-    # Function add_ibapi_connection_options
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #
-    # Defaults Ports:
-    #         | Live | Demo |
-    # --------+------+------|
-    # TWS     | 7496 | 7497 |
-    # Gateway | 4001 | 4002 |
-    #
-    # ==============================================================================================
-    def add_ibapi_connection_options(self):
-        conf = config.Config()
+    def add_broker_options(self) -> None:
+        """!
+        Adds options related to the broker.
 
-        default_address = conf.get_brokerclient_address()
-        self.add_argument('-a',
-                          '--address',
+        @return None
+        """
+        broker_list = list(BROKERS)
+        help_str = (f"Brokers (Default: {broker_list})\n"
+                    f"If 'backtest' is chosen, all other brokers will be ignored.")
+        self.add_argument("-b",
+                          "--broker",
+                          nargs="*",
+                          choices=broker_list,
+                          default=[broker_list[0]],
+                          help=help_str)
+        self.add_argument("-c",
+                          "--client-id",
+                          default=CLIENT_ID,
+                          help=f"Broker Client Id (Default: {CLIENT_ID})")
+
+        default_address = "127.0.0.1"
+        self.add_argument("-a",
+                          "--address",
                           default=default_address,
-                          help="TWS / IB Gateway Address (Default is localhost)")
-        return None
+                          help=f"The Broker Address (Default: {default_address})")
+        self.add_argument("-p", "--ports", nargs="*", help="List of ports available to connect to.")
 
-    # ==============================================================================================
-    #
-    # Function read
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #
-    # Returns
-    # -------
-    #    @return: self.parent
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    # ==============================================================================================
     def add_logging_option(self):
+        """!
+        Adds logging options.
+
+        @return self.parent
+        """
         # Common Help Descriptions:
-        quiet_help = 'Decrease output'
-        verbose_help = 'Increase output'
-        loglevel_help = 'Specify output level'
-        debug_help = 'Maximize output level'
+        quiet_help = "Decrease output"
+        verbose_help = "Increase output"
+        loglevel_help = "Specify output level"
+        debug_help = "Maximize output level"
         loglevel_choices = [
-            'debug', 'info', 'warning', 'error', 'critical', 'DEBUG', 'INFO', 'WARNING', 'ERROR',
-            'CRITICAL'
+            "debug", "info", "warning", "error", "critical", "DEBUG", "INFO", "WARNING", "ERROR",
+            "CRITICAL"
         ]
 
         # Create Parent Parser
@@ -188,68 +151,43 @@ class CommonParser(ArgumentParser):
         # Parser Groups
         # Logging Group
         # self.parent_logging = self.parent.add_argument_group("Logging Options")
-        self.logging = self.add_argument_group('Logging Options')
+        self.logging = self.add_argument_group("Logging Options")
 
         # Quiet Settings
-        self.logging.add_argument('-q', '--quiet', action='count', default=0, help=quiet_help)
-        # self.parent_logging.add_argument('-q',
-        #                                  '--quiet',
-        #                                  action='count',
+        self.logging.add_argument("-q", "--quiet", action="count", default=0, help=quiet_help)
+        # self.parent_logging.add_argument("-q",
+        #                                  "--quiet",
+        #                                  action="count",
         #                                  default=0,
         #                                  help=quiet_help)
 
         # Verbose Options
-        self.logging.add_argument('-v', '--verbosity', action='count', default=0, help=verbose_help)
+        self.logging.add_argument("-v", "--verbosity", action="count", default=0, help=verbose_help)
 
-        # self.parent_logging.add_argument('-v',
-        #                                  '--verbosity',
-        #                                  action='count',
+        # self.parent_logging.add_argument("-v",
+        #                                  "--verbosity",
+        #                                  action="count",
         #                                  default=0,
         #                                  help=verbose_help)
 
         # If debugging is enabled
         if DEBUG:
             # Set Loglevel
-            self.logging.add_argument('--loglevel',
+            self.logging.add_argument("--loglevel",
                                       choices=loglevel_choices,
-                                      default='INFO',
+                                      default="INFO",
                                       help=loglevel_help)
             # Maximize logging
-            self.logging.add_argument('--debug', action='store_true', help=debug_help)
+            self.logging.add_argument("--debug", action="store_true", help=debug_help)
 
             # # Set Loglevel
-            # self.parent_logging.add_argument('--loglevel',
+            # self.parent_logging.add_argument("--loglevel",
             #                                  choices=loglevel_choices,
-            #                                  default='INFO',
+            #                                  default="INFO",
             #                                  help=loglevel_help)
             # # Maximize logging
-            # self.parent_logging.add_argument('--debug',
-            #                                  action='store_true',
+            # self.parent_logging.add_argument("--debug",
+            #                                  action="store_true",
             #                                  help=debug_help)
 
         return self.parent
-
-
-# ==================================================================================================
-#
-# Class ArgParser
-#
-# Inputs
-# ------
-#    @param: *args    - tuple of all subparsers and parent parsers
-#                       args[0]: the subparser
-#                       args[1:] the parent parsers
-
-
-#
-# Returns
-# -------
-#    @return: None
-#
-# Raises
-# ------
-#    ...
-#
-# ==================================================================================================
-class ArgParser(CommonParser):
-    pass
