@@ -24,17 +24,13 @@ Manages the broker processes
 # System Libraries
 from multiprocessing import Process, Queue
 
-# 3rd Party Libraries
-
 # Application Libraries
-# System Library Overrides
-from pytrader.libs.system import logging
-
-# Other Application Libraries
 from pytrader.libs.clients.broker import BrokerClient
+from pytrader.libs.system import logging
 from pytrader.libs.utilities.config.broker import BrokerConfig
+from pytrader.libs.utilities.exceptions import BrokerNotAvailable
 
-# Conditional Libraries
+# 3rd Party Libraries
 
 # ==================================================================================================
 #
@@ -101,10 +97,19 @@ class BrokerProcessManager():
             self.address[broker] = addresses[self.broker_list[0]]
 
         for broker in list(self.brokers):
+            logger.debug("Broker: %s", broker)
             self.broker_clients[broker] = BrokerClient(self.brokers[broker],
                                                        self.broker_cmd_queues[broker],
                                                        self.data_queue)
-            self.broker_clients[broker].connect(self.address[broker], self.client_id)
+
+            self.broker_clients[broker].set_broker_observers(broker)
+
+            try:
+                self.broker_clients[broker].connect(self.address[broker])
+            except BrokerNotAvailable as msg:
+                logger.debug("Broker Not Available: %s", msg)
+                self.broker_clients.pop(broker, None)
+                continue
 
     def run(self) -> None:
         """!
@@ -160,6 +165,26 @@ class BrokerProcessManager():
         except KeyboardInterrupt:
             logger.critical("Received Keyboard Interrupt! Shutting down the Broker Clients.")
 
+    def set_downloader(self) -> None:
+        """!
+        Configures the downloader observers.
+
+        @return None
+        """
+        for broker in list(self.brokers):
+            if broker in list(self.broker_clients):
+                self.broker_clients[broker].set_downloader()
+
+    def set_main(self) -> None:
+        """!
+        Configures the main process observers.
+
+        @return None
+        """
+        for broker in list(self.brokers):
+            if broker in list(self.broker_clients):
+                self.broker_clients[broker].set_main()
+
     def set_strategies(self, strategy_list: list) -> None:
         """!
         Set's the strategies observers for message passing.
@@ -171,7 +196,8 @@ class BrokerProcessManager():
         self.strategies = strategy_list
 
         for broker in list(self.brokers):
-            self.broker_clients[broker].set_strategies(strategy_list)
+            if broker in list(self.broker_clients):
+                self.broker_clients[broker].set_strategies(strategy_list)
 
     def stop(self) -> None:
         """!
