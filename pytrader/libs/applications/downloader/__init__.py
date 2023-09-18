@@ -2,9 +2,8 @@
 
 The main user interface for the trading program.
 
-@author Geoff S. Derber
-@version HEAD
-@date 2022
+@author G S Derber
+@date 2022-2003
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -23,17 +22,15 @@ The main user interface for the trading program.
 @file pytrader/libs/applications/downloader/__init__.py
 """
 # System Libraries
-
-# 3rd Party Libraries
+from datetime import date, timedelta
+from multiprocessing import Queue
 
 # Application Libraries
-# System Library Overrides
+from pytrader.libs.clients.broker.ibkr.webscraper import IbkrWebScraper
+from pytrader.libs.clients.database.mysql.ibkr.contract_universe import \
+    IbkrContractUniverse
+from pytrader.libs.contracts import Contract
 from pytrader.libs.system import logging
-
-# Other Application Libraries
-from pytrader.libs import contracts
-
-# Conditional Libraries
 
 # ==================================================================================================
 #
@@ -43,21 +40,6 @@ from pytrader.libs import contracts
 ## The base logger.
 logger = logging.getLogger(__name__)
 
-IBKR_ASSET_CLASS_MAP = {
-    "stocks": "STK",
-    "futures": "FUT",
-    "options": "OPT",
-    "indices": "IND",
-    "futures_options": "FOP",
-    "forex": "CASH",
-    "combo": "BAG",
-    "warrant": "WAR",
-    "bond": "BOND",
-    "commodity": "CMDTY",
-    "news": "NEWS",
-    "fund": "FUND"
-}
-
 
 # ==================================================================================================
 #
@@ -65,63 +47,100 @@ IBKR_ASSET_CLASS_MAP = {
 #
 # ==================================================================================================
 class DownloadProcess():
+    """!
+    Managers the Data Downloading Process.
+    """
+    contracts = {}
+    contract_universe = None
 
-    def __init__(self, cmd_queue, data_queue):
+    def __init__(self, cmd_queue: Queue, data_queue: Queue, tickers: list, enable_options: bool,
+                 asset_classes: list, currencies: list, regions: list, export: list) -> None:
+        """!
+        Initializes the Downloader Process
+
+        @param cmd_queue:
+        @param data_queue:
+        @param tickers:
+        @param enable_options:
+        @param asset_classes:
+        @param currencies:
+        @param regions:
+        @param export:
+
+        @return None
+        """
         self.cmd_queue = cmd_queue
         self.data_queue = data_queue
+        self.ticker_list = tickers
+        self.enable_options = enable_options
+        self.asset_classes = asset_classes
+        self.currencies = currencies
+        self.regions = regions
+        self.export = export
 
-    def run(self, asset_classes, securities_list: list = []):
-        if len(securities_list) == 0:
-            logger.error("No security list set.")
-            logger.error(
-                "Automatic security list generation not implemented yet.")
-        else:
-            self.download_info(asset_classes, securities_list)
+    def run(self) -> None:
+        """!
+        Runs the Download Process.
 
-        while True:
-            message = self.data_queue.get()
-            self._process_message(message)
-
-    def download_info(self, asset_classes, securities_list: list = []):
+        @return None
         """
-        basic_info
+        self._get_contract_universe()
 
-        @param investments
-        @param brokerclient
-        @param security
+        for item in self.contract_universe:
+            self._get_contract_details(item)
+
+    def _download_contract_details(self, ticker: dict) -> None:
+        symbol = ticker["ib_symbol"]
+        sec_type = ticker["asset_class"]
+        self.contracts[symbol] = Contract(self.cmd_queue, symbol, sec_type)
+        self.contracts[symbol].create_contract(ticker["exchange"], ticker["currency"])
+        self.contracts[symbol].send_contract("downloader")
+
+    def _download_contract_universe(self):
+        """!
+        Downloads the stock universe
         """
-        logger.debug("Begin Function")
+        scraper = IbkrWebScraper()
+        scraper.get_exchange_listings(self.regions)
+        scraper.get_asset_classes()
+        scraper.get_asset_class_pages(self.asset_classes)
+        scraper.get_assets()
+        scraper.filter_assets(self.currencies)
+        scraper.to_sql()
 
-        for asset_class in asset_classes:
-            sec_type = IBKR_ASSET_CLASS_MAP[asset_class]
+        if "csv" in self.export:
+            scraper.to_csv()
 
-            if securities_list:
-                info = contracts.Contracts(self.cmd_queue, sec_type,
-                                           securities_list)
-            else:
-                info = contracts.Contracts(self.cmd_queue, sec_type)
+    def _get_contract_details(self, ticker: dict) -> None:
+        symbol = ticker["ib_symbol"]
+        self.contracts[symbol] = Contract(self.cmd_queue, symbol, ticker["asset_class"])
+        self.contracts[symbol].create_contract(ticker["exchange"], ticker["currency"])
+        self.contracts[symbol].get_contract_details()
 
-            info.update_info("broker")
+    def _get_contract_universe(self):
+        db = IbkrContractUniverse()
+        max_date = db.max_date()
+        renew_data_date = date.today() - timedelta(days=7)
 
-        logger.debug("End Function")
-
-    def download_bars(self,
-                      investments,
-                      brokerclient,
-                      bar_sizes=None,
-                      securities_list=None,
-                      duration=None):
-        logger.debug10("Begin Function")
-        if securities_list:
-            info = contracts.Contracts(brokerclient=brokerclient,
-                                       securities_type=investments,
-                                       securities_list=securities_list)
+        logger.debug("Max Date: %s", max_date)
+        logger.debug("Renew Date: %s", renew_data_date)
+        if max_date and max_date > renew_data_date:
+            self._query_contract_universe()
         else:
-            info = contracts.Contracts(brokerclient=brokerclient,
-                                       securities_type=investments)
+            logger.debug("Updating Contract Universe")
+            self._download_contract_universe()
+            self._query_contract_universe()
 
-        info.update_history("broker", bar_sizes, duration)
-        logger.debug10("End Function")
+    def _query_contract_universe(self):
+        db = IbkrContractUniverse()
+
+        if len(self.ticker_list) > 0:
+            criteria = {"ib_symbol": self.ticker_list}
+            self.contract_universe = db.select(criteria=criteria)
+            logger.debug("Contract Universe: %s", self.contract_universe)
+        else:
+            self.contract_universe = db.select()
+            logger.debug("Contract Universe: %s", self.contract_universe)
 
     def _process_data(self, data):
         if data.get("contracts"):
