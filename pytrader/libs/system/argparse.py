@@ -111,23 +111,32 @@ class ArgParser(ArgumentParser):
         broker_list = list(BROKERS)
         help_str = (f"Brokers (Default: {broker_list})\n"
                     f"If 'backtest' is chosen, all other brokers will be ignored.")
-        self.add_argument("-b",
-                          "--broker",
-                          nargs="*",
-                          choices=broker_list,
-                          default=[broker_list[0]],
-                          help=help_str)
-        self.add_argument("-c",
-                          "--client-id",
-                          default=CLIENT_ID,
-                          help=f"Broker Client Id (Default: {CLIENT_ID})")
-
+        broker = self.add_argument_group("broker")
+        broker.add_argument("-b",
+                            "--broker",
+                            nargs="*",
+                            choices=broker_list,
+                            default=[broker_list[0]],
+                            help=help_str)
+        broker.add_argument("-c",
+                            "--client-id",
+                            default=CLIENT_ID,
+                            help=f"Broker Client Id (Default: {CLIENT_ID})")
         default_address = "127.0.0.1"
-        self.add_argument("-a",
-                          "--address",
-                          default=default_address,
-                          help=f"The Broker Address (Default: {default_address})")
-        self.add_argument("-p", "--ports", nargs="*", help="List of ports available to connect to.")
+        broker.add_argument("-a",
+                            "--address",
+                            default=default_address,
+                            help=f"The Broker Address (Default: {default_address})")
+        broker.add_argument("-d",
+                            "--disable-broker",
+                            action="store_false",
+                            default=True,
+                            help="Disable Broker Initialization")
+        broker.add_argument("-p",
+                            "--ports",
+                            nargs="*",
+                            metavar="PORT",
+                            help="List of ports available to connect to.")
 
     def add_logging_option(self):
         """!
