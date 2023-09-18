@@ -31,15 +31,9 @@ The user interface for downloading data.
 # System libraries
 import sys
 
-# 3rd Party libraries
-
-# System Library Overrides
-from pytrader.libs.system import argparse
-from pytrader.libs.system import logging
-
 # Application Libraries
 from pytrader import DEBUG
-from pytrader.libs import utilities
+from pytrader.libs.system import argparse, logging
 from pytrader.libs.utilities import config
 
 # ==================================================================================================
@@ -47,21 +41,29 @@ from pytrader.libs.utilities import config
 # Global Variables
 #
 # ==================================================================================================
-"""!
-@var logger
-The base logger.
-"""
+## The base logger.
 logger = logging.getLogger(__name__)
 client_id = 2
 
 
 # ==================================================================================================
 #
-# Function init
+# Functions
 #
 # ==================================================================================================
-def init(args):
-    import_path = "pytrader.plugins.download."
+def start_process_manager(args):
+    logger.debug("Args: %s", args)
+
+
+def init(args) -> int:
+    """! Initializates the program.
+
+    @param args
+    Provides the arguments from the command line.
+
+    @return 0
+    """
+    logger.debug("Entered real main")
 
     epilog_text = """
     See man pytrader for more information.\n
@@ -69,55 +71,42 @@ def init(args):
     Report bugs to ...
     """
 
-    parser = argparse.ArgParser(description="Download Data used by AutoTrader", epilog=epilog_text)
+    parser = argparse.ArgParser(description="Automated trading system", epilog=epilog_text)
 
     parser.add_version_option()
-    parent_parser = parser.add_logging_option()
-    subparsers = parser.create_subparsers()
+    parser.add_broker_options()
+    parser.add_logging_option()
 
-    subcommands = ["broker"]
+    parser.set_defaults(debug=False, verbosity=0, loglevel='INFO')
 
-    for i in subcommands:
-        subcommand = utilities.get_plugin_function(scmd='download',
-                                                   program=i,
-                                                   cmd='parser',
-                                                   import_path=import_path)
-        subcommand(subparsers, parent_parser)
+    try:
+        args = parser.parse_args()
 
-    parser.set_defaults(func=False, debug=False, verbosity=0, loglevel='INFO')
+        conf = config.Config()
+        conf.read_config()
+        conf.set_loglevel(args)
 
-    args = parser.parse_args()
+        logger.debug2('Configuration set')
+        logger.debug8('Configuration Settings: ' + str(conf))
+        logger.debug9('Arguments: ' + str(args))
 
-    conf = config.Config()
-    conf.read_config()
-    conf.set_loglevel(args)
-
-    logger.debug9('Configuration set')
-    logger.debug9('Configuration Settings: ' + str(conf))
-    logger.debug9('Arguments: ' + str(args))
-
-    logger.debug9("Desired Log Level: %s", conf.loglevel)
-
-    level = logger.getEffectiveLevel()
-    logger.debug9("Set Log Level: %s", level)
-
-    # 'application' code
-    if DEBUG is False:
-        try:
-            args.func(args)
-        except Exception as msg:
-            parser.print_help()
-            logger.debug(msg)
-            logger.error('No command was given')
-    else:
-        if args.func:
-            args.func(args)
+        # 'application' code
+        if DEBUG is False:
+            logger.debug8("Attempting to start client")
+            try:
+                start_process_manager(args)
+            except Exception as msg:
+                parser.print_help()
+                logger.critical(msg)
         else:
-            parser.print_help()
-            logger.debug("No command was given")
+            logger.debug8("Starting Client")
+            start_process_manager(args)
+        return 0
 
-    logger.debug10("End Function")
-    return None
+    except argparse.ArgumentError as msg:
+        logger.critical("Invalid Argument: %s", msg)
+        parser.print_help()
+        return 2
 
 
 # ==================================================================================================
@@ -125,18 +114,13 @@ def init(args):
 # Function main
 #
 # ==================================================================================================
-def main(args=None):
-    logger.debug("Begin Application")
-    if DEBUG is False:
-        try:
-            init(args)
-        except Exception as msg:
-            logger.critical(msg)
-    else:
-        init(args)
+def main(args=None) -> int:
+    """! The main program.
 
-    logger.debug("End Application")
-    return 1
+    @param args - The input from the command line.
+    @return 0
+    """
+    return init(args)
 
 
 # ==================================================================================================
