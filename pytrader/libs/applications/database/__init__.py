@@ -34,7 +34,8 @@ The user interface for managing the databases
 # 3rd Party libraries
 
 # System Library Overrides
-from pytrader.libs.clients import database
+from pytrader.libs.clients.database.sqlalchemy import Database
+from pytrader.libs.clients.database.mysql import MySQLDatabase
 from pytrader.libs.system import logging
 
 # Application Libraries
@@ -65,9 +66,9 @@ class DatabaseManager():
     def initialize_database(self) -> None:
         """!
         Initializes the database."""
-        db = database.Database()
+        db = Database()
         db.create_engine()
-        db_session = db.create_session()
+        db.create_session()
         db.create_tables()
         logger.debug("Initialization Complete!")
 
@@ -80,7 +81,16 @@ class DatabaseManager():
           - REQUIRESUPGRADE
           - GOOD
         """
-        logger.debug("Check database status")
+        db = MySQLDatabase()
+
+        status = db.check_database_exists()
+
+        if not status:
+            self.database_status = "NOTEXIST"
+        else:
+            self.database_status = "GOOD"
+
+        self.database_status = "NOTEXIST"
 
     def run(self):
         self.check_database_status()
