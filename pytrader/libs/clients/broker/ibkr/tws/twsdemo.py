@@ -29,13 +29,8 @@ Creates the interface for connecting to a Tws Account.
 # 3rd Party Libraries
 
 # Application Libraries
-# System Library Overrides
-from pytrader.libs.system import logging
-
-# Other Application Libraries
 from pytrader.libs.clients.broker.ibkr.tws.twsaccount import TwsAccountClient
-
-# Conditional Libraries
+from pytrader.libs.system import logging
 
 # ==================================================================================================
 #
