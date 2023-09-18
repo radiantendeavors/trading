@@ -52,6 +52,7 @@ import pygit2
 # Application Libraries
 # System Library Overrides
 from pytrader.libs.system import logging
+
 # Other Application Libraries
 
 # Conditional Libraries
@@ -67,7 +68,7 @@ DEBUG = True
 LOGLEVEL = 20
 
 ## Client ID
-CLIENT_ID = 2008
+CLIENT_ID = 1001
 
 ## An instance of the logging class
 logger = logging.getLogger(__name__)
@@ -86,3 +87,10 @@ logger.addHandler(consolehandler)
 module_path = os.path.dirname(__file__)
 
 git_branch = pygit2.Repository(module_path).head.shorthand
+
+if git_branch == "main":
+    CLIENT_ID = 1001
+elif git_branch.startswith("release"):
+    CLIENT_ID = 2001
+else:
+    CLIENT_ID = 3001
