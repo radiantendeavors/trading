@@ -53,9 +53,10 @@ class StrategyProcess():
 
     strategy_process = {}
 
-    def __init__(self, cmd_queue: Queue, data_queue: dict) -> None:
+    def __init__(self, cmd_queue: Queue, data_queue: dict, next_order_id: int) -> None:
         self.cmd_queue = cmd_queue
         self.data_queue = data_queue
+        self.next_order_id = next_order_id
 
     def run(self, strategy_list: list) -> None:
         """!
@@ -66,10 +67,12 @@ class StrategyProcess():
         @return None
         """
         try:
-            for strategy_id in strategy_list:
+            for index, strategy_id in enumerate(strategy_list):
+                order_id = self.next_order_id + (index * 1000)
+                logger.debug("Order Id for Strategy %s: %s", strategy_id, order_id)
                 module_name = IMPORT_PATH + strategy_id
                 module = importlib.import_module(module_name, __name__)
-                strategy = module.Strategy(self.cmd_queue, self.data_queue[strategy_id],
+                strategy = module.Strategy(self.cmd_queue, self.data_queue[strategy_id], order_id,
                                            strategy_id)
                 self.strategy_process[strategy_id] = multiprocessing.Process(target=strategy.run,
                                                                              args=())
