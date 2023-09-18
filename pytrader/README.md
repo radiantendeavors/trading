@@ -41,4 +41,3 @@ This project is licensed under the [GNU Affero General Public License v3.0](LICE
 ## Author Information
 
 G Derber gd.github@radiantendeavors.com https://github.com/gderber
-

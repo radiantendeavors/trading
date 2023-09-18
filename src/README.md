@@ -14,8 +14,8 @@ CPP Trader
 
 ## Description
 
-Trader is an automated trading/investing platform.  It works with stocks, etfs, and their related 
-options.  It provides a framework for creating, testing, and using your own trading strategies.  A 
+Trader is an automated trading/investing platform.  It works with stocks, etfs, and their related
+options.  It provides a framework for creating, testing, and using your own trading strategies.  A
 couple sample strategies are provided.
 
 
