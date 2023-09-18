@@ -25,16 +25,14 @@ The main user interface for the trading program.
 # System libraries
 import sys
 
-# 3rd Party libraries
-
-# System Library Overrides
-from pytrader.libs.system import argparse
-from pytrader.libs.system import logging
-
 # Application Libraries
 from pytrader import DEBUG
 from pytrader.libs.applications import trader
+# System Library Overrides
+from pytrader.libs.system import argparse, logging
 from pytrader.libs.utilities import config
+
+# 3rd Party libraries
 
 # ==================================================================================================
 #
@@ -47,92 +45,165 @@ logger = logging.getLogger(__name__)
 
 # ==================================================================================================
 #
+# Classes
+#
+# ==================================================================================================
+class PyTrader():
+    """!
+    The main program class.
+    """
+
+    def __init__(self) -> None:
+        """!
+        Initialize the main program.
+
+        @param args: Arguments received from the command line.
+
+        @return None
+        """
+        epilog_text = """
+        See man pytrader for more information.\n
+        \n
+        Report bugs to ...
+        """
+        self.conf = config.Config()
+        self.parser = argparse.ArgParser(description="Automated trading system", epilog=epilog_text)
+        self.parser.add_version_option()
+        self.parser.add_broker_options()
+
+        strategy_options = self.parser.add_argument_group("Strategy Options")
+        strategy_options.add_argument(
+            "-s",
+            "--strategies",
+            nargs="*",
+            default=[],
+            help="Strategies to run.  If not specified no strategies will run.")
+
+        download_options = self.parser.add_argument_group("Data Downloader Options")
+        download_options.add_argument("-t",
+                                      "--tickers",
+                                      nargs="*",
+                                      default=[],
+                                      help="Tickers for downloading data.")
+
+        download_options.add_argument("-o",
+                                      "--enable-options",
+                                      action="store_true",
+                                      default=False,
+                                      help="Enable downloading Options data.")
+        download_options.add_argument(
+            "-A",
+            "--asset_classes",
+            nargs="*",
+            default=["STK", "ETF", "BOND", "BILL", "IND", "FUTGRP", "OPTGRP", "WAR"],
+            choices=["STK", "ETF", "BOND", "BILL", "IND", "FUTGRP", "OPTGRP", "WAR"],
+            help="Asset Classes for stock universe.")
+
+        # Currently, the default is "USD" because that is all I have access to.
+        # While other currencies should 'theoretically' work, it has not been tested.
+        #
+        # The same goes for other regions besides 'north_america'
+        currency_choices = [
+            "AUD", "CAD", "CHF", "CZK", "DKK", "EUR", "GBP", "HKD", "HUF", "ILS", "INR", "JPY",
+            "KRW", "MXN", "NOK", "NZD", "PLN", "SEK", "SGD", "TWD", "USD", "ZAR"
+        ]
+        download_options.add_argument(
+            "-C",
+            "--currencies",
+            nargs="*",
+            default=["USD"],
+            choices=currency_choices,
+            help="Allowed currencies for securities. (default is ['USD'])")
+        download_options.add_argument(
+            "-r",
+            "--regions",
+            nargs="*",
+            default=["north_america"],
+            choices=["north_america", "europe", "asia", "global"],
+            help="Regions to download exchange listings for (default is ['north_america'])")
+
+        # Not sure if this configuration is really necessary.  I doubt it'll ever export to anything
+        # other than CSV.  It always exports to the database.  It may export to CSV.  CSV format is
+        # helpful for debugging and working out how to manage duplicates.
+        download_options.add_argument("-x",
+                                      "--export",
+                                      nargs="*",
+                                      default=[],
+                                      choices=["csv"],
+                                      help="Additional options to save stock universe.")
+
+        self.parser.add_logging_option()
+        self.parser.set_defaults(debug=False, verbosity=0, loglevel='INFO')
+        self.args = self.parser.parse_args()
+
+    def config(self) -> None:
+        """!
+        Reads the configuration file and sets the log levels.
+
+        @return None
+        """
+        self.conf.read_config()
+        self.conf.set_loglevel(self.args)
+        logger.debug2('Configuration set')
+        logger.debug8('Configuration Settings: ' + str(self.conf))
+        logger.debug9('Arguments: ' + str(self.args))
+
+    def start_process_manager(self) -> None:
+        """!
+        Starts the Overall Process Manager.
+
+        @param args: The arguments received from the command line.
+
+        @return None
+        """
+        process_manager = trader.ProcessManager(self.args)
+
+        if self.args.disable_broker:
+            process_manager.config_brokers()
+
+        process_manager.run()
+
+    def run(self) -> int:
+        """!
+        The main function.
+
+        @return int:
+        """
+        # 'application' code
+        if DEBUG:
+            self.start_process_manager()
+            return 0
+
+        logger.debug8("Attempting to start client")
+        try:
+            self.start_process_manager()
+            return 0
+        # We want a catchall exception
+        except Exception as msg:
+            logger.critical(msg)
+            return 1
+
+
+# ==================================================================================================
+#
 # Functions
 #
 # ==================================================================================================
-def start_process_manager(args) -> None:
-    """!
-    Starts the Overall Process Manager.
-
-    @param args: The arguments received from the command line.
-
-    @return None
-    """
-    process_manager = trader.ProcessManager(args.broker, args.strategies, args.client_id)
-    process_manager.config_brokers()
-    process_manager.run()
-
-
-def init(args) -> int:
-    """! Initializates the program.
-
-    @param args
-    Provides the arguments from the command line.
-
-    @return 0
-    """
-    logger.debug("Entered real main")
-
-    epilog_text = """
-    See man pytrader for more information.\n
-    \n
-    Report bugs to ...
-    """
-
-    parser = argparse.ArgParser(description="Automated trading system", epilog=epilog_text)
-
-    parser.add_version_option()
-    parser.add_broker_options()
-    parser.add_logging_option()
-
-    parser.add_argument("-s",
-                        "--strategies",
-                        nargs="+",
-                        default=[],
-                        help="Strategies to run.  If not specified no strategies will run.")
-
-    parser.set_defaults(debug=False, verbosity=0, loglevel='INFO')
-
-    try:
-        args = parser.parse_args()
-
-        conf = config.Config()
-        conf.read_config()
-        conf.set_loglevel(args)
-
-        logger.debug2('Configuration set')
-        logger.debug8('Configuration Settings: ' + str(conf))
-        logger.debug9('Arguments: ' + str(args))
-
-        # 'application' code
-        if DEBUG is False:
-            logger.debug8("Attempting to start client")
-            try:
-                start_process_manager(args)
-            except Exception as msg:
-                parser.print_help()
-                logger.critical(msg)
-        else:
-            logger.debug8("Starting Client")
-            start_process_manager(args)
-        return 0
-
-    except argparse.ArgumentError as msg:
-        logger.critical("Invalid Argument: %s", msg)
-        parser.print_help()
-        return 2
-
-
-def main(args=None) -> int:
+def main() -> int:
     """! The main program.
 
     @param args - The input from the command line.
     @return 0
     """
-    logger.debug("Begin Application")
+    pytrader = PyTrader()
+    pytrader.config()
+    return pytrader.run()
 
-    return init(args)
 
-
+# ==================================================================================================
+#
+#
+#
+# ==================================================================================================
 if __name__ == "__main__":
     sys.exit(main())
