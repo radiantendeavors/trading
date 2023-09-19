@@ -224,11 +224,8 @@ class BrokerProcessManager():
 
         @return None
         """
-        logger.debug("Client Id: %s", self.client_id)
-        logger.debug("Broker Clients: %s", self.broker_clients)
-
         for broker_id, brokerclient in self.broker_clients.items():
-            logger.debug("Brokerclient: %s", brokerclient)
+            logger.debug("Starting Brokerclient %s: %s", broker_id, brokerclient)
             self.broker_processes[broker_id] = Process(target=brokerclient.run, args=())
             self.broker_processes[broker_id].start()
 
