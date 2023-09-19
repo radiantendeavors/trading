@@ -25,33 +25,42 @@ Creates the interface for connecting to Tws Demo account.
 Creates the interface for connecting to Tws Demo account.
 """
 # System Libraries
+import datetime
 import threading
+from time import sleep
 
 # 3rd Party Libraries
+from ibapi.contract import Contract
 
 # Application Libraries
-# System Library Overrides
-from pytrader.libs.system import logging
-
-# Other Application Libraries
 from pytrader import CLIENT_ID
 from pytrader.libs.clients.broker.abstractclient import AbstractBrokerClient
 from pytrader.libs.clients.broker.ibkr.tws import TwsApiClient
-
-from pytrader.libs.clients.broker.observers import (
-    StrategyBarDataObserver, StrategyContractDataObserver, StrategyMarketDataObserver,
-    StrategyOptionDataObserver, StrategyOrderDataObserver, StrategyRealTimeBarObserver)
-from pytrader.libs.clients.broker.subjects import (BrokerBarData, BrokerContractData,
-                                                   BrokerMarketData, BrokerOptionData,
-                                                   BrokerOrderData, BrokerRealTimeBarData)
-
-# Conditional Libraries
+from pytrader.libs.system import logging
 
 # ==================================================================================================
 #
 # Global Variables
 #
 # ==================================================================================================
+## Amount of time to sleep to avoid pacing violations.
+HISTORICAL_DATA_SLEEP_TIME = 0
+
+## Sleep time to avoid pacing violations
+SMALL_BAR_SLEEP_TIME = 15
+
+## Used to store bar sizes with pacing violations
+SMALL_BAR_SIZES = ["1 secs", "5 secs", "10 secs", "15 secs", "30 secs"]
+
+## Used to store allowed intraday bar sizes
+INTRADAY_BAR_SIZES = SMALL_BAR_SIZES + [
+    "1 min", "2 mins", "3 mins", "5 mins", "10 mins", "15 mins", "20 mins", "30 mins", "1 hour",
+    "2 hours", "3 hours", "4 hours", "8 hours"
+]
+
+## Used to store allowed bar sizes
+BAR_SIZES = INTRADAY_BAR_SIZES + ["1 day", "1 week", "1 month"]
+
 ## The Base Logger
 logger = logging.getLogger(__name__)
 
@@ -69,38 +78,53 @@ class TwsAccountClient(AbstractBrokerClient):
       - IbgReal
       - IbgDemo
     """
-    brokerclient = TwsApiClient()
+    __next_client_id = CLIENT_ID
 
-    contract_subjects = BrokerContractData()
-    bar_subjects = BrokerBarData()
-    mkt_data_subjects = BrokerMarketData()
-    option_subjects = BrokerOptionData()
-    order_subjects = BrokerOrderData()
-    rtb_subjects = BrokerRealTimeBarData()
+    ##
+    __contract_details_sleep_time = 0
+
+    ## Used to track when the last contract details data request was made
+    __contract_details_data_req_timestamp = datetime.datetime(year=1970,
+                                                              month=1,
+                                                              day=1,
+                                                              hour=0,
+                                                              minute=0,
+                                                              second=0)
 
     def __init__(self, data_queue: dict) -> None:
         """!
         Initializes the TwsDataThread class.
         """
+        #
+        self.brokerclient = TwsApiClient()
+
         # Contract Subjects and Observers
-        self.contract_observers = {}
-        self.bar_observers = {}
-        self.mkt_data_observers = {}
-        self.option_observers = {}
-        self.order_observers = {}
-        self.rtb_observers = {}
-        self.client_thread = threading.Thread(target=self.run, daemon=True)
+        self.req_id = 0
+
+        self.brokerclient.set_data_queue(data_queue)
 
         super().__init__(data_queue)
 
-    def connect(self, address: str = "127.0.0.1", port: int = 0, client_id: int = CLIENT_ID):
+    def connect(self, address: str = "127.0.0.1", port: int = 0):
         if port == 0:
             port = self.port
-        self.brokerclient.connect(address, port, client_id)
+        self.brokerclient.connect(address, port, self.__next_client_id)
+        self.__next_client_id += 1
+
+    def set_broker_observers(self, broker: str) -> None:
+        self.brokerclient.config_broker_observers(broker, self.queue)
+
+    def set_downloader_observers(self) -> None:
+        self.brokerclient.config_downloader_observers()
+
+    def set_main_observers(self) -> None:
+        self.brokerclient.config_main_observers()
+
+    def set_strategy_observers(self, strategy_list: list) -> None:
+        self.brokerclient.config_strategy_observers(strategy_list)
 
     def start(self):
-        self.client_thread.start()
-        self.brokerclient.start(self.queue)
+        self.brokerclient.start()
 
     def stop(self):
         self.brokerclient.stop()
@@ -117,6 +141,9 @@ class TwsAccountClient(AbstractBrokerClient):
 
     def calculate_implied_volatility(self):
         logger.debug("Calculate Implied Volatility")
+
+    def calculate_option_price(self):
+        logger.debug("Calculate Option Price")
 
     def create_order(self, order_request: dict, strategy_id: str) -> None:
         """!
@@ -137,8 +164,22 @@ class TwsAccountClient(AbstractBrokerClient):
         self.bar_subjects.request_bars()
         self.bar_subjects.notify()
 
+    def request_contract_details(self, contract: Contract):
+        self.req_id += 1
+        self._contract_details_data_wait()
+        logger.debug("Contract: %s", contract)
+        self.brokerclient.req_contract_details(self.req_id, contract)
+        self.__contract_details_data_req_timestamp = datetime.datetime.now()
+
     def request_global_cancel(self) -> None:
         self.brokerclient.req_global_cancel()
+
+    def request_history_begin_date(self, contract: Contract) -> None:
+        self.req_id += 1
+        self.brokerclient.contract_history_begin_subjects.add_ticker(self.req_id,
+                                                                     contract.localSymbol)
+        logger.debug(self.brokerclient.contract_history_begin_subjects)
+        self.brokerclient.req_head_timestamp(self.req_id, contract)
 
     def request_option_details(self, strategy_id):
         tickers = self.contract_observers[strategy_id].get_tickers()
@@ -177,41 +218,6 @@ class TwsAccountClient(AbstractBrokerClient):
     def set_contract_details(self, contract_details: dict):
         self.contract_subjects.set_contract_details(contract_details)
 
-    def set_strategies(self, strategy_list: list) -> None:
-        """!
-        Sets the subject and observers for each strategy.
-
-        @param strategy_list: List of strategies to use.
-
-        @return None
-        """
-        for strategy in strategy_list:
-            # Add Bar Observers
-            self.bar_observers[strategy] = StrategyBarDataObserver(self.data_queue[strategy])
-            self.bar_subjects.attach(self.bar_observers[strategy], self.brokerclient)
-
-            # Add Contract Observers
-            self.contract_observers[strategy] = StrategyContractDataObserver(
-                self.data_queue[strategy])
-            self.contract_subjects.attach(self.contract_observers[strategy], self.brokerclient)
-
-            # Add MarketData Observers
-            self.mkt_data_observers[strategy] = StrategyMarketDataObserver(
-                self.data_queue[strategy])
-            self.mkt_data_subjects.attach(self.mkt_data_observers[strategy], self.brokerclient)
-
-            # Add Option Detail Observers
-            self.option_observers[strategy] = StrategyOptionDataObserver(self.data_queue[strategy])
-            self.option_subjects.attach(self.option_observers[strategy], self.brokerclient)
-
-            # Add Option Detail Observers
-            self.order_observers[strategy] = StrategyOrderDataObserver(self.data_queue[strategy])
-            self.order_subjects.attach(self.order_observers[strategy], self.brokerclient)
-
-            # Add Real Time Bar Observers
-            self.rtb_observers[strategy] = StrategyRealTimeBarObserver(self.data_queue[strategy])
-            self.rtb_subjects.attach(self.rtb_observers[strategy], self.brokerclient)
-
     def set_bar_sizes(self, bar_sizes: list, strategy_id: str):
         """!
         Sets bar sizes
@@ -225,16 +231,80 @@ class TwsAccountClient(AbstractBrokerClient):
         self.bar_subjects.add_bar_sizes(tickers, contracts, bar_sizes)
         self.bar_observers[strategy_id].add_ticker_bar_sizes(tickers, bar_sizes)
 
-    def set_contracts(self, contracts: dict, strategy_id: str):
-        for ticker, contract_ in contracts.items():
-            self.contract_subjects.request_contract_data(ticker, contract_)
+    # ==============================================================================================
+    #
+    # Internal Helper Functions
+    #
+    # ==============================================================================================
+    def _data_wait(self, timestamp, sleep_time):
+        time_diff = datetime.datetime.now() - timestamp
 
-        # We do this after requesting contract detail, so we can check if the ticker has a valid
-        # contract.
-        valid_tickers = self.contract_subjects.get_tickers()
-        tickers = set(valid_tickers).intersection(list(contracts))
+        # FIXME: Why is this a loop?
+        while time_diff.total_seconds() < sleep_time:
 
-        self.contract_observers[strategy_id].add_tickers(tickers)
+            logger.debug6("Now: %s", datetime.datetime.now())
+            logger.debug6("Last Request: %s", timestamp)
+            logger.debug6("Time Difference: %s seconds", time_diff.total_seconds())
+            remaining_sleep_time = sleep_time - time_diff.total_seconds()
+            logger.debug6("Sleep Time: %s", remaining_sleep_time)
+            sleep(sleep_time - time_diff.total_seconds())
+            time_diff = datetime.datetime.now() - timestamp
 
-        logger.debug("Contracts: %s", valid_tickers)
-        self.contract_subjects.notify()
+    def _historical_data_wait(self):
+        """!
+        Ensure that we wait between historical data requests.
+
+        @param self
+
+        @return
+        """
+        self._data_wait(self.__historical_data_req_timestamp, HISTORICAL_DATA_SLEEP_TIME)
+
+    def _req_tick_by_tick_data(self, contract: Contract, tick_type: str, number_of_ticks: int,
+                               ignore_size: bool):
+        self.req_id += 1
+        self._historical_data_wait()
+
+        self.reqTickByTickData(self.req_id, contract, tick_type, number_of_ticks, ignore_size)
+        self.__historical_data_req_timestamp = datetime.datetime.now()
+        logger.debug("End Function")
+        return self.req_id
+
+    def _small_bar_data_wait(self):
+        """!
+        Ensure that we wait between historical data requests.
+
+        @param self
+
+        @return
+        """
+        self._data_wait(self.__small_bar_data_req_timestamp, SMALL_BAR_SLEEP_TIME)
+
+    def _contract_details_data_wait(self):
+        """!
+        Ensure that we wait between historical data requests.
+
+        @param self
+
+        @return
+        """
+        self._data_wait(self.__contract_details_data_req_timestamp,
+                        self.__contract_details_sleep_time)
+
+    def _calculate_deep_data_allotment(self):
+        """!
+        Caclulates the allowed dep data requests available.
+        """
+        min_allotment = 3
+        max_allotment = 60
+
+        basic_allotment = self.__available_market_data_lines % 100
+
+        if basic_allotment < min_allotment:
+            self.__available_deep_data_allotment = min_allotment
+        elif basic_allotment > max_allotment:
+            self.__available_deep_data_allotment = max_allotment
+        else:
+            self.__available_deep_data_allotment = basic_allotment
+
+        logger.debug("Deep Data Allotment: %s", self.__available_deep_data_allotment)

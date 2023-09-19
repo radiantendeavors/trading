@@ -1,13 +1,11 @@
 """!
-@package pytrader.libs.clients.broker
-Creates a basic interface for interacting with a broker
+@package pytrader.libs.clients.database.mysql.ibkr_stock_contracts
 
-@file pytrader/libs/clients/broker/__init__.py
+Provides the database client
 
-Creates a basic interface for interacting with a broker
-
-@author G. S. Derber
-@date 2022-2023
+@author Geoff S. derber
+@version HEAD
+@date 2022
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -23,20 +21,27 @@ Creates a basic interface for interacting with a broker
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
+@file pytrader/libs/clients/mysql/etf_info.py
 """
 # System Libraries
-import threading
+from datetime import date
+
+# 3rd Party Libraries
+import pymysql
 
 # Application Libraries
-from pytrader.libs.clients.broker.ibkr.tws.reader import TwsReader
+from pytrader.libs.clients.database.mysql.ibkr.base_contracts import \
+    IbkrBaseContracts
 from pytrader.libs.system import logging
+from pytrader.libs.utilities import text
 
 # ==================================================================================================
 #
 # Global Variables
 #
 # ==================================================================================================
-## The Base Logger
+## The base logger.
 logger = logging.getLogger(__name__)
 
 
@@ -45,32 +50,11 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class TwsThreadMngr(TwsReader):
-    """!
-    Manages the thread for the TWS API Client.
-    """
+class IbkrStkContracts(IbkrBaseContracts):
 
-    def __init__(self):
-        super().__init__()
-        self.api_thread = threading.Thread(target=self.run, daemon=True)
-
-    def start(self) -> None:
-        """!
-        Starts the api thread.
-
-        @param thread_queue: The thread message passing queue.
-
-        @return None
-        """
-        self.api_thread.start()
-
-    def stop(self) -> None:
-        """!
-        Stops the api thread.
-
-        @return None.
-        """
-        try:
-            self.api_thread.join()
-        except AttributeError as msg:
-            logger.error("AttributeError Stopping TwsApiClient Thread: %s", msg)
+    table_name = "z_ibkr_stock_contracts"
+    insert_column_names = [
+        "contract_id", "ticker_symbol", "security_type", "exchange", "currency", "local_symbol",
+        "primary_exchange", "trading_class"
+    ]
+    update_column_names = insert_column_names + ["last_updated"]

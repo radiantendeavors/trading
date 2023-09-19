@@ -89,6 +89,9 @@ class DownloadProcess():
         for item in self.contract_universe:
             self._get_contract_details(item)
 
+        for item in self.contract_universe:
+            self._get_contract_history_begin_date(item)
+
     def _download_contract_details(self, ticker: dict) -> None:
         symbol = ticker["ib_symbol"]
         sec_type = ticker["asset_class"]
@@ -116,6 +119,10 @@ class DownloadProcess():
         self.contracts[symbol] = Contract(self.cmd_queue, symbol, ticker["asset_class"])
         self.contracts[symbol].create_contract(ticker["exchange"], ticker["currency"])
         self.contracts[symbol].get_contract_details()
+
+    def _get_contract_history_begin_date(self, ticker: dict) -> None:
+        symbol = ticker["ib_symbol"]
+        self.contracts[symbol].get_contract_history_begin_date()
 
     def _get_contract_universe(self):
         db = IbkrContractUniverse()

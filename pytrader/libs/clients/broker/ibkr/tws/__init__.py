@@ -24,36 +24,6 @@ Creates a basic interface for interacting with a broker
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 """
-# System Libraries
-from queue import Queue
-import datetime
-
-from abc import ABCMeta, abstractmethod
-from typing import Optional
-
-# 3rd Party Libraries
-from ibapi.commission_report import CommissionReport
-from ibapi.common import (BarData, TickAttribLast, TickAttribBidAsk, TickAttrib)
-from ibapi.contract import Contract, ContractDetails, DeltaNeutralContract
-from ibapi.execution import Execution
-from ibapi.order import Order
-from ibapi.order_state import OrderState
-
-# Application Libraries
-# System Library Overrides
-from pytrader.libs.system import logging
-
-# Other Application Libraries
-from pytrader.libs.clients.broker.ibkr.tws.thread import TwsThreadMngr
-from pytrader.libs.utilities.exceptions import (BrokerTooManyRequests, InvalidExchange,
-                                                InvalidTickType)
-# Conditional Libraries
-
-# ==================================================================================================
-#
-# Global Variables
-#
-# ==================================================================================================
 # ==================================================================================================
 #
 # Pacing Violations
@@ -66,27 +36,25 @@ from pytrader.libs.utilities.exceptions import (BrokerTooManyRequests, InvalidEx
 # https://interactivebrokers.github.io/tws-api/historical_limitations.html#pacing_violations
 #
 # ==================================================================================================
-## Amount of time to sleep to avoid pacing violations.
-HISTORICAL_DATA_SLEEP_TIME = 0
 
-##
-CONTRACT_DETAILS_SLEEP_TIME = 0
+# System Libraries
+from typing import Optional
 
-## Sleep time to avoid pacing violations
-SMALL_BAR_SLEEP_TIME = 15
+# 3rd Party Libraries
+from ibapi.contract import Contract
+from ibapi.order import Order
 
-## Used to store bar sizes with pacing violations
-SMALL_BAR_SIZES = ["1 secs", "5 secs", "10 secs", "15 secs", "30 secs"]
+# Application Libraries
+from pytrader.libs.system import logging
+from pytrader.libs.clients.broker.ibkr.tws.thread import TwsThreadMngr
+from pytrader.libs.utilities.exceptions import (InvalidExchange,
+                                                InvalidTickType)
 
-## Used to store allowed intraday bar sizes
-INTRADAY_BAR_SIZES = SMALL_BAR_SIZES + [
-    "1 min", "2 mins", "3 mins", "5 mins", "10 mins", "15 mins", "20 mins", "30 mins", "1 hour",
-    "2 hours", "3 hours", "4 hours", "8 hours"
-]
-
-## Used to store allowed bar sizes
-BAR_SIZES = INTRADAY_BAR_SIZES + ["1 day", "1 week", "1 month"]
-
+# ==================================================================================================
+#
+# Global Variables
+#
+# ==================================================================================================
 ## The Base Logger
 logger = logging.getLogger(__name__)
 
@@ -101,29 +69,6 @@ class TwsApiClient(TwsThreadMngr):
     The Command interface for the TWS API Client.
     """
 
-    ## Used to track when the last historical data request was made
-    __historical_data_req_timestamp = datetime.datetime(year=1970,
-                                                        month=1,
-                                                        day=1,
-                                                        hour=0,
-                                                        minute=0,
-                                                        second=0)
-
-    ## Used to track when the last contract details data request was made
-    __contract_details_data_req_timestamp = datetime.datetime(year=1970,
-                                                              month=1,
-                                                              day=1,
-                                                              hour=0,
-                                                              minute=0,
-                                                              second=0)
-
-    __small_bar_data_req_timestamp = datetime.datetime(year=1970,
-                                                       month=1,
-                                                       day=1,
-                                                       hour=0,
-                                                       minute=0,
-                                                       second=0)
-
     def __init__(self) -> None:
         """!
         Initializes the TWSAPI Client.
@@ -135,9 +80,9 @@ class TwsApiClient(TwsThreadMngr):
 
     # ==============================================================================================
     #
-    # The following functions are wrappers around the eClient functions.  All are lowercased, and
-    # update the request id prior to calling the API function.  In addition, they provide any
-    # formatting and error checking to ensure the API function receives the correct inputs.
+    # The following functions are wrappers around the eClient functions.  All are lowercased.  Their
+    # primary purpose is to provide any formatting and error checking to ensure the API function
+    # receives the correct inputs.
     #
     # All functions in alphabetical order.
     #
@@ -245,7 +190,6 @@ class TwsApiClient(TwsThreadMngr):
 
         @return None
         """
-        self.__active_historical_data_requests -= 1
         self.cancelHistoricalData(req_id)
 
     def cancel_mkt_data(self, req_id: int) -> None:
@@ -289,6 +233,9 @@ class TwsApiClient(TwsThreadMngr):
 
         @return None
         """
+        # Ensure that manual_order_cancel_time is an empty string
+        manual_order_cancel_time = ""
+
         self.cancelOrder(order_id, manual_order_cancel_time)
 
     def is_connected(self):
@@ -300,7 +247,7 @@ class TwsApiClient(TwsThreadMngr):
         """
         return self.isConnected()
 
-    def place_order(self, contract: Contract, order: Order, order_id=None):
+    def place_order(self, contract: Contract, order: Order, order_id: Optional[int] = None):
         """!
         Places or modifies an order.
 
@@ -416,7 +363,7 @@ class TwsApiClient(TwsThreadMngr):
         """
         self.reqAccountUpdates(subscribe, account_code)
 
-    def req_contract_details(self, contract: Contract):
+    def req_contract_details(self, req_id: int, contract: Contract):
         """!
         Requests contract information.
         This method will provide all the contracts matching the contract provided. It can also be
@@ -431,11 +378,7 @@ class TwsApiClient(TwsThreadMngr):
 
         @return req_id: The unique request identifier.
         """
-        self.req_id += 1
-        self._contract_details_data_wait()
-        self.reqContractDetails(self.req_id, contract)
-        self.__contract_details_data_req_timestamp = datetime.datetime.now()
-        return self.req_id
+        self.reqContractDetails(req_id, contract)
 
     def req_global_cancel(self) -> None:
         """!
@@ -448,10 +391,11 @@ class TwsApiClient(TwsThreadMngr):
         self.reqGlobalCancel()
 
     def req_head_timestamp(self,
+                           req_id: int,
                            contract: Contract,
-                           what_to_show: str = "TRADES",
-                           use_regular_trading_hours: bool = True,
-                           format_date: bool = True) -> int:
+                           what_to_show: Optional[str] = "TRADES",
+                           use_regular_trading_hours: Optional[bool] = True,
+                           format_date: Optional[bool] = True) -> None:
         """!
         Requests the earliest available bar data for a contract.
 
@@ -462,20 +406,8 @@ class TwsApiClient(TwsThreadMngr):
 
         @return req_id: The request identifier
         """
-        logger.debug("Ticker: %s", contract.symbol)
-
-        self.req_id += 1
-
-        # This request seems to trigger the historical data pacing restrictions.  So, we wait.
-        self._historical_data_wait()
-        self.reqHeadTimeStamp(self.req_id, contract, what_to_show, use_regular_trading_hours,
+        self.reqHeadTimeStamp(req_id, contract, what_to_show, use_regular_trading_hours,
                               format_date)
-
-        # This is updated here, rather than in the _historical_data_wait function because we want
-        # to actually make the request before setting a new timer.
-        self.__historical_data_req_timestamp = datetime.datetime.now()
-
-        return self.req_id
 
     # pylint: disable=C0301
     def req_historical_data(self,
@@ -557,51 +489,36 @@ class TwsApiClient(TwsThreadMngr):
         # https://interactivebrokers.github.io/tws-api/historical_limitations.html
         #
         # ==========================================================================================
-        if self.__active_historical_data_requests <= 50:
-            self.__active_historical_data_requests += 1
+        logger.debug6("Contract: %s", contract)
+        logger.debug6("Bar Size: %s", bar_size_setting)
+        logger.debug6("End Date Time: %s", end_date_time)
+        logger.debug6("Duration: %s", duration_str)
+        logger.debug6("What to show: %s", what_to_show)
+        logger.debug6("Use Regular Trading Hours: %s", use_regular_trading_hours)
+        logger.debug6("Format date: %s", format_date)
+        logger.debug6("Keep Up to Date: %s", keep_up_to_date)
+        logger.debug6("Chart Options: %s", chart_options)
+        self.req_id += 1
 
-            logger.debug6("Contract: %s", contract)
-            logger.debug6("Bar Size: %s", bar_size_setting)
-            logger.debug6("End Date Time: %s", end_date_time)
-            logger.debug6("Duration: %s", duration_str)
-            logger.debug6("What to show: %s", what_to_show)
-            logger.debug6("Use Regular Trading Hours: %s", use_regular_trading_hours)
-            logger.debug6("Format date: %s", format_date)
-            logger.debug6("Keep Up to Date: %s", keep_up_to_date)
-            logger.debug6("Chart Options: %s", chart_options)
-            self.req_id += 1
+        # if keep_up_to_date is true, end_date_time must be blank.
+        # https://interactivebrokers.github.io/tws-api/historical_bars.html
+        if keep_up_to_date:
+            end_date_time = ""
 
-            # if keep_up_to_date is true, end_date_time must be blank.
-            # https://interactivebrokers.github.io/tws-api/historical_bars.html
-            if keep_up_to_date:
-                end_date_time = ""
+        self._historical_data_wait()
 
-            if bar_size_setting in SMALL_BAR_SIZES:
-                self._small_bar_data_wait()
-            else:
-                self._historical_data_wait()
+        logger.debug6("Requesting Historical Bars for: %s", contract.localSymbol)
 
-            logger.debug6("Requesting Historical Bars for: %s", contract.localSymbol)
+        # TWSAPI expects chart_options type to be a list.
+        if chart_options is None:
+            chart_options = []
 
-            # TWSAPI expects chart_options type to be a list.
-            if chart_options is None:
-                chart_options = []
+        self.reqHistoricalData(self.req_id, contract, end_date_time, duration_str,
+                               bar_size_setting, what_to_show, use_regular_trading_hours,
+                               format_date, keep_up_to_date, chart_options)
 
-            self.reqHistoricalData(self.req_id, contract, end_date_time, duration_str,
-                                   bar_size_setting, what_to_show, use_regular_trading_hours,
-                                   format_date, keep_up_to_date, chart_options)
-
-            # This is updated here, rather than in the _historical_data_wait function because we
-            # want to actually make the request before setting a new timer.
-            if bar_size_setting in SMALL_BAR_SIZES:
-                self.__small_bar_data_req_timestamp = datetime.datetime.now()
-            else:
-                self.__historical_data_req_timestamp = datetime.datetime.now()
-
-            self.data[self.req_id] = []
-            return self.req_id
-
-        raise BrokerTooManyRequests("Too many open historical data requests")
+        self.data[self.req_id] = []
+        return self.req_id
 
     def req_historical_ticks(self,
                              contract: Contract,
@@ -648,10 +565,8 @@ class TwsApiClient(TwsThreadMngr):
 
         @return None
         """
-
         # NOTE: TWS API reqIds has a required parameter 'numIds'.  The API Docs say it is
         # depreciated, however, an error message will occur if one is not set.
-        self.next_valid_id_available.clear()
         self.reqIds(1)
 
     def req_managed_accounts(self) -> None:
@@ -666,8 +581,7 @@ class TwsApiClient(TwsThreadMngr):
     def req_market_data(
             self,
             contract: Contract,
-            generic_tick_list:
-        str = "221, 232, 233, 236, 258, 293, 294, 295, 318, 375, 411, 456, 595, 619",
+            generic_tick_list: str = "221, 232, 233, 236, 258, 293, 294, 295, 318, 375, 411, 456, 595, 619",
             snapshot: bool = False,
             regulatory_snapshot: bool = False,
             market_data_options: Optional[list] = None):
@@ -807,14 +721,11 @@ class TwsApiClient(TwsThreadMngr):
             if real_time_bar_options is None:
                 real_time_bar_options = []
 
-            self._small_bar_data_wait()
-
             self.reqRealTimeBars(self.req_id, contract, bar_size_setting, what_to_show,
                                  use_regular_trading_hours, real_time_bar_options)
 
             # This is updated here, rather than in the _historical_data_wait function because we
             # want to actually make the request before setting a new timer.
-            self.__small_bar_data_req_timestamp = datetime.datetime.now()
             return self.req_id
 
     def req_sec_def_opt_params(self, contract: Contract, exchange: Optional[str] = None):
@@ -852,6 +763,7 @@ class TwsApiClient(TwsThreadMngr):
 
         @return req_id: The request's identifier
         """
+        # Ensure we have the tick type formatted correctly for TWSAPI
         match tick_type.lower():
             case "last":
                 tick_type = "Last"
@@ -864,7 +776,7 @@ class TwsApiClient(TwsThreadMngr):
             case _:
                 raise InvalidTickType("Invalid Tick Type")
 
-        return self._req_tick_by_tick_data(contract, tick_type, number_of_ticks, ignore_size)
+        logger.debug("Req Tick-by-Tick %s %s %s %s", contract, tick_type, number_of_ticks, ignore_size)
 
     def set_server_loglevel(self, log_level: int = 2):
         """!
@@ -881,82 +793,3 @@ class TwsApiClient(TwsThreadMngr):
         @return
         """
         self.setServerLogLevel(log_level)
-
-    # ==============================================================================================
-    #
-    # Internal Helper Functions
-    #
-    # ==============================================================================================
-    def _data_wait(self, timestamp, sleep_time):
-        time_diff = datetime.datetime.now() - timestamp
-
-        # FIXME: Why is this a loop?
-        while time_diff.total_seconds() < sleep_time:
-
-            logger.debug6("Now: %s", datetime.datetime.now())
-            logger.debug6("Last Request: %s", timestamp)
-            logger.debug6("Time Difference: %s seconds", time_diff.total_seconds())
-            remaining_sleep_time = sleep_time - time_diff.total_seconds()
-            logger.debug6("Sleep Time: %s", remaining_sleep_time)
-            sleep(sleep_time - time_diff.total_seconds())
-            time_diff = datetime.datetime.now() - timestamp
-
-    def _historical_data_wait(self):
-        """!
-        Ensure that we wait between historical data requests.
-
-        @param self
-
-        @return
-        """
-        self._data_wait(self.__historical_data_req_timestamp, HISTORICAL_DATA_SLEEP_TIME)
-
-    def _req_tick_by_tick_data(self, contract: Contract,
-                              tick_type: str,
-                              number_of_ticks: int,
-                              ignore_size: bool):
-        self.req_id += 1
-        self._historical_data_wait()
-
-        self.reqTickByTickData(self.req_id, contract, tick_type, number_of_ticks, ignore_size)
-        self.__historical_data_req_timestamp = datetime.datetime.now()
-        logger.debug("End Function")
-        return self.req_id
-
-    def _small_bar_data_wait(self):
-        """!
-        Ensure that we wait between historical data requests.
-
-        @param self
-
-        @return
-        """
-        self._data_wait(self.__small_bar_data_req_timestamp, SMALL_BAR_SLEEP_TIME)
-
-    def _contract_details_data_wait(self):
-        """!
-        Ensure that we wait between historical data requests.
-
-        @param self
-
-        @return
-        """
-        self._data_wait(self.__contract_details_data_req_timestamp, CONTRACT_DETAILS_SLEEP_TIME)
-
-    def _calculate_deep_data_allotment(self):
-        """!
-        Caclulates the allowed dep data requests available.
-        """
-        min_allotment = 3
-        max_allotment = 60
-
-        basic_allotment = self.__available_market_data_lines % 100
-
-        if basic_allotment < min_allotment:
-            self.__available_deep_data_allotment = min_allotment
-        elif basic_allotment > max_allotment:
-            self.__available_deep_data_allotment = max_allotment
-        else:
-            self.__available_deep_data_allotment = basic_allotment
-
-        logger.debug("Deep Data Allotment: %s", self.__available_deep_data_allotment)

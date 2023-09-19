@@ -27,14 +27,13 @@ Provides the mysql/mariadb database client
 # System Libraries
 import pymysql
 
-# 3rd Party Libraries
-
 # Application Libraries
 # System Library Overrides
 from pytrader.libs.system import logging
-
 # Other Application Libraries
 from pytrader.libs.utilities import config
+
+# 3rd Party Libraries
 
 # ==================================================================================================
 #
@@ -62,13 +61,13 @@ class MySQLDatabase():
     """
 
     def __init__(self, *args, **kwargs):
-        conf = config.Config()
-        conf.read_config()
+        self.conf = config.Config()
+        self.conf.read_config()
 
-        self.host = conf.database_host
-        self.user = conf.database_username
-        self.password = conf.database_password
-        self.database_name = conf.database_name
+        self.host = self.conf.database_host
+        self.user = self.conf.database_username
+        self.password = self.conf.database_password
+        self.database_name = self.conf.database_name
 
         try:
             mydb = pymysql.connect(host=self.host,
@@ -90,12 +89,14 @@ class MySQLDatabase():
         try:
             row = self.mycursor.execute(sql)
             logger.debug("Row: %s", row)
+            return True
         except pymysql.Error as e:
             logger.error("Check Database's Existance Failed: %s", e)
+            return False
 
-    def check_table_exists(self):
+    def check_table_exists(self, table_name):
         logger.debug("Begin Function")
-        sql = "SELECT * FROM information_schema.tables Where table_name = '" + self.table_name + "'"
+        sql = "SELECT * FROM information_schema.tables Where table_name = '" + table_name + "'"
         logger.debug("SQL: %s", sql)
         try:
             row = self.mycursor.execute(sql)
@@ -103,11 +104,14 @@ class MySQLDatabase():
         except pymysql.Error as e:
             logger.error("Check Table's Existance Failed: %s", e)
 
-    def create_database(self):
-        sql = "CREATE TABLE IF NOT EXISTS " + self.table_name
+    def create_database(self, table_name: str):
+        sql = "CREATE TABLE IF NOT EXISTS " + table_name
         logger.debug("Create Database SQL: %s", sql)
 
         try:
             self.mycursor.execute(sql)
         except pymysql.Error as e:
             logger.error("Connection Error: %s", e)
+
+    def substitute_list(self, values: list) -> str:
+        return ", ".join(list(map(lambda x: '%s', values)))

@@ -1,12 +1,9 @@
 """!
-@package pytrader.libs.clients.broker
-Creates a basic interface for interacting with a broker
+@package pytrader.libs.clients.database.mysql.ibkr.contract_universe
 
-@file pytrader/libs/clients/broker/__init__.py
+Interface to the 'z_ibkr_contract_listing' table.
 
-Creates a basic interface for interacting with a broker
-
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -23,13 +20,22 @@ Creates a basic interface for interacting with a broker
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""
-# System Libraries
-import threading
 
+@file pytrader/libs/clients/database/mysql/ibkr/contract_universe.py
+"""
+from datetime import date
+from typing import Optional
+
+# System Libraries
+import pymysql
+
+# Other Application Libraries
+from pytrader.libs.clients.database.mysql.ibkr import base
 # Application Libraries
-from pytrader.libs.clients.broker.ibkr.tws.reader import TwsReader
+# System Library Overrides
 from pytrader.libs.system import logging
+
+# 3rd Party Libraries
 
 # ==================================================================================================
 #
@@ -45,32 +51,33 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class TwsThreadMngr(TwsReader):
+class IbkrContractUniverse(base.IbkrBase):
     """!
-    Manages the thread for the TWS API Client.
+    Works with the 'z_ibkr_contract_listing' table.
     """
+    table_name = "z_ibkr_contract_listing"
+    insert_column_names = [
+        "long_id", "ib_symbol", "product_description", "symbol", "currency", "asset_class",
+        "exchange"
+    ]
+    update_column_names = insert_column_names + ["last_seen"]
 
-    def __init__(self):
-        super().__init__()
-        self.api_thread = threading.Thread(target=self.run, daemon=True)
-
-    def start(self) -> None:
+    def max_date(self) -> date | None:
         """!
-        Starts the api thread.
+        Returns the max date in the database.
 
-        @param thread_queue: The thread message passing queue.
-
-        @return None
+        @return date | None
         """
-        self.api_thread.start()
+        sql = (f"SELECT MAX(`last_seen`) AS `max_date`\n"
+               f"FROM {self.table_name}")
 
-    def stop(self) -> None:
-        """!
-        Stops the api thread.
-
-        @return None.
-        """
+        logger.debug("\nSQL\n%s", sql)
         try:
-            self.api_thread.join()
-        except AttributeError as msg:
-            logger.error("AttributeError Stopping TwsApiClient Thread: %s", msg)
+            self.mycursor.execute(sql)
+            data = self.mycursor.fetchone()
+            logger.debug("Table Rows: %s", data)
+            return data["max_date"]
+
+        except pymysql.Error as msg:
+            logger.error("Error: %s", msg)
+            return None

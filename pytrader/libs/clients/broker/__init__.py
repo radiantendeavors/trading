@@ -25,19 +25,12 @@ Creates a basic interface for interacting with a broker
 
 """
 # System Libraries
-import threading
-
 from multiprocessing import Queue
 
 # 3rd Party Libraries
 
 # Application Libraries
-# System Library Overrides
 from pytrader.libs.system import logging
-
-# Other Application Libraries
-
-# Conditional Libraries
 
 # ==================================================================================================
 #
@@ -64,11 +57,11 @@ class BrokerClient():
         self.cmd_queue = cmd_queue
         self.data_queue = data_queue
 
-    def connect(self, address: str, client_id: int):
+    def connect(self, address: str):
         """!
         Connects to the broker client.
         """
-        self.brokerclient.connect(address, client_id=client_id)
+        self.brokerclient.connect(address)
         self.brokerclient.start()
 
     def run(self) -> None:
@@ -80,10 +73,25 @@ class BrokerClient():
         broker_connection = True
         while broker_connection:
             cmd = self.cmd_queue.get()
-            strategy_id = list(cmd)[0]
+            commander_id = list(cmd)[0]
 
-            self._process_commands(cmd[strategy_id], strategy_id)
+            self._process_commands(cmd[commander_id], commander_id)
             broker_connection = self.brokerclient.is_connected()
+
+    def set_broker_observers(self, broker: str) -> None:
+        self.brokerclient.set_broker_observers(broker)
+
+    def set_downloader(self) -> None:
+        """!
+        Sets the downloader observers.
+        """
+        self.brokerclient.set_downloader_observers()
+
+    def set_main(self) -> None:
+        """!
+        Sets the downloader observers.
+        """
+        self.brokerclient.set_main_observers()
 
     def set_strategies(self, strategy_list: list) -> None:
         """!
@@ -94,7 +102,7 @@ class BrokerClient():
         @return None
         """
         self.strategies = strategy_list
-        self.brokerclient.set_strategies(strategy_list)
+        self.brokerclient.set_strategy_observers(strategy_list)
 
     def _cancel_order(self, order_id: int) -> None:
         """!
@@ -135,20 +143,29 @@ class BrokerClient():
 
     def _req_cmd(self, subcommand: dict, strategy_id: str):
         logger.debug4("Request Command: %s", subcommand)
-        if subcommand == "bar_history":
-            self.brokerclient.request_bar_history()
-        elif subcommand == "option_details":
-            self.brokerclient.request_option_details(strategy_id)
-        elif subcommand == "real_time_bars":
-            self.brokerclient.request_real_time_bars(strategy_id)
-        elif subcommand == "real_time_market_data":
-            self.brokerclient.request_market_data(strategy_id)
-        # elif subcommand == "tick_by_tick_data":
-        #     self._request_tick_by_tick_data()
-        elif subcommand == "global_cancel":
-            self.brokerclient.request_global_cancel()
-        else:
-            logger.error("Command Not Implemented: %s", subcommand)
+
+        command = list(subcommand)[0]
+
+        match command:
+            case "bar_history":
+                self.brokerclient.request_bar_history()
+            case "contract_details":
+                self.brokerclient.request_contract_details(subcommand[command])
+            case "history_begin_date":
+                self.brokerclient.request_history_begin_date(subcommand[command])
+            case "option_details":
+                self.brokerclient.request_option_details(strategy_id)
+            case "real_time_bars":
+                self.brokerclient.request_real_time_bars(strategy_id)
+            case "real_time_market_data":
+                self.brokerclient.request_market_data(strategy_id)
+            case "tick_by_tick_data":
+                logger.warning("Tick By Tick Data Not Implemented")
+                # self._request_tick_by_tick_data()
+            case "global_cancel":
+                self.brokerclient.request_global_cancel()
+            case _:
+                logger.error("Command Not Implemented: %s", subcommand)
 
     # def _request_tick_by_tick_data(self):
     #     for key in list(self.contracts):

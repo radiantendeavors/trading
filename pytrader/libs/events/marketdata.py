@@ -1,12 +1,8 @@
-"""!
-@package pytrader.libs.clients.broker
-Creates a basic interface for interacting with a broker
+"""!@package pytrader.libs.events.bars
 
-@file pytrader/libs/clients/broker/__init__.py
+Provides Observers of Bar Data
 
-Creates a basic interface for interacting with a broker
-
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -23,12 +19,14 @@ Creates a basic interface for interacting with a broker
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+@file pytrader/libs/events/bars.py
 """
 # System Libraries
-import threading
+from abc import ABC, abstractmethod
+from typing import List
 
 # Application Libraries
-from pytrader.libs.clients.broker.ibkr.tws.reader import TwsReader
+from pytrader.libs.events.base import Observer, Subject
 from pytrader.libs.system import logging
 
 # ==================================================================================================
@@ -45,32 +43,37 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class TwsThreadMngr(TwsReader):
-    """!
-    Manages the thread for the TWS API Client.
-    """
+class MarketData(Subject):
+
+    _observers: list[Observer] = []
+    contracts = {}
+    ticker = None
+    market_data = {}
+    rtmd_ids = {}
 
     def __init__(self):
-        super().__init__()
-        self.api_thread = threading.Thread(target=self.run, daemon=True)
+        self.tickers = []
+        self.brokerclient = None
 
-    def start(self) -> None:
-        """!
-        Starts the api thread.
+    def add_tickers(self, tickers: list, contracts: dict):
+        for ticker in tickers:
+            if ticker not in self.tickers:
+                self.tickers.append(ticker)
 
-        @param thread_queue: The thread message passing queue.
+        for ticker, contract_ in contracts.items():
+            if ticker not in list(self.contracts):
+                self.contracts[ticker] = contract_
 
-        @return None
-        """
-        self.api_thread.start()
+    def attach(self, observer: Observer, brokerclient):
+        self.brokerclient = brokerclient
+        if observer not in self._observers:
+            self._observers.append(observer)
 
-    def stop(self) -> None:
-        """!
-        Stops the api thread.
+    def detach(self, observer):
+        if observer in self._observers:
+            self._observers.remove(observer)
 
-        @return None.
-        """
-        try:
-            self.api_thread.join()
-        except AttributeError as msg:
-            logger.error("AttributeError Stopping TwsApiClient Thread: %s", msg)
+    def notify(self, modifier=None):
+        for observer in self._observers:
+            if modifier != observer:
+                observer.update(self)

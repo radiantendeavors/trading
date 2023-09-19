@@ -23,23 +23,16 @@ The main user interface for the trading program.
 """
 # System Libraries
 import datetime
-import threading
-
-from time import sleep
 
 # 3rd Party Libraries
 from ibapi.contract import Contract
 from ibapi.order import Order
 
 # Application Libraries
-# System Library Overrides
+from pytrader.libs.events import (BarData, ContractData,
+                                  ContractHistoryBeginDate, MarketData,
+                                  OrderData, OrderIdData, RealTimeBarData)
 from pytrader.libs.system import logging
-
-# Other Application Libraries
-from pytrader.libs.events import (BarData, ContractData, MarketData, OptionData, OrderData,
-                                  RealTimeBarData)
-
-# Conditional Libraries
 
 # ==================================================================================================
 #
@@ -133,20 +126,19 @@ class BrokerBarData(BarData):
 
 class BrokerContractData(ContractData):
 
-    def request_contract_data(self, ticker, contract_):
-        if ticker not in list(self.contracts):
-            logger.debug("Requesting Contract Details for contract: %s", ticker)
-            req_id = self.brokerclient.req_contract_details(contract_)
-            self.tickers.append(ticker)
-            self.contract_ids[req_id] = ticker
-            self.contracts[ticker] = None
+    def set_contract_details(self, req_id: int, contract_details):
+        self.contract = contract_details
+        self.notify()
 
-    def set_contract_details(self, contract_details: dict):
-        req_id = list(contract_details)[0]
-        details = contract_details[req_id]
-        ticker = details.contract.localSymbol
-        self.contracts[ticker] = details.contract
-        logger.debug("Contracts: %s", self.contracts)
+
+class BrokerContractHistoryBeginDate(ContractHistoryBeginDate):
+    pass
+    # def set_history_begin_date(self, req_id: int, history_begin_date: str):
+    #     self.req_id = req_id
+    #     self.history_begin_date[req_id] = history_begin_date
+    #     logger.debug(self.history_begin_ids)
+    #     logger.debug(self.history_begin_date)
+    #     self.notify()
 
 
 class BrokerMarketData(MarketData):
@@ -163,16 +155,6 @@ class BrokerMarketData(MarketData):
         self.ticker = self.rtmd_ids[req_id]
         self.market_data = market_data[req_id]
         self.notify()
-
-
-class BrokerOptionData(OptionData):
-
-    def request_option_details(self):
-        for ticker, contract_ in self.contracts.items():
-            logger.debug2("Requesting Option Details for Ticker: %s", ticker)
-            req_id = self.brokerclient.req_sec_def_opt_params(contract_)
-            option_details = self.brokerclient.get_data(req_id)
-            self.option_details[ticker] = option_details
 
 
 class BrokerOrderData(OrderData):
@@ -201,6 +183,13 @@ class BrokerOrderData(OrderData):
             if self.order_id in self.valid_order_ids:
                 self.valid_order_ids.remove(self.order_id)
 
+        self.notify()
+
+
+class BrokerOrderIdData(OrderIdData):
+
+    def send_order_id(self, order_id: int):
+        self.order_id = order_id
         self.notify()
 
 

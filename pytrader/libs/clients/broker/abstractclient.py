@@ -24,18 +24,15 @@ Provides a baseline BrokerDataThread common to all brokers.
 @file pytrader/libs/clients/broker/abstractclient.py
 """
 # Standard libraries
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from queue import Queue
 from typing import Optional
 
 # 3rd Party libraries
+from ibapi.contract import Contract
 
-# System Library Overrides
+# Application Libraries
 from pytrader.libs.system import logging
-
-# Other Application Libraries
-
-# Conditional Libraries
 
 # ==================================================================================================
 #
@@ -50,11 +47,11 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class AbstractBrokerClient():
+class AbstractBrokerClient(ABC):
     """!
     Provides the Broker Data Response thread.
     """
-    __metaclass__ = ABCMeta
+    __next_order_id = 0
 
     def __init__(self, data_queue: dict) -> None:
         """!
@@ -63,22 +60,34 @@ class AbstractBrokerClient():
         ## Dictionary of Multiprocessing Data Queues
         self.data_queue = data_queue
 
-        ## Broker Thread Queue
-        self.queue = Queue()
-
-        ## Next Order Id
-        self.next_order_id = 0
-
         # Port number
         self.port = 0
+
+        # Internal Thread Queue
+        self.queue = Queue()
 
         self.connection_status = True
 
     @abstractmethod
-    def connect(self, address: str = "", port: Optional[int] = 0, client_id: Optional[int] = 0):
+    def connect(self, address: str = "", port: Optional[int] = 0):
         """!
         Connect to a broker client.
         """
+
+    def run(self):
+        """!
+        Provides the run loop for the data thread.
+
+        @return None
+        """
+        broker_connection = True
+        while broker_connection:
+            response_data = self.queue.get()
+            logger.debug9("Response Data: %s", response_data)
+            if response_data == "Disconnected":
+                broker_connection = False
+            else:
+                self._parse_data(response_data)
 
     @abstractmethod
     def start(self):
@@ -92,24 +101,22 @@ class AbstractBrokerClient():
         Stops the broker client thread.
         """
 
-    def run(self):
-        """!
-        Provides the run loop for the data thread.
-
-        @return None
-        """
-        broker_connection = True
-        while broker_connection:
-            response_data = self.queue.get()
-            if response_data == "Disconnected":
-                broker_connection = False
-            else:
-                self._parse_data(response_data)
-
     @abstractmethod
-    def calculate_implied_volatility(self):
+    def calculate_implied_volatility(self,
+                                     req_id: int,
+                                     contract: Contract,
+                                     option_price: float,
+                                     underlying_price: float,
+                                     implied_volatility_options: Optional[list] = None) -> None:
         """!
         Calculate the implied volatility of an option.
+        """
+
+    @abstractmethod
+    def calculate_option_price(self, req_id: int, contract: Contract, volatility: float,
+                               underlying_price: float) -> None:
+        """!
+        Calculates the Options Price
         """
 
     @abstractmethod
@@ -118,12 +125,7 @@ class AbstractBrokerClient():
         Creates an order from an order request.
         """
 
-    def is_connected(self):
-        """!
-        Returns the current connection status.
-
-        @return connection_status: True if connected, False if not connected
-        """
+    def is_connected(self) -> bool:
         return self.connection_status
 
     @abstractmethod
@@ -133,9 +135,21 @@ class AbstractBrokerClient():
         """
 
     @abstractmethod
+    def request_contract_details(self, contract: Contract):
+        """!
+        Abstract method to set the contracts.
+        """
+
+    @abstractmethod
     def request_global_cancel(self):
         """!
         Request to cancel all open orders.
+        """
+
+    @abstractmethod
+    def request_history_begin_date(self, contract: Contract):
+        """!
+        Requests the earliest date available for bar history.
         """
 
     @abstractmethod
@@ -170,13 +184,6 @@ class AbstractBrokerClient():
         @param market_data: The market data to send.
         """
 
-    def send_order_id(self):
-        """!
-        Sends the next order id to the strategy.
-        """
-        message = {"next_order_id": self.next_order_id}
-        self.data_queue["main"].put(message)
-
     @abstractmethod
     def send_order_status(self, order_status: dict):
         """!
@@ -202,9 +209,27 @@ class AbstractBrokerClient():
         """
 
     @abstractmethod
-    def set_contracts(self, contracts: dict, strategy_id: str):
+    def set_broker_observers(self, broker: str) -> None:
         """!
-        Abstract method to set the contracts.
+        Sets the brokers observers
+
+        @return None
+        """
+
+    @abstractmethod
+    def set_downloader_observers(self) -> None:
+        """!
+        Set's the downloader observers.
+
+        @return None
+        """
+
+    @abstractmethod
+    def set_strategy_observers(self, strategy_list: list) -> None:
+        """!
+        Set's the strategy observers.
+
+        @return None
         """
 
     # def send_ticks(self, contract: Contract, tick):
@@ -235,19 +260,8 @@ class AbstractBrokerClient():
         @return None
         """
 
-        if response_data.get("real_time_bars"):
-            self.send_real_time_bars(response_data["real_time_bars"])
-        elif response_data.get("market_data"):
-            self.send_market_data_ticks(response_data["market_data"])
-        elif response_data.get("next_order_id"):
+        if response_data.get("next_order_id"):
             # We really only want to update the order id the first time we receive it.  Afterwards,
             # we use our own tracking to ensure we do not make multiple orders with the same id.
-            if self.next_order_id == 0:
-                self.next_order_id = response_data["next_order_id"]
-                self.send_order_id()
-        elif response_data.get("order_status"):
-            self.send_order_status(response_data["order_status"])
-        elif response_data.get("contract_details"):
-            self.set_contract_details(response_data["contract_details"])
-        elif response_data.get("connection_closed"):
-            self.connection_status = False
+            if self.__next_order_id == 0:
+                self.__next_order_id = response_data["next_order_id"]

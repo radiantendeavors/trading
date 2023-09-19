@@ -1,10 +1,8 @@
 """!
-@package pytrader.libs.clients.broker
-Creates a basic interface for interacting with a broker
+@package pytrader.libs.clients.database.ibkr
 
-@file pytrader/libs/clients/broker/__init__.py
-
-Creates a basic interface for interacting with a broker
+Defines the database schema, and creates the database tables for Interactive Brokers related
+information.
 
 @author G. S. Derber
 @date 2022-2023
@@ -23,12 +21,15 @@ Creates a basic interface for interacting with a broker
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
+@file pytrader/libs/clients/database/ibkr.py
 """
 # System Libraries
-import threading
+
+# 3rd Party Libraries
+from sqlalchemy.orm import DeclarativeBase
 
 # Application Libraries
-from pytrader.libs.clients.broker.ibkr.tws.reader import TwsReader
 from pytrader.libs.system import logging
 
 # ==================================================================================================
@@ -36,8 +37,11 @@ from pytrader.libs.system import logging
 # Global Variables
 #
 # ==================================================================================================
-## The Base Logger
+## The base logger.
 logger = logging.getLogger(__name__)
+
+# bigint = Annotated(int, "bigint")
+# my_metadata = MetaData()
 
 
 # ==================================================================================================
@@ -45,32 +49,9 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class TwsThreadMngr(TwsReader):
-    """!
-    Manages the thread for the TWS API Client.
-    """
+class Base(DeclarativeBase):
+    # metadata = my_metadata
 
-    def __init__(self):
-        super().__init__()
-        self.api_thread = threading.Thread(target=self.run, daemon=True)
+    # type_annotation_map = {bigint: BigInteger()}
 
-    def start(self) -> None:
-        """!
-        Starts the api thread.
-
-        @param thread_queue: The thread message passing queue.
-
-        @return None
-        """
-        self.api_thread.start()
-
-    def stop(self) -> None:
-        """!
-        Stops the api thread.
-
-        @return None.
-        """
-        try:
-            self.api_thread.join()
-        except AttributeError as msg:
-            logger.error("AttributeError Stopping TwsApiClient Thread: %s", msg)
+    pass

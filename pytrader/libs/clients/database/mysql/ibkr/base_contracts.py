@@ -1,13 +1,11 @@
 """!
-@package pytrader.libs.clients.broker
-Creates a basic interface for interacting with a broker
+@package pytrader.libs.clients.mysql.etf_info
 
-@file pytrader/libs/clients/broker/__init__.py
+Provides the database client
 
-Creates a basic interface for interacting with a broker
-
-@author G. S. Derber
-@date 2022-2023
+@author Geoff S. derber
+@version HEAD
+@date 2022
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -23,21 +21,38 @@ Creates a basic interface for interacting with a broker
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""
-# System Libraries
-import threading
 
+@file pytrader/libs/clients/mysql/etf_info.py
+"""
+from datetime import date
+from typing import Optional
+
+# System Libraries
+import pymysql
+
+# Other Application Libraries
+from pytrader.libs.clients.database.mysql.ibkr.base import IbkrBase
 # Application Libraries
-from pytrader.libs.clients.broker.ibkr.tws.reader import TwsReader
+# System Library Overrides
 from pytrader.libs.system import logging
+from pytrader.libs.utilities import text
+
+# 3rd Party Libraries
 
 # ==================================================================================================
 #
 # Global Variables
 #
 # ==================================================================================================
-## The Base Logger
+"""!
+@var logger
+The base logger.
+
+@var colortext
+Allows Color text on the console
+"""
 logger = logging.getLogger(__name__)
+colortext = text.ConsoleText()
 
 
 # ==================================================================================================
@@ -45,32 +60,12 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class TwsThreadMngr(TwsReader):
-    """!
-    Manages the thread for the TWS API Client.
-    """
+class IbkrBaseContracts(IbkrBase):
 
-    def __init__(self):
-        super().__init__()
-        self.api_thread = threading.Thread(target=self.run, daemon=True)
+    table_name = None
 
-    def start(self) -> None:
-        """!
-        Starts the api thread.
-
-        @param thread_queue: The thread message passing queue.
-
-        @return None
-        """
-        self.api_thread.start()
-
-    def stop(self) -> None:
-        """!
-        Stops the api thread.
-
-        @return None.
-        """
-        try:
-            self.api_thread.join()
-        except AttributeError as msg:
-            logger.error("AttributeError Stopping TwsApiClient Thread: %s", msg)
+    # ==============================================================================================
+    #
+    # Private Functions
+    #
+    # ==============================================================================================

@@ -1,13 +1,11 @@
 """!
-@package pytrader.libs.clients.broker
-Creates a basic interface for interacting with a broker
+@package pytrader.libs.clients.database
 
-@file pytrader/libs/clients/broker/__init__.py
+Defines the database schema, and creates the database tables.
 
-Creates a basic interface for interacting with a broker
-
-@author G. S. Derber
-@date 2022-2023
+@author Geoff S. Derber
+@version HEAD
+@date 2022
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -23,13 +21,19 @@ Creates a basic interface for interacting with a broker
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
+@file pytrader/libs/clients/database/__init__.py
 """
 # System Libraries
-import threading
+
+# 3rd Party Libraries
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
 # Application Libraries
-from pytrader.libs.clients.broker.ibkr.tws.reader import TwsReader
+from pytrader.libs.clients.database.sqlalchemy import ibkr
 from pytrader.libs.system import logging
+from pytrader.libs.utilities import config
 
 # ==================================================================================================
 #
@@ -45,32 +49,21 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class TwsThreadMngr(TwsReader):
-    """!
-    Manages the thread for the TWS API Client.
-    """
+class Database(ibkr.IbkrDBTables):
 
     def __init__(self):
-        super().__init__()
-        self.api_thread = threading.Thread(target=self.run, daemon=True)
+        conf = config.Config()
+        conf.read_config()
+        self.database_url = conf.set_database_url()
 
-    def start(self) -> None:
-        """!
-        Starts the api thread.
+    def create_session(self) -> None:
+        if self.engine is None:
+            self.create_engine()
 
-        @param thread_queue: The thread message passing queue.
+        self.db_session = Session(self.engine)
+        # self.db_session.configure(bind=self.engine,
+        #                           autoflush=False,
+        #                           expire_on_commit=False)
 
-        @return None
-        """
-        self.api_thread.start()
-
-    def stop(self) -> None:
-        """!
-        Stops the api thread.
-
-        @return None.
-        """
-        try:
-            self.api_thread.join()
-        except AttributeError as msg:
-            logger.error("AttributeError Stopping TwsApiClient Thread: %s", msg)
+    def create_engine(self):
+        self.engine = create_engine(self.database_url)

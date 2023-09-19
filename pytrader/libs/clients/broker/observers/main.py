@@ -1,12 +1,9 @@
 """!
-@package pytrader.libs.clients.broker
-Creates a basic interface for interacting with a broker
+@package pytrader.libs.applications.broker.observers.downloader
 
-@file pytrader/libs/clients/broker/__init__.py
+Provides the observer classes for the DownloaderProcess
 
-Creates a basic interface for interacting with a broker
-
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -23,12 +20,15 @@ Creates a basic interface for interacting with a broker
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+@file pytrader/libs/applications/broker/observers/downloader.py
 """
 # System Libraries
-import threading
+
+# 3rd Party Libraries
 
 # Application Libraries
-from pytrader.libs.clients.broker.ibkr.tws.reader import TwsReader
+from pytrader.libs.clients.broker.observers.base import OrderIdObserver
+from pytrader.libs.events import Subject
 from pytrader.libs.system import logging
 
 # ==================================================================================================
@@ -45,32 +45,14 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class TwsThreadMngr(TwsReader):
+class MainOrderIdObserver(OrderIdObserver):
     """!
-    Manages the thread for the TWS API Client.
+    Observer for historical bar data.
     """
 
-    def __init__(self):
-        super().__init__()
-        self.api_thread = threading.Thread(target=self.run, daemon=True)
-
-    def start(self) -> None:
+    def update(self, subject: Subject) -> None:
         """!
-        Starts the api thread.
-
-        @param thread_queue: The thread message passing queue.
-
-        @return None
+        Saves the historical bar data to the database.
         """
-        self.api_thread.start()
-
-    def stop(self) -> None:
-        """!
-        Stops the api thread.
-
-        @return None.
-        """
-        try:
-            self.api_thread.join()
-        except AttributeError as msg:
-            logger.error("AttributeError Stopping TwsApiClient Thread: %s", msg)
+        msg = {"next_order_id": subject.order_id}
+        self.msg_queue.put(msg)

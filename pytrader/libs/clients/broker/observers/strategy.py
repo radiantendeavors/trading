@@ -1,7 +1,7 @@
 """!
-@package pytrader.libs.applications.broker.ibkr.tws.observers
+@package pytrader.libs.applications.broker.observers.strategy
 
-Provides the observer classes for Interactive Brokers TWS
+Provides the observer classes for the running strategies
 
 @author G S Derber
 @date 2022-2023
@@ -20,19 +20,22 @@ Provides the observer classes for Interactive Brokers TWS
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file pytrader/libs/applications/broker/ibkr/tws/observers.py
+@file pytrader/libs/applications/broker/observers/strategy.py
 """
 # System Libraries
-from multiprocessing import Queue
 
 # 3rd Party Libraries
 
+# Other Application Libraries
+from pytrader.libs.clients.broker.observers.base import (BarDataObserver,
+                                                         ContractDataObserver,
+                                                         MarketDataObserver,
+                                                         OrderDataObserver,
+                                                         RealTimeBarObserver)
+from pytrader.libs.events import Subject
 # Application Libraries
 # System Library Overrides
 from pytrader.libs.system import logging
-
-# Other Application Libraries
-from pytrader.libs.events import ContractData, Observer, Subject
 
 # Conditional Libraries
 
@@ -50,26 +53,9 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class BarDataObserver(Observer):
-    """!
-    Provides the bar data observer class.
-    """
-
-    def __init__(self, msg_queue: Queue):
-        self.ticker_bar_sizes = {}
-        self.msg_queue = msg_queue
-
-    def add_ticker_bar_sizes(self, tickers, bar_sizes):
-        for ticker in tickers:
-            if ticker not in list(self.ticker_bar_sizes):
-                self.ticker_bar_sizes[ticker] = {}
-
-            for bar_size in bar_sizes:
-                if bar_size not in list(self.ticker_bar_sizes[ticker]):
-                    self.ticker_bar_sizes[ticker][bar_size] = False
-
-
 class StrategyBarDataObserver(BarDataObserver):
+    """!
+    """
 
     def update(self, subject: Subject) -> None:
         for ticker, bar_sizes_dict in self.ticker_bar_sizes.items():
@@ -86,21 +72,6 @@ class StrategyBarDataObserver(BarDataObserver):
                         self.ticker_bar_sizes[ticker][bar_size] = True
 
 
-class ContractDataObserver(Observer):
-
-    def __init__(self, msg_queue: Queue):
-        self.tickers = []
-        self.msg_queue = msg_queue
-
-    def add_tickers(self, tickers: list):
-        for ticker in tickers:
-            if ticker not in self.tickers:
-                self.tickers.append(ticker)
-
-    def get_tickers(self):
-        return self.tickers
-
-
 class StrategyContractDataObserver(ContractDataObserver):
 
     def update(self, subject: Subject) -> None:
@@ -114,18 +85,6 @@ class StrategyContractDataObserver(ContractDataObserver):
             self.msg_queue.put(msg)
 
 
-class MarketDataObserver(Observer):
-
-    def __init__(self, msg_queue: Queue):
-        self.tickers = []
-        self.msg_queue = msg_queue
-
-    def add_tickers(self, tickers):
-        for ticker in tickers:
-            if ticker not in self.tickers:
-                self.tickers.append(ticker)
-
-
 class StrategyMarketDataObserver(MarketDataObserver):
 
     def update(self, subject: Subject) -> None:
@@ -135,43 +94,6 @@ class StrategyMarketDataObserver(MarketDataObserver):
                 self.msg_queue.put(message)
 
 
-class OptionDataObserver(Observer):
-
-    def __init__(self, msg_queue: Queue):
-        self.tickers = []
-        self.msg_queue = msg_queue
-
-    def add_tickers(self, tickers):
-        for ticker in tickers:
-            if ticker not in self.tickers:
-                self.tickers.append(ticker)
-
-
-class StrategyOptionDataObserver(OptionDataObserver):
-
-    def update(self, subject: Subject) -> None:
-        if len(self.tickers) > 0:
-            for ticker in self.tickers:
-                message = {
-                    "option_details": {
-                        "ticker": ticker,
-                        "details": subject.option_details[ticker]
-                    }
-                }
-                self.msg_queue.put(message)
-
-
-class OrderDataObserver(Observer):
-
-    def __init__(self, msg_queue: Queue):
-        self.order_ids = []
-        self.msg_queue = msg_queue
-
-    def add_order_id(self, order_id):
-        if order_id not in self.order_ids:
-            self.order_ids.append(order_id)
-
-
 class StrategyOrderDataObserver(OrderDataObserver):
 
     def update(self, subject: Subject) -> None:
@@ -179,18 +101,6 @@ class StrategyOrderDataObserver(OrderDataObserver):
             if subject.order_id in self.order_ids:
                 message = {"order_status": subject.order_status}
                 self.msg_queue.put(message)
-
-
-class RealTimeBarObserver(Observer):
-
-    def __init__(self, msg_queue: Queue):
-        self.tickers = []
-        self.msg_queue = msg_queue
-
-    def add_tickers(self, tickers):
-        for ticker in tickers:
-            if ticker not in self.tickers:
-                self.tickers.append(ticker)
 
 
 class StrategyRealTimeBarObserver(RealTimeBarObserver):
