@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
-"""!@package pytrader.ui.pytrdatabase
+"""!@package pytrader.libs.applications.database
 
-The user interface for managing the databases
+Manages the Database.
 
 @author G S Derber
 @version HEAD
@@ -21,7 +20,7 @@ The user interface for managing the databases
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file pytrader/ui/pytrdatabase.py
+@file pytrader/libs/applications/database/__init__.py
 
 """
 # ==================================================================================================
@@ -33,22 +32,17 @@ The user interface for managing the databases
 
 # 3rd Party libraries
 
-# System Library Overrides
+# Application Libraries
 from pytrader.libs.clients.database.sqlalchemy import Database
 from pytrader.libs.clients.database.mysql import MySQLDatabase
 from pytrader.libs.system import logging
-
-# Application Libraries
 
 # ==================================================================================================
 #
 # Global Variables
 #
 # ==================================================================================================
-"""!
-@var logger
-The base logger.
-"""
+## The base logger.
 logger = logging.getLogger(__name__)
 
 
@@ -66,13 +60,13 @@ class DatabaseManager():
     def initialize_database(self) -> None:
         """!
         Initializes the database."""
-        db = Database()
-        db.create_engine()
-        db.create_session()
-        db.create_tables()
+        database = Database()
+        database.create_engine()
+        database.create_session()
+        database.create_tables()
         logger.debug("Initialization Complete!")
 
-    def check_database_status(self):
+    def check_database_status(self) -> None:
         """!
         Checks and updates the database status.
 
@@ -81,9 +75,9 @@ class DatabaseManager():
           - REQUIRESUPGRADE
           - GOOD
         """
-        db = MySQLDatabase()
+        database = MySQLDatabase()
 
-        status = db.check_database_exists()
+        status = database.check_database_exists()
 
         if not status:
             self.database_status = "NOTEXIST"
@@ -92,7 +86,12 @@ class DatabaseManager():
 
         self.database_status = "NOTEXIST"
 
-    def run(self):
+    def run(self) -> None:
+        """!
+        Runs the database process.
+
+        @return None
+        """
         self.check_database_status()
 
         match self.database_status:
@@ -106,17 +105,10 @@ class DatabaseManager():
                 logger.error("Something didn't work!")
 
     def upgrade_database(self):
+        """!
+        Upgrades the database schema.
+        """
         logger.debug10("Begin Function")
-        # info = stock_info.StockInfo()
-        # new_info = ibkr_stock_info.IbkrStockInfo()
-        # where = "`ibkr_contract_id` IS NOT NULL"
-        # securities = info.select(where_clause=where)
-
-        # for item in securities:
-        #     new_info.insert(item['id'], item['ticker'], item['ibkr_contract_id'],
-        #                     item['ibkr_primary_exchange'], item['ibkr_exchange'],
-        #                     item['ipo_date'])
-
         logger.debug10("End Function")
 
 # ==================================================================================================
