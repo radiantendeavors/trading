@@ -70,13 +70,11 @@ class MySQLDatabase():
         self.database_name = self.conf.database_name
 
         try:
-            mydb = pymysql.connect(host=self.host,
-                                   user=self.user,
-                                   password=self.password,
-                                   database=self.database_name,
-                                   cursorclass=pymysql.cursors.DictCursor)
-            logger.debug("MyDB: %s", mydb)
-            self.mydb = mydb
+            self.mydb = pymysql.connect(host=self.host,
+                                        user=self.user,
+                                        password=self.password,
+                                        database=self.database_name,
+                                        cursorclass=pymysql.cursors.DictCursor)
             self.mycursor = self.mydb.cursor()
             return None
         except pymysql.Error as e:
