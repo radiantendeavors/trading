@@ -75,7 +75,6 @@ class IbkrBase(mysql.MySQLDatabase):
         if criteria:
             x = 0
             for col_name, values in criteria.items():
-                logger.debug("Values: %s", values)
                 value_string = self.substitute_list(values)
                 if x == 0:
                     sql += f"\nWHERE `{col_name}` IN ({value_string})"
@@ -83,9 +82,6 @@ class IbkrBase(mysql.MySQLDatabase):
                     # TODO: Determine how to add additional criteria.
                     sql += ""
                 sql_input += values
-
-        logger.debug2("SQL: %s", sql)
-
         self._execute(sql, sql_input)
         return self.mycursor.fetchall()
 
@@ -113,8 +109,7 @@ class IbkrBase(mysql.MySQLDatabase):
     # ==============================================================================================
     def _execute(self, sql: str, values: Optional[list] = None) -> None:
         query_type = sql.split(" ")[0]
-        logger.debug("\nSQL\n%s", sql)
-        logger.debug("Values: %s", values)
+        logger.debug("\nSQL\n%s Values: %s", sql, values)
         try:
             if values:
                 self.mycursor.execute(sql, values)
