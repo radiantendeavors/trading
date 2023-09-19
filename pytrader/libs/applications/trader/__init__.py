@@ -31,8 +31,6 @@ from pytrader.libs.applications import broker, downloader, strategy
 from pytrader.libs.system import logging
 from pytrader.libs.utilities.exceptions import BrokerNotAvailable
 
-# 3rd Party libraries
-
 # ==================================================================================================
 #
 # Global Variables
@@ -64,7 +62,7 @@ class ProcessManager():
         """!
         Initializes the Process Manager Class
 
-        @param args: Command Line Arguements
+        @param args: Command Line Arguments
 
         @return None
         """
@@ -121,6 +119,8 @@ class ProcessManager():
                 message = self.reply_queue["main"].get()
                 if message.get("next_order_id"):
                     next_order_id = message["next_order_id"]
+
+            logger.debug("Next Order Id: %s", next_order_id)
 
             self._run_downloader_process()
 
