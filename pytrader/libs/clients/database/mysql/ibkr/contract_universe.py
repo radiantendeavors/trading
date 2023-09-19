@@ -71,11 +71,9 @@ class IbkrContractUniverse(base.IbkrBase):
         sql = (f"SELECT MAX(`last_seen`) AS `max_date`\n"
                f"FROM {self.table_name}")
 
-        logger.debug("\nSQL\n%s", sql)
         try:
-            self.mycursor.execute(sql)
+            self._execute(sql)
             data = self.mycursor.fetchone()
-            logger.debug("Table Rows: %s", data)
             return data["max_date"]
 
         except pymysql.Error as msg:

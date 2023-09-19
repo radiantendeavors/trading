@@ -476,6 +476,8 @@ class TwsReader(EWrapper, EClient, BaseBroker):
 
         @return None
         """
+        logger.debug("Client Id: %s", self.clientId)
+        logger.debug(self.contract_history_begin_subjects)
         self.contract_history_begin_subjects.set_history_begin_date(reqId, headTimestamp)
 
     @iswrapper

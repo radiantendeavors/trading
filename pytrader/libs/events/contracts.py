@@ -65,6 +65,9 @@ class ContractData(Subject):
 
 
 class ContractHistoryBeginDate(Subject):
+    """!
+    Used for updating History Begin Date information for contracts.
+    """
     _observers: List[Observer] = []
     history_begin_ids = {}
     history_begin_date = {}
@@ -73,18 +76,19 @@ class ContractHistoryBeginDate(Subject):
     def __repr__(self) -> str:
         class_name = type(self).__name__
 
-        msg_ids = "    Ids:\n"
-        dates = "    Dates:\n"
+        msg_ids = "  Ids:\n"
+        dates = "  Dates:\n"
 
         for key, value in self.history_begin_ids.items():
-            msg_ids += f"        {key}: {value}\n"
+            msg_ids += f"    {key}: {value}\n"
 
         for key, value in self.history_begin_date.items():
-            dates += f"        {key}: {value}\n"
+            dates += f"    {key}: {value}\n"
         message = (f"\n{class_name}(Subject):(\n"
-                   f"Observers: {self._observers}\n"
+                   f"  Observers: {self._observers}\n"
                    f"{msg_ids}"
-                   f"{dates})")
+                   f"{dates}"
+                   f"  Req Id: {self.req_id}\n)")
         return message
 
     def add_ticker(self, req_id: int, ticker: str) -> None:
@@ -96,8 +100,7 @@ class ContractHistoryBeginDate(Subject):
 
         @return None
         """
-        if req_id not in list(self.history_begin_ids):
-            self.history_begin_ids[req_id] = ticker
+        self.history_begin_ids[req_id] = ticker
 
     def attach(self, observer: Observer) -> None:
         if observer not in self._observers:
@@ -116,6 +119,5 @@ class ContractHistoryBeginDate(Subject):
     def set_history_begin_date(self, req_id: int, history_begin_date: str):
         self.req_id = req_id
         self.history_begin_date[req_id] = history_begin_date
-        logger.debug(self.history_begin_ids)
-        logger.debug(self.history_begin_date)
+        logger.debug(self)
         self.notify()

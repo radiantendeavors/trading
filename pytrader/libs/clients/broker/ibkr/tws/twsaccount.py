@@ -176,9 +176,6 @@ class TwsAccountClient(AbstractBrokerClient):
 
     def request_history_begin_date(self, contract: Contract) -> None:
         self.req_id += 1
-        self.brokerclient.contract_history_begin_subjects.add_ticker(self.req_id,
-                                                                     contract.localSymbol)
-        logger.debug(self.brokerclient.contract_history_begin_subjects)
         self.brokerclient.req_head_timestamp(self.req_id, contract)
 
     def request_option_details(self, strategy_id):
