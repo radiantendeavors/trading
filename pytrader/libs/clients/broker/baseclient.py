@@ -105,8 +105,8 @@ class BaseBroker():
         @return None
         """
         # Add Bar Observers
-        self.bar_observers["downloader"] = DownloaderBarDataObserver(self.data_queue["downloader"])
-        self.bar_subjects.attach(self.bar_observers["downloader"])
+        # self.bar_observers["downloader"] =DownloaderBarDataObserver(self.data_queue["downloader"])
+        # self.bar_subjects.attach(self.bar_observers["downloader"])
 
         # Add Contract Observers
         self.contract_observers["downloader"] = DownloaderContractDataObserver(
