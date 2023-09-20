@@ -19,24 +19,27 @@
 #include "twsapi/source/cppclient/client/EWrapper.h"
 #include "twsapi/source/cppclient/client/EClientSocket.h"
 
-template<class ItemType>
+// #include "EReader.h"
+// #include "EReaderOSSignal.h"
+// #include "EWrapper.h"
+// #include "EClientSocket.h"
+
 /***************************************************************************************************
  *
- * @class BrokerClient brokerclient.hpp "brokerclient/brokerclient.hpp"
+ * @class BrokerClient
  *
  * @param host
  * @param port
  * @param clientID
  *
  **************************************************************************************************/
-class BrokerClient : public EWrapper, public EClientSocket {
-
+class TwsApiClient : public EWrapper, public EClientSocket {
 
 public:
-  BrokerClient(const char* host, int port, int clientId = 0);
-  ~BrokerClient();
+  TwsApiClient(const char *host, int port, int clientId = 0);
+  ~TwsApiClient();
 
-  EReader* reader;
+  EReader *reader;
   EReaderOSSignal signal;
 
   // Event handling functions
@@ -73,7 +76,7 @@ public:
    * @param currency the currency on which the value is expressed
    *
    ************************************************************************************************/
-  void acountSummary(int reqId,
+  void accountSummary(int reqId,
                      const std::string& account,
                      const std::string& tag,
                      const std::string& value,
@@ -150,7 +153,7 @@ public:
    *
    * commissionReport
    *
-   * 
+   *
    *
    * @param commissionReport
    *
@@ -508,7 +511,7 @@ public:
    *
    ************************************************************************************************/
   void managedAccounts(const std::string& accountsList) {
-    std::cout << "Account List: " << std::endl;
+    std::cout << "Account List: " << accountsList << std::endl;
   }
 
   /*************************************************************************************************
@@ -579,7 +582,7 @@ public:
    *
    ************************************************************************************************/
   void nextValidId(OrderId orderId) {
-    std::cout << "Next Valid ID: " << std::endl;
+    std::cout << "Next Valid ID: " << orderId << std::endl;
   }
 
   /*************************************************************************************************
@@ -1372,48 +1375,48 @@ public:
     std::cout << "Request Id: " << reqId << std::endl;
   }
 
-  void pnlOperation();
-  void pnlSingleOperation();
-	void tickDataOperation();
-	void tickOptionComputationOperation();
-	void delayedTickDataOperation();
-	void marketDepthOperations();
-	void realTimeBars();
-	void marketDataType();
-	void historicalDataRequests();
-	void optionsOperations();
-	void accountOperations();
-	void orderOperations();
-	void ocaSamples();
-	void conditionSamples();
-	void bracketSample();
-	void hedgeSample();
-	void contractOperations();
-	void marketScanners();
-	void fundamentals();
-	void bulletins();
-	void testAlgoSamples();
-	void financialAdvisorOrderSamples();
-	void financialAdvisorOperations();
-	void testDisplayGroups();
-	void miscelaneous();
-	void reqFamilyCodes();
-	void reqMatchingSymbols();
-	void reqMktDepthExchanges();
-	void reqNewsTicks();
-	void reqSmartComponents();
-	void reqNewsProviders();
-	void reqNewsArticle();
-	void reqHistoricalNews();
-	void reqHeadTimestamp();
-	void reqHistogramData();
-	void rerouteCFDOperations();
-	void marketRuleOperations();
-	void continuousFuturesOperations();
-  void reqHistoricalTicks();
-  void reqTickByTickData();
-	void whatIfSamples();
-	void reqCurrentTime();
+  // void pnlOperation();
+  // void pnlSingleOperation();
+  // void tickDataOperation();
+  // void tickOptionComputationOperation();
+  // void delayedTickDataOperation();
+  // void marketDepthOperations();
+  // void realTimeBars();
+  // void marketDataType();
+  // void historicalDataRequests();
+  // void optionsOperations();
+  // void accountOperations();
+  // void orderOperations();
+  // void ocaSamples();
+  // void conditionSamples();
+  // void bracketSample();
+  // void hedgeSample();
+  // void contractOperations();
+  // void marketScanners();
+  // void fundamentals();
+  // void bulletins();
+  // void testAlgoSamples();
+  // void financialAdvisorOrderSamples();
+  // void financialAdvisorOperations();
+  // void testDisplayGroups();
+  // void miscelaneous();
+  // void reqFamilyCodes();
+  // void reqMatchingSymbols();
+  // void reqMktDepthExchanges();
+  // void reqNewsTicks();
+  // void reqSmartComponents();
+  // void reqNewsProviders();
+  // void reqNewsArticle();
+  // void reqHistoricalNews();
+  // void reqHeadTimestamp();
+  // void reqHistogramData();
+  // void rerouteCFDOperations();
+  // void marketRuleOperations();
+  // void continuousFuturesOperations();
+  // void reqHistoricalTicks();
+  // void reqTickByTickData();
+  // void whatIfSamples();
+  // void reqCurrentTime();
 };
 
 #endif // BROKER_CLIENT_H

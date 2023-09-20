@@ -1,1 +1,1 @@
-add_library(broker brokerclient.hpp brokerclient.cpp)
+add_subdirectory(ibkr)

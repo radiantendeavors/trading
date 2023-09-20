@@ -2,8 +2,7 @@ add_subdirectory(version)
 add_subdirectory(clients)
 
 add_executable(trader trader.cpp)
-
-target_link_libraries(${PROJECT_NAME} PUBLIC clients)
+target_link_libraries(trader PUBLIC ibkr)
 
 
 target_include_directories(${PROJECT_NAME} PUBLIC

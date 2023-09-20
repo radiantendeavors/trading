@@ -8,11 +8,8 @@
  *
  * This file is part of trader.
  *
- * @author G Derber
- * @version HEAD
- * @date 2022
- * @author G Derber <gd.github@radiantendeavors.com>
- *
+ * @author G S Derber
+ * @date 2022-2023
  * @copyright GNU Affero General Public License
  *
  * This program is free software; you can redistribute and/or modify it under the terms of the
@@ -29,37 +26,53 @@
 // C++ standard library headers
 #include <iostream>
 
-// TWS API Specific Headers
+// 3rd Party Headers
+#include "argparse/include/argparse/argparse.hpp"
 
 // Local Headers
+
+#include "clients/broker/ibkr/tws/ibkrclient.hpp"
 #include "version/version.hpp"
-#include "clients/broker/ibkrclient.hpp"
 
 /**************************************************************************************************
  *
  * main
  *
- * @param argc Provides number of arguments.
- * @param argv Provides the actual arguments.
+ * @param argc: Provides number of arguments.
+ * @param argv: Provides the actual arguments.
+ *
+ * @return int: Program Exit Code
  *
  **************************************************************************************************/
 int main(int argc, char** argv) {
+  std::string version = TO_LITERAL(trader_VERSION_MAJOR.trader_VERSION_MINOR.trader_VERSION_PATCH);
+  argparse::ArgumentParser program("trader", version);
 
-  // Connect to TWS / IB Gateway
-  BrokerClient broker_client("127.0.0.1", 7497, 0);
+  program.add_argument("-s", "--strategies").nargs(argparse::nargs_pattern::any).help("List of Strategies to run.");
+
+  try {
+    program.parse_args(argc, argv);
+  }
+  catch (const std::runtime_error& err) {
+    std::cerr << err.what() << std::endl;
+    std::cerr << program;
+    return 1;
+  }
+
+  // Connect to TWS or IB Gateway
+  TwsApiClient twsapi_client("127.0.0.1", 7497, 0);
 
   // Request the current time
-  broker_client.reqCurrentTime();
+  twsapi_client.reqCurrentTime();
 
   // Sleep while the message is received
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
   // Read the message
-  broker_client.signal.waitForSignal();
-  broker_client.reader -> processMsgs();
+  twsapi_client.signal.waitForSignal();
+  twsapi_client.reader->processMsgs();
 
   // Disconnect
-  broker_client.eDisconnect();
-
+  twsapi_client.eDisconnect();
   return 0;
 }

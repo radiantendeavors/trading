@@ -18,7 +18,7 @@
  **************************************************************************************************/
 #define _CRT_SECURE_NO_WARNINGS
 
-#include "brokerclient.hpp"
+#include "ibkrclient.hpp"
 
 /***************************************************************************************************
  *
@@ -29,20 +29,19 @@
  * @param clientId Provides the Client Id for the connection.
  *
  **************************************************************************************************/
-BrokerClient::BrokerClient(const char* host, int port, int clientId) :
+TwsApiClient::TwsApiClient(const char *host, int port, int clientId) :
   signal(1000), EClientSocket(this, &signal) {
 
-  // Connect to TWS / IB Gateway
+  // Connect to TWS
   bool conn = eConnect(host, port, clientId, false);
-
   if (conn) {
 
-    // Launch reader thread
+    // Launch the reader thread
     reader = new EReader(this, &signal);
-    reader -> start();
-  } else {
-    std::cout << "Failed to connect" << std::endl;
+    reader->start();
   }
+  else
+    std::cout << "Failed to connect" << std::endl;
 }
 
-BrokerClient::~BrokerClient() { delete reader; }
+TwsApiClient::~TwsApiClient() { delete reader; }

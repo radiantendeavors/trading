@@ -57,7 +57,7 @@ help: ##@other Show this help.
 # C++ Related targets
 build: ##@CPP
 	@mkdir build
-	@cd build && cmake .. && cmake --build
+	@cd build && cmake .. && cmake --build .
 
 cleancpp: ##@Clean Cleans up C++ Build files
 	@rm -rf build
