@@ -406,7 +406,6 @@ class TwsApiClient(TwsThreadMngr):
 
         @return req_id: The request identifier
         """
-        logger.debug("Client Id: %s", self.clientId)
         self.contract_history_begin_subjects.add_ticker(req_id, contract.localSymbol)
         logger.debug(self.contract_history_begin_subjects)
         self.reqHeadTimeStamp(req_id, contract, what_to_show, use_regular_trading_hours,
