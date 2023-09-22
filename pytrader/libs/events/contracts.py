@@ -84,12 +84,18 @@ class ContractHistoryBeginDate(Subject):
 
         for key, value in self.history_begin_date.items():
             dates += f"    {key}: {value}\n"
-        message = (f"\n{class_name}(Subject):(\n"
+        message = (f"\n{class_name}(Subject) ({hex(id(self))}):(\n"
                    f"  Observers: {self._observers}\n"
                    f"{msg_ids}"
                    f"{dates}"
-                   f"  Req Id: {self.req_id}\n)")
+                   f"  Req Id: {self.req_id}\n"
+                   f"  Number of Ids: 0\n)")
         return message
+
+    def print_instance_attributes(self):
+        for attribute, value in self.__dict__.items():
+            msg = f"{attribute} = {value}"
+            logger.warning(msg)
 
     def add_ticker(self, req_id: int, ticker: str) -> None:
         """!
@@ -116,8 +122,36 @@ class ContractHistoryBeginDate(Subject):
                 logger.debug(self.history_begin_ids)
                 observer.update(self)
 
-    def set_history_begin_date(self, req_id: int, history_begin_date: str):
-        self.req_id = req_id
-        self.history_begin_date[req_id] = history_begin_date
-        logger.debug(self)
-        self.notify()
+
+class ContractOptionParametrsData(Subject):
+    """!
+    Used for updating History Begin Date information for contracts.
+    """
+    _observers: List[Observer] = []
+    req_ids = {}
+    option_parameters = {}
+    req_id = 0
+
+    def add_ticker(self, req_id: int, ticker: str) -> None:
+        """!
+        Adds a ticker for tracking.
+
+        @param req_id:
+        @param ticker:
+
+        @return None
+        """
+        self.req_ids[req_id] = ticker
+
+    def attach(self, observer: Observer) -> None:
+        if observer not in self._observers:
+            self._observers.append(observer)
+
+    def detach(self, observer: Observer) -> None:
+        if observer in self._observers:
+            self._observers.remove(observer)
+
+    def notify(self, modifier=None) -> None:
+        for observer in self._observers:
+            if modifier != observer:
+                observer.update(self)

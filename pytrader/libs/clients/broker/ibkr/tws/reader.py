@@ -44,24 +44,27 @@ abstract function names, and their variables.
 # ==================================================================================================
 # Standard Libraries
 import datetime
-
+import multiprocessing
+import threading
 from decimal import Decimal
+from typing import Optional
 
 # 3rd Party Libraries
 from ibapi.client import EClient
 from ibapi.commission_report import CommissionReport
-from ibapi.common import (BarData, TickAttribLast, TickAttribBidAsk, TickAttrib)
+from ibapi.common import BarData, TickAttrib, TickAttribBidAsk, TickAttribLast
 from ibapi.contract import Contract, ContractDetails, DeltaNeutralContract
 from ibapi.execution import Execution
 from ibapi.order import Order
 from ibapi.order_state import OrderState
-from ibapi.utils import (iswrapper)
+from ibapi.utils import iswrapper
 from ibapi.wrapper import EWrapper
 
 # Application Libraries
-from pytrader.libs.system import logging
 from pytrader.libs.clients.broker.baseclient import BaseBroker
+from pytrader.libs.system import logging
 from pytrader.libs.utilities.exceptions import BrokerNotAvailable
+
 # ==================================================================================================
 #
 # Global Variables
@@ -80,7 +83,6 @@ class TwsReader(EWrapper, EClient, BaseBroker):
     """!
     Serves as the client interface for Interactive Brokers
     """
-
     ## Used to track the number of available market data lines
     __available_market_data_lines = 100
 
@@ -96,6 +98,35 @@ class TwsReader(EWrapper, EClient, BaseBroker):
         EWrapper.__init__(self)
         EClient.__init__(self, self)
         BaseBroker.__init__(self)
+
+        self.history_begin_ids = {}
+        self.req_id = 0
+
+    def req_head_timestamp(self,
+                           req_id: int,
+                           contract: Contract,
+                           what_to_show: Optional[str] = "TRADES",
+                           use_regular_trading_hours: Optional[bool] = True,
+                           format_date: Optional[bool] = True) -> None:
+        """!
+        Requests the earliest available bar data for a contract.
+
+        @param contract: The contract
+        @param what_to_show: Type of information to show, defaults to "TRADES"
+        @param use_regular_trading_hours: Defaults to 'True'
+        @param format_date: Defaults to 'True'
+
+        @return req_id: The request identifier
+        """
+        logger.debug("Process Name: %s", multiprocessing.current_process().name)
+        logger.debug("Thread Name: %s", threading.current_thread().name)
+        self.history_begin_ids[req_id] = contract.localSymbol
+        self.req_id += 1
+        logger.debug(self)
+        logger.debug(self.history_begin_ids)
+        logger.debug(self.contract_history_begin_subjects)
+        self.reqHeadTimeStamp(req_id, contract, what_to_show, use_regular_trading_hours,
+                              format_date)
 
     # ==============================================================================================
     #
@@ -178,8 +209,6 @@ class TwsReader(EWrapper, EClient, BaseBroker):
 
         @return None
         """
-        self.data[reqId] = {"account": account, "tag": tag, "value": value, "currency": currency}
-
         logger.debug("Account Summary. ReqId: %s\nAccount: %s, Tag: %s, Value: %s, Currency: %s",
                      reqId, account, tag, value, currency)
 
@@ -428,6 +457,7 @@ class TwsReader(EWrapper, EClient, BaseBroker):
 
         @return None
         """
+        logger.debug("Req Id: %s", reqId)
         msg = {"order_execution": {execution.OrderId: {contract.localSymbol: execution}}}
         logger.debug(msg)
 
@@ -476,6 +506,12 @@ class TwsReader(EWrapper, EClient, BaseBroker):
 
         @return None
         """
+        logger.debug("Process Name: %s", multiprocessing.current_process().name)
+        logger.debug("Thread Name: %s", threading.current_thread().name)
+        logger.debug(self)
+        logger.debug(self.req_id)
+        logger.debug(self.history_begin_ids)
+        self.contract_history_begin_subjects.history_begin_ids = self.history_begin_ids
         logger.debug(self.contract_history_begin_subjects)
         self.contract_history_begin_subjects.set_history_begin_date(reqId, headTimestamp)
 
@@ -1140,7 +1176,7 @@ class TwsReader(EWrapper, EClient, BaseBroker):
             "expirations": expirations,
             "strikes": strikes
         }
-        self.data[reqId] = opt_params
+        self.contract_option_parameter_subjects.set_option_parameter(reqId, opt_params)
 
     @iswrapper
     def securityDefinitionOptionParameterEnd(self, reqId: int) -> None:
@@ -1152,7 +1188,6 @@ class TwsReader(EWrapper, EClient, BaseBroker):
         @return None
         """
         logger.debug9("SecurityDefinitionOptionParameterEnd. ReqId: %s", reqId)
-        self.data_available[reqId].set()
 
     @iswrapper
     def smartComponents(self, reqId: int, smartComponentMap: dict) -> None:
@@ -1192,10 +1227,8 @@ class TwsReader(EWrapper, EClient, BaseBroker):
         logger.debug("Begin Function")
         logger.info("Number of descriptions: %s", len(contractDescriptions))
 
-        self.data[reqId] = []
         for description in contractDescriptions:
-            self.data[reqId].append(description)
-            logger.info("Symbol: %s", description.contract.symbol)
+            logger.info("Req Id: %s  Symbol: %s", reqId, description.contract.symbol)
 
         logger.debug("End Function")
 
@@ -1805,15 +1838,15 @@ class TwsReader(EWrapper, EClient, BaseBroker):
         else:
             logger.error("ReqID# %s, Code: %s (%s)", req_id, error_code, error_string)
 
-        match error_code:
-            case 200:
-                msg = {"Error": error_string}
-                logger.debug("Message: %s", msg)
-            case 103 | 10147:
-                msg = {"order_status": {req_id: {"status": "TWS_CLOSED"}}}
-                logger.debug("Message: %s", msg)
-            case 502:
-                raise BrokerNotAvailable(error_string)
+        # match error_code:
+        #     case 200:
+        #         msg = {"Error": error_string}
+        #         logger.debug("Message: %s", msg)
+        #     case 103 | 10147:
+        #         msg = {"order_status": {req_id: {"status": "TWS_CLOSED"}}}
+        #         logger.debug("Message: %s", msg)
+        #     case 502:
+        #         raise BrokerNotAvailable(error_string)
 
     def _process_warning_code(self, req_id: int, error_code, error_string,
                               advanced_order_rejection):

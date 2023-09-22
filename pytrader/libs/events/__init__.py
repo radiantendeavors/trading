@@ -25,7 +25,8 @@ The main user interface for the trading program.
 from pytrader.libs.events.bars import BarData, RealTimeBarData
 from pytrader.libs.events.base import Observer, Subject
 from pytrader.libs.events.contracts import (ContractData,
-                                            ContractHistoryBeginDate)
+                                            ContractHistoryBeginDate,
+                                            ContractOptionParametrsData)
 from pytrader.libs.events.marketdata import MarketData
 from pytrader.libs.events.orders import OrderData, OrderIdData
 from pytrader.libs.events.ticks import TickData

@@ -28,15 +28,10 @@ Provides the observer classes for the DownloaderProcess
 from ibapi.contract import ContractDetails
 
 # Application Libraries
-from pytrader.libs.clients.broker.observers.base import (BarDataObserver,
-                                                         ContractDataObserver,
-                                                         ContractHistoryBeginObserver,
-                                                         MarketDataObserver,
-                                                         OrderDataObserver,
-                                                         RealTimeBarObserver)
-from pytrader.libs.clients.database.mysql.ibkr.etf_contracts import IbkrEtfContracts
-from pytrader.libs.clients.database.mysql.ibkr.stock_contracts import IbkrStkContracts
-from pytrader.libs.clients.database.mysql.ibkr.index_contracts import IbkrIndContracts
+from pytrader.libs.clients.broker.observers.base import (
+    BarDataObserver, ContractDataObserver, ContractHistoryBeginObserver,
+    ContractOptionParameterObserver, MarketDataObserver, OrderDataObserver,
+    OrderIdObserver, RealTimeBarObserver)
 from pytrader.libs.events import Subject
 from pytrader.libs.system import logging
 
@@ -82,134 +77,8 @@ class DownloaderContractDataObserver(ContractDataObserver):
         """!
         Saves the historical bar data to the database.
         """
-        details = subject.contract
-
-        match details.contract.secType:
-            case "STK":
-                self._process_stock_details(details)
-            case "IND":
-                self._process_index_details(details)
-            case "OPT":
-                self._process_option_details(details)
-
-    def _process_stock_details(self, details: ContractDetails) -> None:
-        match details.stockType:
-            case "ETF":
-                self._process_etf_details(details)
-            case "COMMON":
-                self._process_common_details(details)
-
-    def _process_common_details(self, details: ContractDetails) -> None:
-        db = IbkrStkContracts()
-        columns = [details.contract.conId, details.contract.symbol, details.contract.secType,
-                   details.contract.exchange, details.contract.currency,
-                   details.contract.localSymbol, details.contract.primaryExchange,
-                   details.contract.tradingClass]
-        db.insert(columns)
-        logger.debug("Contract Info Received")
-        logger.debug("Contract ID: %s", details.contract.conId)
-        logger.debug("Symbol: %s", details.contract.symbol)
-        logger.debug("Security Type: %s", details.contract.secType)
-        logger.debug("LastTradeDate: %s", details.contract.lastTradeDateOrContractMonth)
-        logger.debug("Strike: %s", details.contract.strike)
-        logger.debug("Right: %s", details.contract.right)
-        logger.debug("Multiplier: %s", details.contract.multiplier)
-        logger.debug("Exchange: %s", details.contract.exchange)
-        logger.debug("Currency: %s", details.contract.currency)
-        logger.debug("Local Symbol: %s", details.contract.localSymbol)
-        logger.debug("Primary Exchange: %s", details.contract.primaryExchange)
-        logger.debug("Trading Class: %s", details.contract.tradingClass)
-        logger.debug("Security ID Type: %s", details.contract.secIdType)
-        logger.debug("Security ID: %s", details.contract.secId)
-        logger.debug("Description: %s", details.contract.description)
-        logger.debug("Issuer Id: %s", details.contract.issuerId)
-
-    def _process_etf_details(self, details: ContractDetails) -> None:
-        db = IbkrEtfContracts()
-        columns = [details.contract.conId, details.contract.symbol, details.contract.secType,
-                   details.contract.exchange, details.contract.currency,
-                   details.contract.localSymbol, details.contract.primaryExchange,
-                   details.contract.tradingClass]
-        db.insert(columns)
-        logger.debug("Contract Info Received")
-        logger.debug("Contract ID: %s", details.contract.conId)
-        logger.debug("Symbol: %s", details.contract.symbol)
-        logger.debug("Security Type: %s", details.contract.secType)
-        logger.debug("LastTradeDate: %s", details.contract.lastTradeDateOrContractMonth)
-        logger.debug("Strike: %s", details.contract.strike)
-        logger.debug("Right: %s", details.contract.right)
-        logger.debug("Multiplier: %s", details.contract.multiplier)
-        logger.debug("Exchange: %s", details.contract.exchange)
-        logger.debug("Currency: %s", details.contract.currency)
-        logger.debug("Local Symbol: %s", details.contract.localSymbol)
-        logger.debug("Primary Exchange: %s", details.contract.primaryExchange)
-        logger.debug("Trading Class: %s", details.contract.tradingClass)
-        logger.debug("Security ID Type: %s", details.contract.secIdType)
-        logger.debug("Security ID: %s", details.contract.secId)
-        # logger.debug("Description: %s", details.contract.description)
-        # logger.debug("Issuer Id: %s", details.contract.issuerId)
-
-    def _process_index_details(self, details: ContractDetails) -> None:
-        db = IbkrIndContracts()
-        columns = [details.contract.conId, details.contract.symbol, details.contract.secType,
-                   details.contract.exchange, details.contract.currency,
-                   details.contract.localSymbol]
-        db.insert(columns)
-        logger.debug("Contract Info Received")
-        logger.debug("Contract ID: %s", details.contract.conId)
-        logger.debug("Symbol: %s", details.contract.symbol)
-        logger.debug("Security Type: %s", details.contract.secType)
-        logger.debug("LastTradeDate: %s", details.contract.lastTradeDateOrContractMonth)
-        logger.debug("Strike: %s", details.contract.strike)
-        logger.debug("Right: %s", details.contract.right)
-        logger.debug("Multiplier: %s", details.contract.multiplier)
-        logger.debug("Exchange: %s", details.contract.exchange)
-        logger.debug("Currency: %s", details.contract.currency)
-        logger.debug("Local Symbol: %s", details.contract.localSymbol)
-        logger.debug("Primary Exchange: %s", details.contract.primaryExchange)
-        logger.debug("Trading Class: %s", details.contract.tradingClass)
-        logger.debug("Security ID Type: %s", details.contract.secIdType)
-        logger.debug("Security ID: %s", details.contract.secId)
-        # logger.debug("Description: %s", details.contract.description)
-        # logger.debug("Issuer Id: %s", details.contract.issuerId)
-
-    def _process_option_details(self, details: ContractDetails) -> None:
-        logger.debug("Contract Info Received")
-        logger.debug("Contract ID: %s", details.contract.conId)
-        logger.debug("Symbol: %s", details.contract.symbol)
-        logger.debug("Security Type: %s", details.contract.secType)
-        logger.debug("LastTradeDate: %s", details.contract.lastTradeDateOrContractMonth)
-        logger.debug("Strike: %s", details.contract.strike)
-        logger.debug("Right: %s", details.contract.right)
-        logger.debug("Multiplier: %s", details.contract.multiplier)
-        logger.debug("Exchange: %s", details.contract.exchange)
-        logger.debug("Currency: %s", details.contract.currency)
-        logger.debug("Local Symbol: %s", details.contract.localSymbol)
-        logger.debug("Primary Exchange: %s", details.contract.primaryExchange)
-        logger.debug("Trading Class: %s", details.contract.tradingClass)
-        logger.debug("Security ID Type: %s", details.contract.secIdType)
-        logger.debug("Security ID: %s", details.contract.secId)
-        # logger.debug("Description: %s", details.contract.description)
-        # logger.debug("Issuer Id: %s", details.contract.issuerId)
-
-        logger.debug6("Contract Detail Info")
-        logger.debug6("Market name: %s", details.marketName)
-        logger.debug6("Min Tick: %s", details.minTick)
-        logger.debug6("OrderTypes: %s", details.orderTypes)
-        logger.debug6("Valid Exchanges: %s", details.validExchanges)
-        logger.debug6("Underlying Contract ID: %s", details.underConId)
-        logger.debug6("Long name: %s", details.longName)
-        logger.debug6("Industry: %s", details.industry)
-        logger.debug6("Category: %s", details.category)
-        logger.debug6("Subcategory: %s", details.subcategory)
-        logger.debug6("Time Zone: %s", details.timeZoneId)
-        logger.debug6("Trading Hours: %s", details.tradingHours)
-        logger.debug6("Liquid Hours: %s", details.liquidHours)
-        logger.debug6("SecIdList: %s", details.secIdList)
-        logger.debug6("Underlying Symbol: %s", details.underSymbol)
-        logger.debug6("Stock Type: %s", details.stockType)
-        logger.debug6("Next Option Date: %s", details.nextOptionDate)
-        logger.debug6("Details: %s", details)
+        msg = {"contract_details": subject.contract}
+        self.msg_queue.put(msg)
 
 
 class DownloaderContractHistoryBeginObserver(ContractHistoryBeginObserver):
@@ -218,8 +87,17 @@ class DownloaderContractHistoryBeginObserver(ContractHistoryBeginObserver):
         logger.debug(subject)
         ticker = subject.history_begin_ids[subject.req_id]
         history_begin_date = subject.history_begin_date[subject.req_id]
+        msg = {"contract_history_begin_date": {ticker: history_begin_date}}
+        self.msg_queue.put(msg)
 
-        logger.debug("History Begin Date for %s: %s", ticker, history_begin_date)
+
+class DownloaderContractOptionParametersObserver(ContractOptionParameterObserver):
+
+    def update(self, subject: Subject) -> None:
+        ticker = subject.req_ids[subject.req_id]
+        opt_params = subject.option_parameters[subject.req_id]
+        msg = {"contract_option_parameters": {ticker: opt_params}}
+        self.msg_queue.put(msg)
 
 
 class DownloaderMarketDataObserver(MarketDataObserver):
@@ -238,6 +116,19 @@ class DownloaderOrderDataObserver(OrderDataObserver):
             if subject.order_id in self.order_ids:
                 message = {"order_status": subject.order_status}
                 self.msg_queue.put(message)
+
+
+class DownloaderOrderIdObserver(OrderIdObserver):
+    """!
+    Observer for historical bar data.
+    """
+
+    def update(self, subject: Subject) -> None:
+        """!
+        Saves the historical bar data to the database.
+        """
+        msg = {"next_order_id": subject.order_id}
+        self.msg_queue.put(msg)
 
 
 class DownloaderRealTimeBarObserver(RealTimeBarObserver):

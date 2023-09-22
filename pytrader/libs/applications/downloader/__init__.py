@@ -25,11 +25,14 @@ The main user interface for the trading program.
 from datetime import date, timedelta
 from multiprocessing import Queue
 
+# 3rd Party
+from ibapi.contract import ContractDetails
+
 # Application Libraries
 from pytrader.libs.clients.broker.ibkr.webscraper import IbkrWebScraper
 from pytrader.libs.clients.database.mysql.ibkr.contract_universe import \
     IbkrContractUniverse
-from pytrader.libs.contracts import Contract
+from pytrader.libs.contracts import Contract, DBContract
 from pytrader.libs.system import logging
 
 # ==================================================================================================
@@ -86,11 +89,26 @@ class DownloadProcess():
         """
         self._get_contract_universe()
 
-        for item in self.contract_universe:
-            self._get_contract_details(item)
+        loop_items = ["details", "history_begin_date", "option_parameters"]
+        loop_list = []
 
-        for item in self.contract_universe:
-            self._get_contract_history_begin_date(item)
+        for item in loop_items:
+            loop_list.append(self.contract_universe.copy())
+
+        while True:
+            message = self.data_queue.get()
+
+            if message != "Done":
+                self._process_data(message)
+
+            while len(loop_list[0]) > 0:
+                self._get_contract_details(loop_list[0].pop())
+
+            while len(loop_list[1]) > 0:
+                self._get_contract_history_begin_date(loop_list[1].pop())
+
+            while len(loop_list[2]) > 0:
+                self._get_contract_option_parameters(loop_list[2].pop())
 
     def _download_contract_details(self, ticker: dict) -> None:
         symbol = ticker["ib_symbol"]
@@ -115,14 +133,20 @@ class DownloadProcess():
             scraper.to_csv()
 
     def _get_contract_details(self, ticker: dict) -> None:
+        logger.debug("Getting Contract Details for %s", ticker)
         symbol = ticker["ib_symbol"]
         self.contracts[symbol] = Contract(self.cmd_queue, symbol, ticker["asset_class"])
+        self.contracts[symbol].set_local_queue(self.data_queue)
         self.contracts[symbol].create_contract(ticker["exchange"], ticker["currency"])
         self.contracts[symbol].get_contract_details()
 
     def _get_contract_history_begin_date(self, ticker: dict) -> None:
         symbol = ticker["ib_symbol"]
         self.contracts[symbol].get_contract_history_begin_date()
+
+    def _get_contract_option_parameters(self, ticker: dict) -> None:
+        symbol = ticker["ib_symbol"]
+        self.contracts[symbol].get_contract_option_parameters()
 
     def _get_contract_universe(self):
         db = IbkrContractUniverse()
@@ -150,9 +174,16 @@ class DownloadProcess():
             logger.debug("Contract Universe: %s", self.contract_universe)
 
     def _process_data(self, data):
-        if data.get("contracts"):
-            self.contracts = data["contracts"]
-            logger.debug("Contracts: %s", self.contracts)
+        if data.get("contract_details"):
+            contract_details = data["contract_details"]
+            self._process_contract_details(contract_details)
+        if data.get("contract_history_begin_date"):
+            history_begin_date = data["contract_history_begin_date"]
+            self._process_history_begin_date(history_begin_date)
+        if data.get("contract_option_parameters"):
+            option_parameters = data["contract_option_parameters"]
+            self._process_option_parameters(option_parameters)
+
         # if data.get("option_details"):
         #     logger.debug("Processing Option Details")
         #     self._process_option_details(data["option_details"])
@@ -162,3 +193,16 @@ class DownloadProcess():
         # if data.get("tick"):
         #     logger.debug3("Processing Tick Data")
         #     self._process_ticks(data["tick"])
+
+    def _process_contract_details(self, contract_details: ContractDetails) -> None:
+        self.contracts[contract_details.contract.localSymbol] = Contract(
+            self.cmd_queue, contract=contract_details.contract)
+        self.contracts[contract_details.contract.localSymbol].save_contract(contract_details)
+
+    def _process_history_begin_date(self, history_begin_date: dict) -> None:
+        ticker = list(history_begin_date)[0]
+        self.contracts[ticker].save_history_begin_date(history_begin_date[ticker])
+
+    def _process_option_parameters(self, option_parameters: dict) -> None:
+        ticker = list(option_parameters)[0]
+        self.contracts[ticker].save_option_parameters(option_parameters[ticker])

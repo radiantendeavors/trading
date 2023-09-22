@@ -133,6 +133,9 @@ class IbkrBase(mysql.MySQLDatabase):
         sql = (f"UPDATE `{self.table_name}`\n"
                f"SET {column_names}\n"
                f"WHERE `{self.update_column_names[0]}`={columns[0]}")
-        columns.append(date.today())
+
+        if "last_updated" in self.update_column_names:
+            columns.append(date.today())
+
         self._execute(sql, columns)
         self.mydb.commit()

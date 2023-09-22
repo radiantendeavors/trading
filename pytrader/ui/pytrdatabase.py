@@ -32,16 +32,11 @@ The user interface for managing the databases
 # System libraries
 import sys
 
-# 3rd Party libraries
-
-# System Library Overrides
-from pytrader.libs.system import argparse
-from pytrader.libs.system import logging
-
 # Application Libraries
 from pytrader import DEBUG
 from pytrader.libs import utilities
 from pytrader.libs.applications.database import DatabaseManager
+from pytrader.libs.system import argparse, logging
 from pytrader.libs.utilities import config
 
 # ==================================================================================================
@@ -49,10 +44,7 @@ from pytrader.libs.utilities import config
 # Global Variables
 #
 # ==================================================================================================
-"""!
-@var logger
-The base logger.
-"""
+## The base logger.
 logger = logging.getLogger(__name__)
 
 
@@ -76,7 +68,6 @@ def init(args):
     parser = argparse.ArgParser(description="Database manager for pytrader", epilog=epilog_text)
 
     parser.add_version_option()
-    parser.add_broker_options()
     parser.add_logging_option()
 
     parser.set_defaults(func=False, debug=False, verbosity=0, loglevel='INFO')

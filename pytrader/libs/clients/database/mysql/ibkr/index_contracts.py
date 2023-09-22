@@ -49,10 +49,49 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class IbkrIndContracts(IbkrBaseContracts):
+class IbkrIndexContracts(IbkrBaseContracts):
 
     table_name = "z_ibkr_index_contracts"
     insert_column_names = [
         "contract_id", "ticker_symbol", "security_type", "exchange", "currency", "local_symbol"
     ]
     update_column_names = insert_column_names + ["last_updated"]
+
+
+class IbkrIndexContractDetails(IbkrBaseContracts):
+    table_name = "z_ibkr_index_contract_details"
+    insert_column_names = [
+        "ibkr_contract_id", "market_name", "min_tick", "price_magnifier", "long_name", "industry",
+        "category", "subcategory", "timezone_id", "aggregated_group"
+    ]
+    update_column_names = insert_column_names
+
+
+class IbkrIndexExchanges(IbkrBaseContracts):
+    table_name = "z_ibkr_index_exchanges"
+    insert_column_names = ["ibkr_contract_id", "exchange"]
+    update_column_names = insert_column_names
+
+
+class IbkrIndexHistoryBeginDate(IbkrBaseContracts):
+    table_name = "z_ibkr_index_history_begin_date"
+    insert_column_names = ["ibkr_contract_id", "oldest_datetime"]
+    update_column_names = insert_column_names + ["last_updated"]
+
+
+class IbkrIndexLiquidHours(IbkrBaseContracts):
+    table_name = "z_ibkr_index_liquid_hours"
+    insert_column_names = ["ibkr_contract_id", "liquid_hours"]
+    update_column_names = insert_column_names
+
+
+class IbkrIndexOrderTypes(IbkrBaseContracts):
+    table_name = "z_ibkr_index_order_types"
+    insert_column_names = ["ibkr_contract_id", "order_type"]
+    update_column_names = insert_column_names
+
+
+class IbkrIndexTradingHours(IbkrBaseContracts):
+    table_name = "z_ibkr_index_liquid_hours"
+    insert_column_names = ["ibkr_contract_id", "trading_hours"]
+    update_column_names = insert_column_names

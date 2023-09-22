@@ -63,13 +63,13 @@ class AbstractBrokerClient(ABC):
         # Port number
         self.port = 0
 
-        # Internal Thread Queue
+        # internal thread queue
         self.queue = Queue()
 
         self.connection_status = True
 
     @abstractmethod
-    def connect(self, address: str = "", port: Optional[int] = 0):
+    def connect(self, address: str, client_id: int, port: Optional[int] = 0):
         """!
         Connect to a broker client.
         """
@@ -90,7 +90,7 @@ class AbstractBrokerClient(ABC):
                 self._parse_data(response_data)
 
     @abstractmethod
-    def start(self):
+    def start(self, role: str, strategies: Optional[list] = None):
         """!
         Starts the broker client thread.
         """
@@ -206,30 +206,6 @@ class AbstractBrokerClient(ABC):
     def set_bar_sizes(self, bar_sizes: list, strategy_id: str):
         """!
         Abstract method to set bar sizes.
-        """
-
-    @abstractmethod
-    def set_broker_observers(self, broker: str) -> None:
-        """!
-        Sets the brokers observers
-
-        @return None
-        """
-
-    @abstractmethod
-    def set_downloader_observers(self) -> None:
-        """!
-        Set's the downloader observers.
-
-        @return None
-        """
-
-    @abstractmethod
-    def set_strategy_observers(self, strategy_list: list) -> None:
-        """!
-        Set's the strategy observers.
-
-        @return None
         """
 
     # def send_ticks(self, contract: Contract, tick):

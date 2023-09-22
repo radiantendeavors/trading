@@ -29,8 +29,10 @@ Provides the observer classes for the broker process.
 from pytrader.libs.clients.broker.observers.broker import BrokerOrderIdObserver
 from pytrader.libs.clients.broker.observers.downloader import (
     DownloaderBarDataObserver, DownloaderContractDataObserver,
-    DownloaderContractHistoryBeginObserver, DownloaderMarketDataObserver,
-    DownloaderOrderDataObserver, DownloaderRealTimeBarObserver)
+    DownloaderContractHistoryBeginObserver,
+    DownloaderContractOptionParametersObserver, DownloaderMarketDataObserver,
+    DownloaderOrderDataObserver, DownloaderOrderIdObserver,
+    DownloaderRealTimeBarObserver)
 from pytrader.libs.clients.broker.observers.main import MainOrderIdObserver
 from pytrader.libs.clients.broker.observers.strategy import (
     StrategyBarDataObserver, StrategyContractDataObserver,

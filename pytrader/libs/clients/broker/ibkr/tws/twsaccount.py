@@ -26,8 +26,11 @@ Creates the interface for connecting to Tws Demo account.
 """
 # System Libraries
 import datetime
+import multiprocessing
 import threading
+from queue import Queue
 from time import sleep
+from typing import Optional
 
 # 3rd Party Libraries
 from ibapi.contract import Contract
@@ -35,7 +38,7 @@ from ibapi.contract import Contract
 # Application Libraries
 from pytrader import CLIENT_ID
 from pytrader.libs.clients.broker.abstractclient import AbstractBrokerClient
-from pytrader.libs.clients.broker.ibkr.tws import TwsApiClient
+from pytrader.libs.clients.broker.ibkr.tws.client import TwsApiClient
 from pytrader.libs.system import logging
 
 # ==================================================================================================
@@ -78,8 +81,6 @@ class TwsAccountClient(AbstractBrokerClient):
       - IbgReal
       - IbgDemo
     """
-    __next_client_id = CLIENT_ID
-
     ##
     __contract_details_sleep_time = 0
 
@@ -101,30 +102,24 @@ class TwsAccountClient(AbstractBrokerClient):
         # Contract Subjects and Observers
         self.req_id = 0
 
-        self.brokerclient.set_data_queue(data_queue)
-
         super().__init__(data_queue)
 
-    def connect(self, address: str = "127.0.0.1", port: int = 0):
+    def connect(self, address: str, client_id: int, port: Optional[int] = 0) -> None:
+        """!
+        Connects to the broker.
+
+        @param address: The broker ip or url.
+        @param client_id:
+        @param port:
+
+        @return None
+        """
         if port == 0:
             port = self.port
-        self.brokerclient.connect(address, port, self.__next_client_id)
-        self.__next_client_id += 1
+        self.brokerclient.connect(address, port, client_id)
 
-    def set_broker_observers(self, broker: str) -> None:
-        self.brokerclient.config_broker_observers(broker, self.queue)
-
-    def set_downloader_observers(self) -> None:
-        self.brokerclient.config_downloader_observers()
-
-    def set_main_observers(self) -> None:
-        self.brokerclient.config_main_observers()
-
-    def set_strategy_observers(self, strategy_list: list) -> None:
-        self.brokerclient.config_strategy_observers(strategy_list)
-
-    def start(self):
-        self.brokerclient.start()
+    def start(self, role: str, strategies: Optional[list] = None):
+        self.brokerclient.start(role, self.data_queue, self.queue, strategies)
 
     def stop(self):
         self.brokerclient.stop()
@@ -176,16 +171,14 @@ class TwsAccountClient(AbstractBrokerClient):
 
     def request_history_begin_date(self, contract: Contract) -> None:
         self.req_id += 1
+        self.brokerclient.add_history_begin_ticker(self.req_id, contract.localSymbol)
         self.brokerclient.req_head_timestamp(self.req_id, contract)
 
-    def request_option_details(self, strategy_id):
-        tickers = self.contract_observers[strategy_id].get_tickers()
-        contracts = self.contract_subjects.get_contracts()
-
-        self.option_observers[strategy_id].add_tickers(tickers)
-        self.option_subjects.add_tickers(tickers, contracts)
-        self.option_subjects.request_option_details()
-        self.option_subjects.notify()
+    def request_option_details(self, contract: Contract) -> None:
+        self.req_id += 1
+        logger.debug("Contract: %s", contract)
+        self.brokerclient.add_contract_option_params_ticker(self.req_id, contract.localSymbol)
+        self.brokerclient.req_sec_def_opt_params(self.req_id, contract)
 
     def request_real_time_bars(self, strategy_id):
         tickers = self.contract_observers[strategy_id].get_tickers()

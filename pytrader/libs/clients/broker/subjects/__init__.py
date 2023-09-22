@@ -30,7 +30,8 @@ from ibapi.order import Order
 
 # Application Libraries
 from pytrader.libs.events import (BarData, ContractData,
-                                  ContractHistoryBeginDate, MarketData,
+                                  ContractHistoryBeginDate,
+                                  ContractOptionParametrsData, MarketData,
                                   OrderData, OrderIdData, RealTimeBarData)
 from pytrader.libs.system import logging
 
@@ -126,19 +127,25 @@ class BrokerBarData(BarData):
 
 class BrokerContractData(ContractData):
 
-    def set_contract_details(self, req_id: int, contract_details):
+    def set_contract_details(self, req_id: int, contract_details) -> None:
         self.contract = contract_details
         self.notify()
 
 
 class BrokerContractHistoryBeginDate(ContractHistoryBeginDate):
-    pass
-    # def set_history_begin_date(self, req_id: int, history_begin_date: str):
-    #     self.req_id = req_id
-    #     self.history_begin_date[req_id] = history_begin_date
-    #     logger.debug(self.history_begin_ids)
-    #     logger.debug(self.history_begin_date)
-    #     self.notify()
+
+    def set_history_begin_date(self, req_id: int, history_begin_date: str):
+        self.req_id = req_id
+        self.history_begin_date[req_id] = history_begin_date
+        self.notify()
+
+
+class BrokerContractOptionParametersData(ContractOptionParametrsData):
+
+    def set_option_parameter(self, req_id: int, option_parameters: dict):
+        self.req_id = req_id
+        self.option_parameters[req_id] = option_parameters
+        self.notify()
 
 
 class BrokerMarketData(MarketData):

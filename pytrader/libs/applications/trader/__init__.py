@@ -25,6 +25,7 @@ The main user interface for the trading program.
 # System libraries
 import argparse
 import multiprocessing
+import threading
 
 # Application Libraries
 from pytrader.libs.applications import broker, downloader, strategy
@@ -51,12 +52,14 @@ class ProcessManager():
     """
     cmd_queue = multiprocessing.Queue()
     reply_queue = {}
-    brokers = None
-    downloader = None
+    broker_mngr = None
+    downloader_mngr = None
+    strategy_mngr = None
     strategies = None
     broker_process = None
     strategy_process = None
     downloader_process = None
+    next_order_id = 0
 
     def __init__(self, args: argparse.Namespace) -> None:
         """!
@@ -67,9 +70,10 @@ class ProcessManager():
         @return None
         """
         logger.debug9("Args: %s", args)
-        self.broker_list = args.broker
+        self.brokers = args.brokers
+        self.address = args.address
         self.client_id = args.client_id
-        self.strategy_list = args.strategies
+        self.strategies = args.strategies
         self.tickers = args.tickers
         self.enable_options = args.enable_options
         self.asset_classes = args.asset_classes
@@ -77,34 +81,46 @@ class ProcessManager():
         self.regions = args.regions
         self.export = args.export
 
-        if len(self.strategy_list) > 0:
-            for strategy_id in self.strategy_list:
+        if len(self.strategies) > 0:
+            for strategy_id in self.strategies:
                 strategy_data_queue = multiprocessing.Queue()
                 self.reply_queue[strategy_id] = strategy_data_queue
 
         self.reply_queue["downloader"] = multiprocessing.Queue()
         self.reply_queue["main"] = multiprocessing.Queue()
 
-    def config_brokers(self) -> None:
+    def start(self, enable_broker: bool) -> None:
         """!
-        Configures the Brokers
+        Starts the various Subprocesses
+
+        @param enable_broker: Weither we wish to enable the broker processes or not.
 
         @return None
         """
-        self.brokers = broker.BrokerProcessManager(self.broker_list, self.client_id, self.cmd_queue,
-                                                   self.reply_queue)
-        self.brokers.configure_brokers()
+        logger.debug("Process Name: %s  Thread Name: %s",
+                     multiprocessing.current_process().name,
+                     threading.current_thread().name)
 
-        if self.strategy_list is not None:
-            self.brokers.set_strategies(self.strategy_list)
+        if enable_broker:
+            self._configure_broker()
 
-        self.brokers.set_downloader()
-        self.brokers.set_main()
+        self._run_downloader_process()
 
-        try:
-            self._run_broker_process()
-        except KeyboardInterrupt as msg:
-            logger.critical("Keyboard Interupt! %s", msg)
+        # If we disabled the broker, there is no point in running the strategies.
+        if self.strategies is not None and enable_broker:
+            logger.debug("Starting Straties: %s", self.strategies)
+            self._run_strategy_process(self.strategies, self.next_order_id)
+
+        self.run()
+
+    def stop(self) -> None:
+        """!
+        Stops all processes."""
+        if self.strategies is not None:
+            self._stop_strategy_process()
+
+        self._stop_downloader_process()
+        self._stop_broker_process()
 
     def run(self) -> None:
         """!
@@ -112,58 +128,52 @@ class ProcessManager():
 
         @return None
         """
-        try:
-            # This ensures we have the next order ID before doing anything else.
-            next_order_id = 0
-            while next_order_id == 0:
-                message = self.reply_queue["main"].get()
-                if message.get("next_order_id"):
-                    next_order_id = message["next_order_id"]
+        # FIXME: Determine what will actually end this process.
+        while True:
+            pass
 
-            logger.debug("Next Order Id: %s", next_order_id)
+    # ==============================================================================================
+    #
+    # Private Functions
+    #
+    # ==============================================================================================
+    def _configure_broker(self) -> None:
+        self.broker_mngr = broker.BrokerProcessManager(self.brokers, self.cmd_queue,
+                                                       self.reply_queue)
+        self.broker_mngr.configure_brokers(self.address, self.client_id, self.strategies)
+        self._run_broker_process()
 
-            self._run_downloader_process()
+        # This ensures we have the next order ID before doing anything else.
+        while self.next_order_id == 0:
+            message = self.reply_queue["main"].get()
+            if message.get("next_order_id"):
+                self.next_order_id = message["next_order_id"]
 
-            if self.strategy_list is not None:
-                logger.debug("Starting Straties: %s", self.strategy_list)
-                self._run_strategy_process(self.strategy_list, next_order_id)
-
-            # FIXME: Determine what will actually end this process.
-            while True:
-                pass
-
-        except BrokerNotAvailable as msg:
-            logger.critical("Broker Not Available. %s", msg)
-
-        except KeyboardInterrupt as msg:
-            logger.critical("Keyboard Interrupt, Closing Application: %s", msg)
-        finally:
-            if self.strategy_list is not None:
-                self._stop_strategy_process(self.strategy_list)
-
-            self._stop_broker_process()
+        logger.debug("Next Order Id: %s", self.next_order_id)
 
     def _run_broker_process(self) -> None:
-        self.broker_process = multiprocessing.Process(target=self.brokers.run, args=())
+        self.broker_process = multiprocessing.Process(target=self.broker_mngr.run, args=())
         self.broker_process.start()
 
     def _run_downloader_process(self) -> None:
-        self.downloader = downloader.DownloadProcess(self.cmd_queue, self.reply_queue["downloader"],
-                                                     self.tickers, self.enable_options,
-                                                     self.asset_classes, self.currencies,
-                                                     self.regions, self.export)
-        self.downloader_process = multiprocessing.Process(target=self.downloader.run, args=())
+        self.downloader_mngr = downloader.DownloadProcess(self.cmd_queue,
+                                                          self.reply_queue["downloader"],
+                                                          self.tickers, self.enable_options,
+                                                          self.asset_classes, self.currencies,
+                                                          self.regions, self.export)
+        self.downloader_process = multiprocessing.Process(target=self.downloader_mngr.run, args=())
         self.downloader_process.start()
 
     def _run_strategy_process(self, strategy_list: list, next_order_id: int) -> None:
-        self.strategies = strategy.StrategyProcess(self.cmd_queue, self.reply_queue, next_order_id)
-        self.strategy_process = multiprocessing.Process(target=self.strategies.run,
+        self.strategy_mngr = strategy.StrategyProcess(self.cmd_queue, self.reply_queue,
+                                                      next_order_id)
+        self.strategy_process = multiprocessing.Process(target=self.strategy_mngr.run,
                                                         args=(strategy_list, ))
         self.strategy_process.start()
 
     def _stop_broker_process(self):
         try:
-            self.brokers.stop()
+            self.broker_mngr.stop()
             self.broker_process.join()
         except AttributeError as msg:
             logger.error("AttributeError Stopping Broker Processes: %s", msg)
@@ -171,12 +181,12 @@ class ProcessManager():
     def _stop_downloader_process(self) -> None:
         self.downloader_process.join()
 
-    def _stop_strategy_process(self, strategy_list: list):
+    def _stop_strategy_process(self):
         try:
             # We add this check here because if the strategies aren't started above because we never
             # receive the next order id, then self.strategies will still be NoneType.
             if self.strategies is not None:
-                self.strategies.stop(strategy_list)
+                self.strategies.stop(self.strategies)
                 self.strategy_process.join()
         except AttributeError as msg:
             logger.error("AttributeError Stopping Strategy Processes: %s", msg)

@@ -26,7 +26,7 @@ The main user interface for the trading program.
 import sys
 
 # Application Libraries
-from pytrader import DEBUG
+from pytrader import CLIENT_ID
 from pytrader.libs.applications import trader
 # System Library Overrides
 from pytrader.libs.system import argparse, logging
@@ -52,6 +52,7 @@ class PyTrader():
     """!
     The main program class.
     """
+    process_manager = None
 
     def __init__(self) -> None:
         """!
@@ -69,16 +70,89 @@ class PyTrader():
         self.conf = config.Config()
         self.parser = argparse.ArgParser(description="Automated trading system", epilog=epilog_text)
         self.parser.add_version_option()
-        self.parser.add_broker_options()
+        self._add_broker_options()
+        self._add_strategy_options()
+        self._add_download_options()
 
-        strategy_options = self.parser.add_argument_group("Strategy Options")
-        strategy_options.add_argument(
-            "-s",
-            "--strategies",
-            nargs="*",
-            default=[],
-            help="Strategies to run.  If not specified no strategies will run.")
+        self.parser.add_logging_option()
+        self.parser.set_defaults(debug=False, verbosity=0, loglevel='INFO')
+        self.args = self.parser.parse_args()
 
+    def config(self) -> None:
+        """!
+        Reads the configuration file and sets the log levels.
+
+        @return None
+        """
+        self.conf.read_config()
+        self.conf.set_loglevel(self.args)
+        logger.debug2('Configuration set')
+        logger.debug8('Configuration Settings: ' + str(self.conf))
+        logger.debug9('Arguments: ' + str(self.args))
+
+    def start(self) -> int:
+        """!
+        Run Program
+
+        @return int: Program Return Code
+        """
+        logger.debug("Starting Process Manager")
+        try:
+            self._start_process_manager()
+            return 0
+        except KeyboardInterrupt as msg:
+            logger.critical("Keyboard Interrupt Detected! Shutting Down. %s", msg)
+            self._stop()
+            return 130
+        # We want a catchall exception
+        except Exception as msg:
+            logger.critical(msg)
+            self._stop()
+            return 1
+
+    # ==============================================================================================
+    #
+    # Private Functions
+    #
+    # ==============================================================================================
+    def _add_broker_options(self) -> None:
+        """!
+        Adds options related to the broker.
+
+        @return None
+        """
+        broker_list = ["twsapi"]
+        help_str = (f"Brokers (Default: {broker_list})\n"
+                    f"If 'backtest' is chosen, all other brokers will be ignored.")
+        broker = self.parser.add_argument_group("broker")
+        broker.add_argument("-b",
+                            "--brokers",
+                            nargs="*",
+                            choices=broker_list,
+                            default=[broker_list[0]],
+                            help=help_str)
+        default_address = "127.0.0.1"
+        broker.add_argument("-a",
+                            "--address",
+                            default=default_address,
+                            help=f"The Broker Address (Default: {default_address})")
+        broker.add_argument("-c",
+                            "--client-id",
+                            default=CLIENT_ID,
+                            help=f"Broker Client Id (Default: {CLIENT_ID})")
+        broker.add_argument("-p",
+                            "--ports",
+                            nargs="*",
+                            metavar="PORT",
+                            help="List of ports available to connect to.")
+        help_str = "Disable Broker Initialization, NOTE: This severely limits capabilities"
+        broker.add_argument("-d",
+                            "--disable-broker",
+                            action="store_false",
+                            default=True,
+                            help=help_str)
+
+    def _add_download_options(self) -> None:
         download_options = self.parser.add_argument_group("Data Downloader Options")
         download_options.add_argument("-t",
                                       "--tickers",
@@ -132,23 +206,16 @@ class PyTrader():
                                       choices=["csv"],
                                       help="Additional options to save stock universe.")
 
-        self.parser.add_logging_option()
-        self.parser.set_defaults(debug=False, verbosity=0, loglevel='INFO')
-        self.args = self.parser.parse_args()
+    def _add_strategy_options(self) -> None:
+        strategy_options = self.parser.add_argument_group("Strategy Options")
+        strategy_options.add_argument(
+            "-s",
+            "--strategies",
+            nargs="*",
+            default=[],
+            help="Strategies to run.  If not specified no strategies will run.")
 
-    def config(self) -> None:
-        """!
-        Reads the configuration file and sets the log levels.
-
-        @return None
-        """
-        self.conf.read_config()
-        self.conf.set_loglevel(self.args)
-        logger.debug2('Configuration set')
-        logger.debug8('Configuration Settings: ' + str(self.conf))
-        logger.debug9('Arguments: ' + str(self.args))
-
-    def start_process_manager(self) -> None:
+    def _start_process_manager(self) -> None:
         """!
         Starts the Overall Process Manager.
 
@@ -156,32 +223,16 @@ class PyTrader():
 
         @return None
         """
-        process_manager = trader.ProcessManager(self.args)
+        self.process_manager = trader.ProcessManager(self.args)
+        self.process_manager.start(self.args.disable_broker)
 
-        if self.args.disable_broker:
-            process_manager.config_brokers()
-
-        process_manager.run()
-
-    def run(self) -> int:
+    def _stop(self) -> None:
         """!
-        The main function.
+        Stops the Process Manager
 
-        @return int:
+        @return None
         """
-        # 'application' code
-        if DEBUG:
-            self.start_process_manager()
-            return 0
-
-        logger.debug8("Attempting to start client")
-        try:
-            self.start_process_manager()
-            return 0
-        # We want a catchall exception
-        except Exception as msg:
-            logger.critical(msg)
-            return 1
+        self.process_manager.stop()
 
 
 # ==================================================================================================
@@ -197,7 +248,7 @@ def main() -> int:
     """
     pytrader = PyTrader()
     pytrader.config()
-    return pytrader.run()
+    return pytrader.start()
 
 
 # ==================================================================================================

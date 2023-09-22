@@ -79,6 +79,12 @@ class ContractHistoryBeginObserver(Observer):
         self.msg_queue = msg_queue
 
 
+class ContractOptionParameterObserver(Observer):
+
+    def __init__(self, msg_queue: multiprocessing.Queue):
+        self.msg_queue = msg_queue
+
+
 class MarketDataObserver(Observer):
 
     def __init__(self, msg_queue: multiprocessing.Queue):

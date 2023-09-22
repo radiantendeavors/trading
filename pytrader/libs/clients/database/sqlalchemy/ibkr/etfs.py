@@ -66,7 +66,7 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class IbkrETFContracts(Base):
+class IbkrEtfContracts(Base):
     __tablename__ = "z_ibkr_etf_contracts"
     id: Mapped[int] = mapped_column(primary_key=True)
     contract_id: Mapped[int] = mapped_column(index=True, unique=True)
@@ -81,7 +81,7 @@ class IbkrETFContracts(Base):
 
     def __repr__(self) -> str:
         repr_str = f"""
-        IbkrETFContracts(
+        IbkrEtfContracts(
             id={self.id!r},
             contract_id={self.contract_id!r},
             ticker_symbol={self.ticker_symbol!r},
@@ -93,7 +93,7 @@ class IbkrETFContracts(Base):
 
     def query_contract(self, db_session, local_symbol):
         logger.debug10("Begin Funtion")
-        query = select(IbkrETFContracts).where(IbkrETFContracts.local_symbol == local_symbol)
+        query = select(IbkrEtfContracts).where(IbkrEtfContracts.local_symbol == local_symbol)
 
         results = db_session.execute(query).one()
 
@@ -103,7 +103,7 @@ class IbkrETFContracts(Base):
 
     def query_contracts(self, db_session):
         logger.debug10("Begin Funtion")
-        query = select(IbkrETFContracts)
+        query = select(IbkrEtfContracts)
         results = db_session.execute(query).all()
 
         logger.debug("Results: %s", results)
@@ -150,8 +150,8 @@ class IbkrETFContracts(Base):
 class IbkrEtfBarHistoryBeginDate(Base):
     __tablename__ = "z_ibkr_etf_history_begin_date"
     id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_etf_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_etf: Mapped["IbkrETFContracts"] = relationship()
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_etf_contracts.id"))
+    ibkr_contract: Mapped["IbkrEtfContracts"] = relationship()
     oldest_datetime: Mapped[datetime]
     last_updated: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
@@ -166,10 +166,10 @@ class IbkrEtfBarHistoryBeginDate(Base):
         """
         return repr_str
 
-    def query_begin_date(self, db_session, ibkr_etf):
+    def query_begin_date(self, db_session, ibkr_contract):
         logger.debug10("Begin Function")
         query = select(IbkrEtfBarHistoryBeginDate).where(
-            IbkrEtfBarHistoryBeginDate.ibkr_etf == ibkr_etf)
+            IbkrEtfBarHistoryBeginDate.ibkr_contract == ibkr_contract)
 
         results = db_session.execute(query).one()
         logger.debug("Results: %s", results)
@@ -178,7 +178,7 @@ class IbkrEtfBarHistoryBeginDate(Base):
 
     def row_exists(self, db_session):
         date_list = []
-        date_list = self.select(db_session, self.ibkr_etf)
+        date_list = self.select(db_session, self.ibkr_contract)
 
         if len(date_list) == 0:
             return False
@@ -194,20 +194,74 @@ class IbkrEtfBarHistoryBeginDate(Base):
                 db_session.add(self)
             except Exception as msg:
                 logger.error("Exception: %s", msg)
-                print("Error Adding Ticker:", self.ibkr_etf)
+                print("Error Adding Ticker:", self.ibkr_contract)
 
             try:
                 db_session.commit()
             except Exception as msg:
                 logger.error("Exception: %s", msg)
-                print("Error committing ticker:", self.ibkr_etf)
+                print("Error committing ticker:", self.ibkr_contract)
+
+
+class IbkrEtfContractDetails(Base):
+    __tablename__ = "z_ibkr_etf_contract_details"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_etf_contracts.id"))
+    ibkr_contract: Mapped["IbkrEtfContracts"] = relationship()
+    market_name: Mapped[str] = mapped_column(String(6))
+    min_tick: Mapped[float]
+    price_magnifier: Mapped[int]
+    long_name: Mapped[str] = mapped_column(String(96))
+    timezone_id: Mapped[str] = mapped_column(String(16))
+    stock_type: Mapped[str] = mapped_column(String(16))
+    aggregated_group: Mapped[int]
+
+
+class IbkrEtfExchanges(Base):
+    __tablename__ = "z_ibkr_etf_exchanges"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_etf_contracts.id"))
+    ibkr_contract: Mapped["IbkrEtfContracts"] = relationship()
+    exchange: Mapped[str] = mapped_column(String(12))
+
+
+class IbkrEtfOrderTypes(Base):
+    __tablename__ = "z_ibkr_etf_order_types"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_etf_contracts.id"))
+    ibkr_contract: Mapped["IbkrEtfContracts"] = relationship()
+    order_type: Mapped[str] = mapped_column(String(12))
+
+
+class IbkrEtfTradingHours(Base):
+    __tablename__ = "z_ibkr_etf_trading_hours"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_etf_contracts.id"))
+    ibkr_contract: Mapped["IbkrEtfContracts"] = relationship()
+    trading_hours: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+
+class IbkrEtfLiquidHours(Base):
+    __tablename__ = "z_ibkr_etf_liquid_hours"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_etf_contracts.id"))
+    ibkr_contract: Mapped["IbkrEtfContracts"] = relationship()
+    liquid_hours: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+
+class IbkrEtfOptionParams(Base):
+    __tablename__ = "z_ibkr_etf_option_parameters"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_etf_contracts.id"))
+    ibkr_contract: Mapped["IbkrEtfContracts"] = relationship()
+    exchange: Mapped[str] = mapped_column(String(12))
 
 
 class IbkrEtfBar1MinTrades(Base):
     __tablename__ = "z_ibkr_etf_bar_1min_trades"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_contract: Mapped["IbkrETFContracts"] = relationship()
+    ibkr_contract: Mapped["IbkrEtfContracts"] = relationship()
     date_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     bar_open: Mapped[float]
     bar_high: Mapped[float]
@@ -295,7 +349,7 @@ class IbkrEtfBar5SecTrades(Base):
     __tablename__ = "z_ibkr_etf_bar_5sec_trades"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_etf_contracts.id"))
-    ibkr_contract: Mapped["IbkrETFContracts"] = relationship()
+    ibkr_contract: Mapped["IbkrEtfContracts"] = relationship()
     date_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     bar_open: Mapped[float]
     bar_high: Mapped[float]

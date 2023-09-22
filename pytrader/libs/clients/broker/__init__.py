@@ -25,12 +25,19 @@ Creates a basic interface for interacting with a broker
 
 """
 # System Libraries
+import multiprocessing
+import threading
 from multiprocessing import Queue
+from typing import Optional
 
-# 3rd Party Libraries
-
+from pytrader.libs.clients.broker.ibkr.tws import (IbgDemoAccountClient,
+                                                   IbgRealAccountClient,
+                                                   TwsDemoAccountClient,
+                                                   TwsRealAccountClient)
 # Application Libraries
 from pytrader.libs.system import logging
+
+# 3rd Party Libraries
 
 # ==================================================================================================
 #
@@ -50,19 +57,25 @@ class BrokerClient():
     """
     The BrokerClient.
     """
+    address = None
     strategies = None
+    client_classes = {
+        "tws_real": TwsRealAccountClient,
+        "tws_demo": TwsDemoAccountClient,
+        "ibg_real": IbgRealAccountClient,
+        "ibg_demo": IbgDemoAccountClient
+    }
+    role = None
 
-    def __init__(self, brokerclient, cmd_queue: Queue, data_queue: dict):
-        self.brokerclient = brokerclient
+    def __init__(self,
+                 brokerclient: str,
+                 cmd_queue: Queue,
+                 data_queue: dict,
+                 client_id: Optional[int] = 0):
+        self.brokerclient = TwsDemoAccountClient(data_queue)
         self.cmd_queue = cmd_queue
         self.data_queue = data_queue
-
-    def connect(self, address: str):
-        """!
-        Connects to the broker client.
-        """
-        self.brokerclient.connect(address)
-        self.brokerclient.start()
+        self.client_id = client_id
 
     def run(self) -> None:
         """!
@@ -70,6 +83,9 @@ class BrokerClient():
 
         @return None
         """
+        self.brokerclient.connect(self.address, self.client_id)
+        self.brokerclient.start(self.role, self.strategies)
+
         broker_connection = True
         while broker_connection:
             cmd = self.cmd_queue.get()
@@ -77,21 +93,6 @@ class BrokerClient():
 
             self._process_commands(cmd[commander_id], commander_id)
             broker_connection = self.brokerclient.is_connected()
-
-    def set_broker_observers(self, broker: str) -> None:
-        self.brokerclient.set_broker_observers(broker)
-
-    def set_downloader(self) -> None:
-        """!
-        Sets the downloader observers.
-        """
-        self.brokerclient.set_downloader_observers()
-
-    def set_main(self) -> None:
-        """!
-        Sets the downloader observers.
-        """
-        self.brokerclient.set_main_observers()
 
     def set_strategies(self, strategy_list: list) -> None:
         """!
@@ -102,8 +103,18 @@ class BrokerClient():
         @return None
         """
         self.strategies = strategy_list
-        self.brokerclient.set_strategy_observers(strategy_list)
 
+    def set_address(self, address: str) -> None:
+        self.address = address
+
+    def set_role(self, role: str) -> None:
+        self.role = role
+
+    # ==============================================================================================
+    #
+    # Private Functions
+    #
+    # ==============================================================================================
     def _cancel_order(self, order_id: int) -> None:
         """!
         Send Cancel Order to brokerclient thread.
@@ -154,7 +165,7 @@ class BrokerClient():
             case "history_begin_date":
                 self.brokerclient.request_history_begin_date(subcommand[command])
             case "option_details":
-                self.brokerclient.request_option_details(strategy_id)
+                self.brokerclient.request_option_details(subcommand[command])
             case "real_time_bars":
                 self.brokerclient.request_real_time_bars(strategy_id)
             case "real_time_market_data":

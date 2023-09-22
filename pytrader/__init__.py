@@ -50,12 +50,7 @@ import os
 import pygit2
 
 # Application Libraries
-# System Library Overrides
 from pytrader.libs.system import logging
-
-# Other Application Libraries
-
-# Conditional Libraries
 
 # ==================================================================================================
 #

@@ -31,14 +31,15 @@ from queue import Queue
 from pytrader.libs.clients.broker.observers import (
     BrokerOrderIdObserver, DownloaderBarDataObserver,
     DownloaderContractDataObserver, DownloaderContractHistoryBeginObserver,
-    DownloaderMarketDataObserver, DownloaderOrderDataObserver,
+    DownloaderContractOptionParametersObserver, DownloaderMarketDataObserver,
+    DownloaderOrderDataObserver, DownloaderOrderIdObserver,
     DownloaderRealTimeBarObserver, MainOrderIdObserver,
     StrategyMarketDataObserver, StrategyOrderDataObserver,
     StrategyRealTimeBarObserver)
 from pytrader.libs.clients.broker.subjects import (
     BrokerBarData, BrokerContractData, BrokerContractHistoryBeginDate,
-    BrokerMarketData, BrokerOrderData, BrokerOrderIdData,
-    BrokerRealTimeBarData)
+    BrokerContractOptionParametersData, BrokerMarketData, BrokerOrderData,
+    BrokerOrderIdData, BrokerRealTimeBarData)
 from pytrader.libs.system import logging
 
 # ==================================================================================================
@@ -63,6 +64,7 @@ class BaseBroker():
     bar_subjects = BrokerBarData()
     contract_subjects = BrokerContractData()
     contract_history_begin_subjects = BrokerContractHistoryBeginDate()
+    contract_option_parameter_subjects = BrokerContractOptionParametersData()
     mkt_data_subjects = BrokerMarketData()
     order_id_subjects = BrokerOrderIdData()
     order_subjects = BrokerOrderData()
@@ -71,12 +73,19 @@ class BaseBroker():
     # Observers
     contract_observers = {}
     contract_history_begin_observers = {}
+    contract_option_parameter_observers = {}
     bar_observers = {}
     mkt_data_observers = {}
     order_observers = {}
     order_id_observers = {}
     rtb_observers = {}
     data_queue = {}
+
+    def add_history_begin_ticker(self, req_id: int, ticker: str) -> None:
+        self.contract_history_begin_subjects.add_ticker(req_id, ticker)
+
+    def add_contract_option_params_ticker(self, req_id: int, ticker: str) -> None:
+        self.contract_option_parameter_subjects.add_ticker(req_id, ticker)
 
     def set_data_queue(self, data_queue: dict) -> None:
         """!
@@ -93,6 +102,7 @@ class BaseBroker():
 
         @returun None.
         """
+        logger.debug("Broker Id: %s", broker_id)
         self.order_id_observers[broker_id] = BrokerOrderIdObserver(queue)
         self.order_id_subjects.attach(self.order_id_observers[broker_id])
 
@@ -118,10 +128,20 @@ class BaseBroker():
         self.contract_history_begin_subjects.attach(
             self.contract_history_begin_observers["downloader"])
 
+        self.contract_option_parameter_observers[
+            "downloader"] = DownloaderContractOptionParametersObserver(
+                self.data_queue["downloader"])
+        self.contract_option_parameter_subjects.attach(
+            self.contract_option_parameter_observers["downloader"])
+
         # # Add Order Observers
         # self.order_observers["downloader"] = DownloaderOrderDataObserver(
         #     self.data_queue["downloader"])
         # self.order_subjects.attach(self.order_observers["downloader"], self.brokerclient)
+
+        self.order_id_observers["downloader"] = DownloaderOrderIdObserver(
+            self.data_queue["downloader"])
+        self.order_id_subjects.attach(self.order_id_observers["downloader"])
 
         # # Add Market Data Observers
         # self.mkt_data_observers["downloader"] = DownloaderMarketDataObserver(

@@ -39,8 +39,6 @@ from pytrader.libs.utilities.config.broker import twsconfig
 # create logger
 logger = logging.getLogger(__name__)
 
-BROKERS = {"twsapi": twsconfig.TwsConfig}
-
 
 # ==================================================================================================
 #

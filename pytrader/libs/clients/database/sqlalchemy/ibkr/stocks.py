@@ -134,6 +134,55 @@ class IbkrStockContracts(Base):
         return None
 
 
+class IbkrStockContractDetails(Base):
+    __tablename__ = "z_ibkr_stock_contract_details"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_stock_contracts.id"))
+    ibkr_contract: Mapped["IbkrStockContracts"] = relationship()
+    market_name: Mapped[str] = mapped_column(String(6))
+    min_tick: Mapped[float]
+    price_magnifier: Mapped[int]
+    long_name: Mapped[str] = mapped_column(String(96))
+    industry: Mapped[str] = mapped_column(String(32))
+    category: Mapped[str] = mapped_column(String(32))
+    subcategory: Mapped[str] = mapped_column(String(32))
+    timezone_id: Mapped[str] = mapped_column(String(16))
+    stock_type: Mapped[str] = mapped_column(String(16))
+    aggregated_group: Mapped[int]
+
+
+class IbkrStockExchanges(Base):
+    __tablename__ = "z_ibkr_stock_exchanges"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_stock_contracts.id"))
+    ibkr_contract: Mapped["IbkrStockContracts"] = relationship()
+    exchange: Mapped[str] = mapped_column(String(12))
+
+
+class IbkrStockOrderTypes(Base):
+    __tablename__ = "z_ibkr_stock_order_types"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_stock_contracts.id"))
+    ibkr_contract: Mapped["IbkrStockContracts"] = relationship()
+    order_type: Mapped[str] = mapped_column(String(12))
+
+
+class IbkrStockTradingHours(Base):
+    __tablename__ = "z_ibkr_stock_trading_hours"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_stock_contracts.id"))
+    ibkr_contract: Mapped["IbkrStockContracts"] = relationship()
+    trading_hours: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+
+class IbkrStockLiquidHours(Base):
+    __tablename__ = "z_ibkr_stock_liquid_hours"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_stock_contracts.id"))
+    ibkr_contract: Mapped["IbkrStockContracts"] = relationship()
+    liquid_hours: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+
 class IbkrStockHistoryBeginDate(Base):
     __tablename__ = "z_ibkr_stock_history_begin_date"
     id: Mapped[int] = mapped_column(primary_key=True)
