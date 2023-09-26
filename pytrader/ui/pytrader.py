@@ -214,6 +214,12 @@ class PyTrader():
             nargs="*",
             default=[],
             help="Strategies to run.  If not specified no strategies will run.")
+        strategy_options.add_argument("-f",
+                                      "--fed",
+                                      nargs='?',
+                                      default="meeting",
+                                      choices=["meeting", "minutes"],
+                                      help="Let the system know of Fed Events.")
 
     def _start_process_manager(self) -> None:
         """!

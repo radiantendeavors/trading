@@ -80,6 +80,7 @@ class ProcessManager():
         self.currencies = args.currencies
         self.regions = args.regions
         self.export = args.export
+        self.fed_event = args.fed
 
         if len(self.strategies) > 0:
             for strategy_id in self.strategies:
@@ -115,7 +116,10 @@ class ProcessManager():
 
     def stop(self) -> None:
         """!
-        Stops all processes."""
+        Stops all processes.
+
+        @return None
+        """
         if self.strategies is not None:
             self._stop_strategy_process()
 
@@ -166,7 +170,7 @@ class ProcessManager():
 
     def _run_strategy_process(self, strategy_list: list, next_order_id: int) -> None:
         self.strategy_mngr = strategy.StrategyProcess(self.cmd_queue, self.reply_queue,
-                                                      next_order_id)
+                                                      next_order_id, self.fed_event)
         self.strategy_process = multiprocessing.Process(target=self.strategy_mngr.run,
                                                         args=(strategy_list, ))
         self.strategy_process.start()
@@ -186,7 +190,7 @@ class ProcessManager():
             # We add this check here because if the strategies aren't started above because we never
             # receive the next order id, then self.strategies will still be NoneType.
             if self.strategies is not None:
-                self.strategies.stop(self.strategies)
+                self.strategy_mngr.stop()
                 self.strategy_process.join()
         except AttributeError as msg:
             logger.error("AttributeError Stopping Strategy Processes: %s", msg)

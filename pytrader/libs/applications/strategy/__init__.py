@@ -53,10 +53,12 @@ class StrategyProcess():
 
     strategy_process = {}
 
-    def __init__(self, cmd_queue: Queue, data_queue: dict, next_order_id: int) -> None:
+    def __init__(self, cmd_queue: Queue, data_queue: dict, next_order_id: int,
+                 fed_event: str) -> None:
         self.cmd_queue = cmd_queue
         self.data_queue = data_queue
         self.next_order_id = next_order_id
+        self.fed_event = fed_event
 
     def run(self, strategy_list: list) -> None:
         """!
@@ -66,28 +68,20 @@ class StrategyProcess():
 
         @return None
         """
-        try:
-            for index, strategy_id in enumerate(strategy_list):
-                order_id = self.next_order_id + (index * 1000)
-                logger.debug("Order Id for Strategy %s: %s", strategy_id, order_id)
-                module_name = IMPORT_PATH + strategy_id
-                module = importlib.import_module(module_name, __name__)
-                strategy = module.Strategy(self.cmd_queue, self.data_queue[strategy_id], order_id,
-                                           strategy_id)
-                self.strategy_process[strategy_id] = multiprocessing.Process(target=strategy.run,
-                                                                             args=())
-                self.strategy_process[strategy_id].start()
+        for index, strategy_id in enumerate(strategy_list):
+            order_id = self.next_order_id + (index * 1000)
+            logger.debug("Order Id for Strategy %s: %s", strategy_id, order_id)
+            module_name = IMPORT_PATH + strategy_id
+            module = importlib.import_module(module_name, __name__)
+            strategy = module.Strategy(self.cmd_queue, self.data_queue[strategy_id], order_id,
+                                       strategy_id)
+            self.strategy_process[strategy_id] = multiprocessing.Process(target=strategy.run,
+                                                                         args=())
+            self.strategy_process[strategy_id].start()
 
-            logger.debug("Strategy Keys: %s", str(list(self.strategy_process)))
+        logger.debug("Strategy Keys: %s", str(list(self.strategy_process)))
 
-        except KeyboardInterrupt as msg:
-            logger.critical("Received Keyboard Interupt! Ending strategy processeses!")
-            logger.debug9("Message: %s", msg)
-
-        finally:
-            logger.debug9("Strategy Keys: %s", str(list(self.strategy_process)))
-
-    def stop(self, strategy_list: list) -> None:
+    def stop(self) -> None:
         """!
         Stops various strategy processes
 
@@ -97,7 +91,7 @@ class StrategyProcess():
         """
         logger.debug10("Strategy Keys: %s", str(list(self.strategy_process)))
         try:
-            for strategy_id in strategy_list:
+            for strategy_id in list(self.strategy_process):
                 try:
                     self.strategy_process[strategy_id].join()
                 except KeyError:
