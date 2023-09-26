@@ -1172,7 +1172,7 @@ class TwsReader(EWrapper, EClient, BaseBroker):
             "exchange": exchange,
             "underlying_contract_id": underlyingConId,
             "trading_class": tradingClass,
-            "mulitplier": multiplier,
+            "multiplier": multiplier,
             "expirations": expirations,
             "strikes": strikes
         }
