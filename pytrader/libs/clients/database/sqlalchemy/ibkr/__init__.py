@@ -36,8 +36,8 @@ from sqlalchemy.sql import func
 
 # Application Libraries
 from pytrader.libs.clients.database.sqlalchemy import base
-from pytrader.libs.clients.database.sqlalchemy.ibkr import (etfs, indexes,
-                                                            stocks)
+from pytrader.libs.clients.database.sqlalchemy.ibkr import (indexes, indopt,
+                                                            stkopt, stocks)
 from pytrader.libs.system import logging
 
 # ==================================================================================================
@@ -60,7 +60,7 @@ logger = logging.getLogger(__name__)
 class IbkrContractListing(base.Base):
     __tablename__ = "z_ibkr_contract_listing"
     id: Mapped[int] = mapped_column(primary_key=True)
-    long_id: Mapped[str] = mapped_column(String(160), index=True, unique=True)
+    long_id: Mapped[str] = mapped_column(String(40), index=True, unique=True)
     ib_symbol: Mapped[str] = mapped_column(String(32))
     product_description: Mapped[str] = mapped_column(String(96))
     symbol: Mapped[str] = mapped_column(String(32))

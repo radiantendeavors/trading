@@ -25,10 +25,10 @@ The main user interface for the trading program.
 # System libraries
 import argparse
 import multiprocessing
-import threading
 
 # Application Libraries
 from pytrader.libs.applications import broker, downloader, strategy
+from pytrader.libs.applications.database import DatabaseManager
 from pytrader.libs.system import logging
 from pytrader.libs.utilities.exceptions import BrokerNotAvailable
 
@@ -75,11 +75,9 @@ class ProcessManager():
         self.client_id = args.client_id
         self.strategies = args.strategies
         self.tickers = args.tickers
-        self.enable_options = args.enable_options
         self.asset_classes = args.asset_classes
         self.currencies = args.currencies
         self.regions = args.regions
-        self.export = args.export
         self.fed_event = args.fed
 
         if len(self.strategies) > 0:
@@ -98,9 +96,7 @@ class ProcessManager():
 
         @return None
         """
-        logger.debug("Process Name: %s  Thread Name: %s",
-                     multiprocessing.current_process().name,
-                     threading.current_thread().name)
+        self._run_database_mngr()
 
         if enable_broker:
             self._configure_broker()
@@ -159,12 +155,15 @@ class ProcessManager():
         self.broker_process = multiprocessing.Process(target=self.broker_mngr.run, args=())
         self.broker_process.start()
 
+    def _run_database_mngr(self) -> None:
+        dbmgr = DatabaseManager()
+        dbmgr.run()
+
     def _run_downloader_process(self) -> None:
         self.downloader_mngr = downloader.DownloadProcess(self.cmd_queue,
                                                           self.reply_queue["downloader"],
-                                                          self.tickers, self.enable_options,
-                                                          self.asset_classes, self.currencies,
-                                                          self.regions, self.export)
+                                                          self.tickers, self.asset_classes,
+                                                          self.currencies, self.regions)
         self.downloader_process = multiprocessing.Process(target=self.downloader_mngr.run, args=())
         self.downloader_process.start()
 

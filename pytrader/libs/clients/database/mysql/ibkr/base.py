@@ -79,13 +79,13 @@ class IbkrBase(mysql.MySQLDatabase):
                 if x == 0:
                     sql += f"\nWHERE `{col_name}` IN ({value_string})"
                 else:
-                    # TODO: Determine how to add additional criteria.
-                    sql += ""
+                    sql += f"\nAND `{col_name}` IN ({value_string})"
                 sql_input += values
+                x += 1
         self._execute(sql, sql_input)
         return self.mycursor.fetchall()
 
-    def insert(self, columns: list) -> None:
+    def insert(self, columns: list, additional_criteria: Optional[dict] = None) -> None:
         """!
         Inserts a new row into the table.
 
@@ -95,10 +95,17 @@ class IbkrBase(mysql.MySQLDatabase):
         """
         criteria_column_name = self.insert_column_names[0]
         criteria = {criteria_column_name: [columns[0]]}
+
+        if additional_criteria:
+            criteria = criteria | additional_criteria
+
+        logger.debug("Criteria: %s", criteria)
+        logger.debug("Columns: %s", columns)
+
         row_exists = self.select([criteria_column_name], criteria)
 
         if row_exists:
-            self._update(columns)
+            self._update(columns, additional_criteria)
         else:
             self._insert(columns)
 
@@ -127,12 +134,16 @@ class IbkrBase(mysql.MySQLDatabase):
         self._execute(sql, columns)
         self.mydb.commit()
 
-    def _update(self, columns: list) -> None:
+    def _update(self, columns: list, additional_criteria: Optional[dict] = None) -> None:
         column_names = "`=%s, `".join(self.update_column_names) + "`=%s"
         column_names = "`" + column_names
         sql = (f"UPDATE `{self.table_name}`\n"
                f"SET {column_names}\n"
                f"WHERE `{self.update_column_names[0]}`={columns[0]}")
+
+        if additional_criteria:
+            for col_name, value in additional_criteria.items():
+                sql += f"\nAND `{col_name}`='{value[0]}'"
 
         if "last_updated" in self.update_column_names:
             columns.append(date.today())

@@ -74,17 +74,6 @@ class IbkrWebScraper():
     user_agent += " Chrome/117.0.0.0 Safari/537.36"
     session.headers.update({"User-Agent": user_agent})
 
-    ibkr_asset_class_sort_order = {
-        "ETF": 1,
-        "STK": 2,
-        "BOND": 3,
-        "BILL": 4,
-        "IND": 5,
-        "FUTGRP": 6,
-        "OPTGRP": 7,
-        "WAR": 8
-    }
-
     def filter_assets(self, currencies: list) -> None:
         """!
         Filters assets to eliminate bad values
@@ -97,22 +86,12 @@ class IbkrWebScraper():
         self.exchange_listings = self.exchange_listings.rename(
             columns=self.exchange_listings.iloc[0])
 
-        # Drop rows where atleast one element is missing
-        self.exchange_listings = self.exchange_listings.dropna()
-
-        # if there is row with text 'symbol', exclude that
-        self.exchange_listings = self.exchange_listings[self.exchange_listings.Symbol != 'Symbol']
-
-        # Drop exact matches for duplicate Product Descriptions
-        self.exchange_listings = self.exchange_listings.drop_duplicates("Product Description")
-
-        self.exchange_listings = self.exchange_listings[self.exchange_listings.Currency.isin(
-            currencies)]
-
+        # We do basic filting first to minimize calculations needed in finding unique rows.
+        self._filter_assets(currencies)
         self._find_unique_rows()
 
-        self.exchange_listings = self.exchange_listings.sort_values(
-            by=["IB Symbol", "Asset Class Sort"], ascending=[True, True])
+        self.exchange_listings = self.exchange_listings.sort_values(by=["Long ID"],
+                                                                    ascending=[True])
         self.exchange_listings = self.exchange_listings.reset_index(drop=True)
         logger.debug("Dataframe:\n%s", self.exchange_listings)
 
@@ -236,7 +215,7 @@ class IbkrWebScraper():
     # ==============================================================================================
     def _create_table_data(self, asset_url: str, pages: int) -> None:
         asset_class = self.exchange_asset_page_assets[asset_url]
-        exchange = self._get_exchange(asset_url, asset_class)
+        exchange = self._get_exchange(asset_url)
 
         if pages == 0:
             self._get_table_data(asset_url, asset_class, exchange)
@@ -250,38 +229,72 @@ class IbkrWebScraper():
         logger.debug("Exchange Listings:\n%s", self.exchange_listings)
 
     def _find_unique_rows(self) -> None:
-        # ==========================================================================================
+        # Drop exact matches for duplicate Product Descriptions (Ensure it's case insensitive)
+        self.exchange_listings["Desc_Upper"] = self.exchange_listings["Product Description"].astype(
+            str).str.upper()
+        self.exchange_listings = self.exchange_listings.drop_duplicates("Desc_Upper")
+
+        # Adjust the 'Asset Class' based on the product description.
         #
-        # FIXME: Ensuring we don't have any duplicates is hard.  This is a half-assed solution.  It
-        # is still an improvement over what I had.
+        # We do the indexes first because some etfs are listed as "... Index ETF"
+        # This way, any bad adjustments are corrected
         #
-        # Sometimes ETFs will appear as Stocks with the product description ALL CAPS, but with other
-        # minor changes.  For example
-        #
-        # Symbol | Product Description               | Asset Class
-        # -------+-----------------------------------+------------
-        # VT     | VANGUARD TOT WORLD STK ETF        | STK
-        # VT     | Vanguard Total World Stock ETF    | ETF
-        # VT     | CBOE S&P 500 Three Month Variance | IND  (To make it even more complicated)
-        #
-        # And that is within the USD Currency.
-        #
-        # ==========================================================================================
+        # FIXME: This probable needs to be done with BILLS -> BONDS as well.  I do not trade BONDS
+        # so I don't have a good way to test anything else relating to bonds.  So for now, I'm not
+        # downloading bond information I'd need to test.
+        self.exchange_listings["Asset Class"] = numpy.where(
+            self.exchange_listings["Product Description"].str.contains("index",
+                                                                       case=False,
+                                                                       regex=False), "IND",
+            self.exchange_listings["Asset Class"])
+        self.exchange_listings["Asset Class"] = numpy.where(
+            self.exchange_listings["Product Description"].str.contains("etf",
+                                                                       case=False,
+                                                                       regex=False), "STK",
+            self.exchange_listings["Asset Class"])
+        self.exchange_listings["Asset Class"] = numpy.where(
+            self.exchange_listings["Product Description"].str.contains("etn",
+                                                                       case=False,
+                                                                       regex=False), "STK",
+            self.exchange_listings["Asset Class"])
+        # TODO: Check if these are actually mutual funds...
+        self.exchange_listings["Asset Class"] = numpy.where(
+            self.exchange_listings["Product Description"].str.contains("fund",
+                                                                       case=False,
+                                                                       regex=False), "STK",
+            self.exchange_listings["Asset Class"])
+        # While the above has probably already taken care of checking the asset class for an ETF
+        # we want to be certain we have.
+        self.exchange_listings["Asset Class"] = numpy.where(
+            self.exchange_listings["Asset Class"] == "ETF", "STK",
+            self.exchange_listings["Asset Class"])
+
+        self.exchange_listings["Exchange"] = numpy.where(
+            self.exchange_listings["Asset Class"].isin(["STK"]), "SMART",
+            self.exchange_listings["Exchange"])
+
         self.exchange_listings["Long ID"] = self.exchange_listings[
             "IB Symbol"] + "." + self.exchange_listings["Asset Class"]
         self.exchange_listings = self.exchange_listings.drop_duplicates("Long ID")
 
-    def _get_exchange(self, asset_url: str, asset_class: str) -> str:
-        if asset_class == "IND":
-            exchange_half = asset_url.split("=")[2]
-            exchange = exchange_half.split("&")[0]
-            logger.debug("Asset URL: %s", asset_url)
-            logger.debug("Exchange: %s", exchange)
+    def _filter_assets(self, currencies) -> None:
+        self.exchange_listings = self.exchange_listings.dropna()
+        self.exchange_listings = self.exchange_listings[self.exchange_listings["Symbol"] !=
+                                                        'Symbol']
+        self.exchange_listings = self.exchange_listings[self.exchange_listings["Currency"].isin(
+            currencies)]
+        # Drop rows that have $TICKER.OLD* (Provides old ticker after splits/reverse splits)
+        self.exchange_listings = self.exchange_listings[~self.exchange_listings["IB Symbol"].str.
+                                                        contains(".OLD")]
 
-            # Ensure exchanges are upper case
-            return exchange.upper()
+    def _get_exchange(self, asset_url: str) -> str:
+        exchange_half = asset_url.split("=")[2]
+        exchange = exchange_half.split("&")[0]
+        logger.debug("Asset URL: %s", asset_url)
+        logger.debug("Exchange: %s", exchange)
 
-        return "SMART"
+        # Ensure exchanges are upper case
+        return exchange.upper()
 
     def _get_table_data(self, asset_url: str, asset_class: str, exchange: str) -> None:
         """
@@ -312,23 +325,11 @@ class IbkrWebScraper():
                 try:
                     page_dataframe.loc[row_marker] = [column.get_text() for column in columns]
                 except ValueError:
-                    # Ensure we don't fail out if column.get_text() returns an empty list.
+                    # Ensure we don't fail if we get an empty list.
                     continue
 
             page_dataframe["Asset Class"] = asset_class
             page_dataframe["Exchange"] = exchange
-
-            # If the description says it's an ETF, ensure we capture it as an ETF.
-            # We really need to check "ETF", "Etf", maybe "EtF", and "etf"
-            # I'd be easier to check upper case, but that doesn't work with a dataframe.
-            page_dataframe["Asset Class"] = numpy.where(
-                page_dataframe[1].str.contains("etf", case=False, regex=False), "ETF",
-                page_dataframe["Asset Class"])
-            page_dataframe["Asset Class"] = numpy.where(
-                page_dataframe[1].str.contains("etn", case=False, regex=False), "ETN",
-                page_dataframe["Asset Class"])
-
-            page_dataframe["Asset Class Sort"] = self.ibkr_asset_class_sort_order[asset_class]
 
             self.exchange_listings = pandas.concat([self.exchange_listings, page_dataframe],
                                                    ignore_index=True)
@@ -371,7 +372,6 @@ class IbkrWebScraper():
 
             page_dataframe["Asset Class"] = "Asset Class"
             page_dataframe["Exchange"] = "Exchange"
-            page_dataframe["Asset Class Sort"] = "Asset Class Sort"
 
             self.exchange_listings = pandas.concat([self.exchange_listings, page_dataframe],
                                                    ignore_index=True)

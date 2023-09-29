@@ -77,7 +77,11 @@ class DownloaderContractDataObserver(ContractDataObserver):
         """!
         Saves the historical bar data to the database.
         """
-        msg = {"contract_details": subject.contract}
+        if subject.contract == "Error":
+            msg = "Done"
+        else:
+            msg = {"contract_details": subject.contract}
+
         self.msg_queue.put(msg)
 
 

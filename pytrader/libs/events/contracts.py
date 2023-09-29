@@ -92,11 +92,6 @@ class ContractHistoryBeginDate(Subject):
                    f"  Number of Ids: 0\n)")
         return message
 
-    def print_instance_attributes(self):
-        for attribute, value in self.__dict__.items():
-            msg = f"{attribute} = {value}"
-            logger.warning(msg)
-
     def add_ticker(self, req_id: int, ticker: str) -> None:
         """!
         Adds a ticker for tracking.
@@ -119,7 +114,6 @@ class ContractHistoryBeginDate(Subject):
     def notify(self, modifier=None) -> None:
         for observer in self._observers:
             if modifier != observer:
-                logger.debug(self.history_begin_ids)
                 observer.update(self)
 
 

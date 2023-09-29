@@ -49,6 +49,39 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class IbkrOptContracts(IbkrBaseContracts):
+class IbkrStkOptContracts(IbkrBaseContracts):
+    table_name = "z_ibkr_stk_opt_contracts"
+    insert_column_names = [
+        "contract_id", "symbol", "security_type", "last_trading_date", "strike", "opt_right",
+        "multiplier", "exchange", "currency", "local_symbol", "trading_class"
+    ]
+    update_column_names = insert_column_names + ["last_updated"]
 
-    table_name = "z_ibkr_options_contracts"
+
+class IbkrStkOptContractDetails(IbkrBaseContracts):
+    table_name = "z_ibkr_stk_opt_contract_details"
+    insert_column_names = [
+        "ibkr_contract_id", "market_name", "min_tick", "price_magnifier", "order_types",
+        "valid_exchanges", "underlying_contract_id", "contract_month", "timezone_id",
+        "ev_multiplier", "agg_group", "sec_id_list", "market_rule_ids", "real_expiration_date",
+        "last_trade_time"
+    ]
+    update_column_names = insert_column_names
+
+
+class IbkrStkOptHistoryBeginDate(IbkrBaseContracts):
+    table_name = "z_ibkr_stk_opt_history_begin_date"
+    insert_column_names = ["ibkr_contract_id", "oldest_datetime"]
+    update_column_names = insert_column_names + ["last_updated"]
+
+
+class IbkrStkOptLiquidHours(IbkrBaseContracts):
+    table_name = "z_ibkr_stk_opt_liquid_hours"
+    insert_column_names = ["ibkr_contract_id", "begin_dt", "end_dt"]
+    update_column_names = insert_column_names
+
+
+class IbkrStkOptTradingHours(IbkrBaseContracts):
+    table_name = "z_ibkr_stk_opt_trading_hours"
+    insert_column_names = ["ibkr_contract_id", "begin_dt", "end_dt"]
+    update_column_names = insert_column_names

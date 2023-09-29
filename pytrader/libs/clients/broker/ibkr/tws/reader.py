@@ -506,9 +506,6 @@ class TwsReader(EWrapper, EClient, BaseBroker):
 
         @return None
         """
-        logger.debug("Process Name: %s", multiprocessing.current_process().name)
-        logger.debug("Thread Name: %s", threading.current_thread().name)
-        logger.debug(self)
         logger.debug(self.req_id)
         logger.debug(self.history_begin_ids)
         self.contract_history_begin_subjects.history_begin_ids = self.history_begin_ids
@@ -1837,6 +1834,9 @@ class TwsReader(EWrapper, EClient, BaseBroker):
                          error_code, error_string, advanced_order_rejection)
         else:
             logger.error("ReqID# %s, Code: %s (%s)", req_id, error_code, error_string)
+
+        if error_code == 200:
+            self.contract_subjects.set_contract_details(req_id, "Error")
 
         # match error_code:
         #     case 200:

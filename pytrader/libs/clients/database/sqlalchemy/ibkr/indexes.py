@@ -28,9 +28,7 @@ information.
 from datetime import date, datetime
 
 # 3rd Party Libraries
-from sqlalchemy import (BigInteger, Boolean, Date, DateTime, FetchedValue,
-                        Float, ForeignKey, Integer, MetaData, String, Time,
-                        select)
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, select
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -52,11 +50,11 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class IbkrIndexContracts(Base):
-    __tablename__ = "z_ibkr_index_contracts"
+class IbkrIndContracts(Base):
+    __tablename__ = "z_ibkr_ind_contracts"
     id: Mapped[int] = mapped_column(primary_key=True)
     contract_id: Mapped[int] = mapped_column(index=True, unique=True)
-    ticker_symbol: Mapped[str] = mapped_column(String(6), index=True, unique=True)
+    symbol: Mapped[str] = mapped_column(String(6), index=True, unique=True)
     security_type: Mapped[str] = mapped_column(String(6))
     exchange: Mapped[str] = mapped_column(String(12), nullable=False, default="SMART")
     currency: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -64,67 +62,67 @@ class IbkrIndexContracts(Base):
     last_updated: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
 
-class IbkrIndexContractDetails(Base):
-    __tablename__ = "z_ibkr_index_contract_details"
+class IbkrIndContractDetails(Base):
+    __tablename__ = "z_ibkr_ind_contract_details"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_index_contracts.id"))
-    ibkr_contract: Mapped["IbkrIndexContracts"] = relationship()
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_ind_contracts.id"))
+    ibkr_contract: Mapped["IbkrIndContracts"] = relationship()
     market_name: Mapped[str] = mapped_column(String(6))
     min_tick: Mapped[float]
     price_magnifier: Mapped[int]
     long_name: Mapped[str] = mapped_column(String(96))
-    industry: Mapped[str] = mapped_column(String(32))
-    category: Mapped[str] = mapped_column(String(32))
-    subcategory: Mapped[str] = mapped_column(String(32))
+    industry: Mapped[str] = mapped_column(String(32), nullable=True)
+    category: Mapped[str] = mapped_column(String(32), nullable=True)
+    subcategory: Mapped[str] = mapped_column(String(32), nullable=True)
     timezone_id: Mapped[str] = mapped_column(String(16))
-    aggregated_group: Mapped[int]
+    ev_multiplier: Mapped[int]
+    agg_group: Mapped[int]
+    market_rule_ids: Mapped[str] = mapped_column(Text)
 
 
-class IbkrIndexExchanges(Base):
-    __tablename__ = "z_ibkr_index_exchanges"
+class IbkrIndOptionParams(Base):
+    __tablename__ = "z_ibkr_ind_option_parameters"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_index_contracts.id"))
-    ibkr_contract: Mapped["IbkrIndexContracts"] = relationship()
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_ind_contracts.id"))
+    ibkr_contract: Mapped["IbkrIndContracts"] = relationship()
     exchange: Mapped[str] = mapped_column(String(12))
+    multiplier: Mapped[int]
+    expirations: Mapped[str] = mapped_column(Text)
+    strikes: Mapped[str] = mapped_column(Text)
+    last_updated: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
 
-class IbkrIndexOrderTypes(Base):
-    __tablename__ = "z_ibkr_index_order_types"
+class IbkrIndTradingHours(Base):
+    __tablename__ = "z_ibkr_ind_trading_hours"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_index_contracts.id"))
-    ibkr_contract: Mapped["IbkrIndexContracts"] = relationship()
-    order_type: Mapped[str] = mapped_column(String(12))
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_ind_contracts.id"))
+    ibkr_contract: Mapped["IbkrIndContracts"] = relationship()
+    begin_dt: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    end_dt: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
-class IbkrIndexTradingHours(Base):
-    __tablename__ = "z_ibkr_index_trading_hours"
+class IbkrIndLiquidHours(Base):
+    __tablename__ = "z_ibkr_ind_liquid_hours"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_index_contracts.id"))
-    ibkr_contract: Mapped["IbkrIndexContracts"] = relationship()
-    trading_hours: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_ind_contracts.id"))
+    ibkr_contract: Mapped["IbkrIndContracts"] = relationship()
+    begin_dt: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    end_dt: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
-class IbkrIndexLiquidHours(Base):
-    __tablename__ = "z_ibkr_index_liquid_hours"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_index_contracts.id"))
-    ibkr_contract: Mapped["IbkrIndexContracts"] = relationship()
-    liquid_hours: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-
-
-class IbkrIndexBarHistoryBeginDate(Base):
-    __tablename__ = "z_ibkr_index_history_begin_date"
+class IbkrIndBarHistoryBeginDate(Base):
+    __tablename__ = "z_ibkr_ind_history_begin_date"
     id: Mapped[int] = mapped_column(primary_key=True)
-    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_index_contracts.id"))
-    ibkr_contract: Mapped["IbkrIndexContracts"] = relationship()
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_ind_contracts.id"))
+    ibkr_contract: Mapped["IbkrIndContracts"] = relationship()
     oldest_datetime: Mapped[datetime]
     last_updated: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
     def __repr__(self) -> str:
         repr_str = f"""
-        IbkrIndexBarHistoryBeginDate(
+        IbkrIndBarHistoryBeginDate(
             id={self.id!r},
-            ibkr_contract_id={self.ibkr_index_id!r},
+            ibkr_contract_id={self.ibkr_contract_id!r},
             oldest_datetime={self.oldest_datetime!r},
             last_updated={self.last_updated!r}
         )
@@ -133,8 +131,8 @@ class IbkrIndexBarHistoryBeginDate(Base):
 
     def query_begin_date(self, db_session, ibkr_contract):
         logger.debug10("Begin Function")
-        query = select(IbkrIndexBarHistoryBeginDate).where(
-            IbkrIndexBarHistoryBeginDate.ibkr_index == ibkr_contract)
+        query = select(IbkrIndBarHistoryBeginDate).where(
+            IbkrIndBarHistoryBeginDate.ibkr_contract_id == ibkr_contract)
 
         results = db_session.execute(query).one()
         logger.debug("Results: %s", results)
@@ -168,8 +166,8 @@ class IbkrIndexBarHistoryBeginDate(Base):
                 print("Error committing ticker:", self.ibkr_contract)
 
 
-# class IbkrIndexBarDailyTrades(Base):
-#     __tablename__ = "z_ibkr_index_bar_daily_trades"
+# class IbkrIndBarDailyTrades(Base):
+#     __tablename__ = "z_ibkr_ind_bar_daily_trades"
 #     id: Mapped[int] = mapped_column(primary_key=True)
 #     index_id: Mapped[] = mapped_column(Integer, ForeignKey("z_ibkr_index_info.id"))
 #     index = relationship(IbkrIndexContract)

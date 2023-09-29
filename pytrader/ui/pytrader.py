@@ -159,17 +159,11 @@ class PyTrader():
                                       nargs="*",
                                       default=[],
                                       help="Tickers for downloading data.")
-
-        download_options.add_argument("-o",
-                                      "--enable-options",
-                                      action="store_true",
-                                      default=False,
-                                      help="Enable downloading Options data.")
         download_options.add_argument(
             "-A",
             "--asset_classes",
             nargs="*",
-            default=["STK", "ETF", "BOND", "BILL", "IND", "FUTGRP", "OPTGRP", "WAR"],
+            default=["STK", "ETF", "IND", "FUTGRP", "OPTGRP", "WAR"],
             choices=["STK", "ETF", "BOND", "BILL", "IND", "FUTGRP", "OPTGRP", "WAR"],
             help="Asset Classes for stock universe.")
 
@@ -195,16 +189,6 @@ class PyTrader():
             default=["north_america"],
             choices=["north_america", "europe", "asia", "global"],
             help="Regions to download exchange listings for (default is ['north_america'])")
-
-        # Not sure if this configuration is really necessary.  I doubt it'll ever export to anything
-        # other than CSV.  It always exports to the database.  It may export to CSV.  CSV format is
-        # helpful for debugging and working out how to manage duplicates.
-        download_options.add_argument("-x",
-                                      "--export",
-                                      nargs="*",
-                                      default=[],
-                                      choices=["csv"],
-                                      help="Additional options to save stock universe.")
 
     def _add_strategy_options(self) -> None:
         strategy_options = self.parser.add_argument_group("Strategy Options")

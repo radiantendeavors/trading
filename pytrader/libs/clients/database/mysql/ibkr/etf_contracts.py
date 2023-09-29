@@ -62,8 +62,8 @@ class IbkrEtfContracts(IbkrBaseContracts):
 class IbkrEtfContractDetails(IbkrBaseContracts):
     table_name = "z_ibkr_etf_contract_details"
     insert_column_names = [
-        "ibkr_contract_id", "market_name", "min_tick", "price_magnifier", "long_name",
-        "timezone_id", "stock_type", "aggregated_group"
+        "ibkr_contract_id", "market_name", "min_tick", "price_magnifier", "valid_exchanges",
+        "long_name", "timezone_id", "stock_type", "aggregated_group"
     ]
     update_column_names = insert_column_names
 
@@ -90,6 +90,12 @@ class IbkrEtfOrderTypes(IbkrBaseContracts):
     table_name = "z_ibkr_etf_order_types"
     insert_column_names = ["ibkr_contract_id", "order_type"]
     update_column_names = insert_column_names
+
+
+class IbkrEtfOptParams(IbkrBaseContracts):
+    table_name = "z_ibkr_etf_option_parameters"
+    insert_column_names = ["ibkr_contract_id", "exchange", "multiplier", "expirations", "strikes"]
+    update_column_names = insert_column_names + ["last_updated"]
 
 
 class IbkrEtfTradingHours(IbkrBaseContracts):
