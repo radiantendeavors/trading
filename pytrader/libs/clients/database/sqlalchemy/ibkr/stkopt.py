@@ -30,7 +30,7 @@ from datetime import date, datetime, time
 
 # 3rd Party Libraries
 from sqlalchemy import (Date, DateTime, Float, ForeignKey, Integer, String,
-                        Text, select)
+                        Text, Time, select)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -58,6 +58,7 @@ class IbkrStkOptContracts(Base):
     __tablename__ = "z_ibkr_stk_opt_contracts"
     id: Mapped[int] = mapped_column(primary_key=True)
     contract_id: Mapped[int] = mapped_column(index=True, unique=True)
+    local_symbol: Mapped[str] = mapped_column(String(32), index=True, unique=True)
     symbol: Mapped[str] = mapped_column(String(6))
     security_type: Mapped[str] = mapped_column(String(6))
     last_trading_date: Mapped[date]
@@ -66,7 +67,6 @@ class IbkrStkOptContracts(Base):
     multiplier: Mapped[int]
     exchange: Mapped[str] = mapped_column(String(12), nullable=False, default="SMART")
     currency: Mapped[str] = mapped_column(String(4), nullable=False)
-    local_symbol: Mapped[str] = mapped_column(String(32), index=True, unique=True)
     trading_class: Mapped[str] = mapped_column(String(6))
     last_updated: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
@@ -156,7 +156,17 @@ class IbkrStkOptContractDetails(Base):
     sec_id_list: Mapped[str] = mapped_column(Text, nullable=True)
     market_rule_ids: Mapped[str] = mapped_column(Text)
     real_expiration_date: Mapped[date]
-    last_trade_time: Mapped[time]
+    last_trade_time: Mapped[time] = mapped_column(Time, nullable=True)
+
+
+class IbkrStkOptInvalidContracts(Base):
+    __tablename__ = "z_ibkr_stk_opt_invalid_contracts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    symbol: Mapped[str] = mapped_column(String(6))
+    last_trading_date: Mapped[date]
+    strike: Mapped[float]
+    opt_right: Mapped[str] = mapped_column(String(1))
+    last_updated: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
 
 class IbkrStkOptBarHistoryBeginDate(Base):

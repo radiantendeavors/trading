@@ -68,11 +68,16 @@ class DatabaseContract(BaseContract):
         @return None
         """
         super().__init__(ticker, contract)
-        self.id = 0
         self.columns = {}
 
-    def query_contracts(self) -> list | tuple:
+    def query_contracts(self, additional_criteria: Optional[dict] = None) -> list | tuple:
         criteria = {"symbol": [self.contract.symbol]}
+
+        if additional_criteria:
+            criteria = criteria | additional_criteria
+
+        logger.debug("Criteria: %s", criteria)
+
         raw_results = self.contract_table.select(criteria=criteria)
 
         if raw_results:
@@ -89,11 +94,11 @@ class DatabaseContract(BaseContract):
 
         @return list or tuple:
         """
-        criteria = {"ibkr_contract_id": [self.id]}
+        criteria = self._set_criteria()
         return self.history_begin_date_table.select(criteria=criteria)
 
     def query_option_parameters(self) -> list | tuple:
-        criteria = {"ibkr_contract_id": [self.id]}
+        criteria = self._set_criteria()
         return self.option_parameters_table.select(criteria=criteria)
 
     def save_history_begin_date(self, history_begin_date) -> None:

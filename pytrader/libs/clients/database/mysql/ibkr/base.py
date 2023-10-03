@@ -75,6 +75,9 @@ class IbkrBase(mysql.MySQLDatabase):
         if criteria:
             x = 0
             for col_name, values in criteria.items():
+                if not isinstance(values, list):
+                    values = [values]
+
                 value_string = self.substitute_list(values)
                 if x == 0:
                     sql += f"\nWHERE `{col_name}` IN ({value_string})"
@@ -139,7 +142,7 @@ class IbkrBase(mysql.MySQLDatabase):
         column_names = "`" + column_names
         sql = (f"UPDATE `{self.table_name}`\n"
                f"SET {column_names}\n"
-               f"WHERE `{self.update_column_names[0]}`={columns[0]}")
+               f"WHERE `{self.update_column_names[0]}`='{columns[0]}'")
 
         if additional_criteria:
             for col_name, value in additional_criteria.items():

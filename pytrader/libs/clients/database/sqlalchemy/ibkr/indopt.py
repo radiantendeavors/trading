@@ -26,11 +26,11 @@ information.
 """
 
 # System Libraries
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 # 3rd Party Libraries
 from sqlalchemy import (Date, DateTime, Float, ForeignKey, Integer, String,
-                        Text, select)
+                        Text, Time, select)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -58,7 +58,8 @@ class IbkrIndOptContracts(Base):
     __tablename__ = "z_ibkr_ind_opt_contracts"
     id: Mapped[int] = mapped_column(primary_key=True)
     contract_id: Mapped[int] = mapped_column(index=True, unique=True)
-    ticker_symbol: Mapped[str] = mapped_column(String(6))
+    local_symbol: Mapped[str] = mapped_column(String(32), index=True, unique=True)
+    symbol: Mapped[str] = mapped_column(String(6))
     security_type: Mapped[str] = mapped_column(String(6))
     last_trading_date: Mapped[date]
     strike: Mapped[float]
@@ -66,7 +67,6 @@ class IbkrIndOptContracts(Base):
     multiplier: Mapped[int]
     exchange: Mapped[str] = mapped_column(String(12), nullable=False, default="SMART")
     currency: Mapped[str] = mapped_column(String(4), nullable=False)
-    local_symbol: Mapped[str] = mapped_column(String(32), index=True, unique=True)
     trading_class: Mapped[str] = mapped_column(String(6))
     last_updated: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
@@ -143,12 +143,29 @@ class IbkrIndOptContractDetails(Base):
     market_name: Mapped[str] = mapped_column(String(6))
     min_tick: Mapped[float]
     price_magnifier: Mapped[int]
+    order_types: Mapped[str] = mapped_column(Text)
     valid_exchanges: Mapped[str] = mapped_column(Text)
     underlying_contract_id: Mapped[int] = mapped_column(
         ForeignKey("z_ibkr_ind_contracts.contract_id"))
     underlying_contract: Mapped["IbkrIndContracts"] = relationship()
+    contract_month: Mapped[date]
     timezone_id: Mapped[str] = mapped_column(String(16))
-    aggregated_group: Mapped[int]
+    ev_multiplier: Mapped[int]
+    agg_group: Mapped[int]
+    sec_id_list: Mapped[str] = mapped_column(Text, nullable=True)
+    market_rule_ids: Mapped[str] = mapped_column(Text)
+    real_expiration_date: Mapped[date]
+    last_trade_time: Mapped[time] = mapped_column(Time, nullable=True)
+
+
+class IbkrIndOptInvalidContracts(Base):
+    __tablename__ = "z_ibkr_ind_opt_invalid_contracts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    symbol: Mapped[str] = mapped_column(String(6))
+    last_trading_date: Mapped[date]
+    strike: Mapped[float]
+    opt_right: Mapped[str] = mapped_column(String(1))
+    last_updated: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
 
 class IbkrIndOptBarHistoryBeginDate(Base):

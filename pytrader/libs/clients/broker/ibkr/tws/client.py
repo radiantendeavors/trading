@@ -24,31 +24,15 @@ Creates a basic interface for interacting with a broker
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 """
-# ==================================================================================================
-#
-# Pacing Violations
-#
-# 1. To avoid pacing violations, historical data can be requested no more than 60 requests in any 10
-# minute period.
-# 2. There are 600 seconds in 10 minutes.
-# 3. Therefore, 1 request every 15 seconds to ensure we don't cross the threshold.
-#
-# https://interactivebrokers.github.io/tws-api/historical_limitations.html#pacing_violations
-#
-# ==================================================================================================
-
-# System Libraries
+import datetime
 from typing import Optional
 
-# 3rd Party Libraries
 from ibapi.contract import Contract
 from ibapi.order import Order
 
-# Application Libraries
+from pytrader.libs.clients.broker.ibkr.tws.twspacemngr import TwsPacingMngr
 from pytrader.libs.system import logging
-from pytrader.libs.clients.broker.ibkr.tws.thread import TwsThreadMngr
-from pytrader.libs.utilities.exceptions import (InvalidExchange,
-                                                InvalidTickType)
+from pytrader.libs.utilities.exceptions import InvalidExchange, InvalidTickType
 
 # ==================================================================================================
 #
@@ -64,7 +48,7 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class TwsApiClient(TwsThreadMngr):
+class TwsApiClient(TwsPacingMngr):
     """!
     The Command interface for the TWS API Client.
     """
@@ -369,7 +353,9 @@ class TwsApiClient(TwsThreadMngr):
 
         @return req_id: The unique request identifier.
         """
+        self.contract_details_data_wait()
         self.reqContractDetails(req_id, contract)
+        self.contract_details_data_req_timestamp = datetime.datetime.now()
 
     def req_global_cancel(self) -> None:
         """!
@@ -380,6 +366,28 @@ class TwsApiClient(TwsThreadMngr):
         @return None
         """
         self.reqGlobalCancel()
+
+    def req_head_timestamp(self,
+                           req_id: int,
+                           contract: Contract,
+                           what_to_show: Optional[str] = "TRADES",
+                           use_regular_trading_hours: Optional[bool] = True,
+                           format_date: Optional[bool] = True) -> None:
+        """!
+        Requests the earliest available bar data for a contract.
+
+        @param req_id: The request id to use for this request.
+        @param contract: The contract
+        @param what_to_show: Type of information to show, defaults to "TRADES"
+        @param use_regular_trading_hours: Defaults to 'True'
+        @param format_date: Defaults to 'True'
+
+        @return req_id: The request identifier
+        """
+        self.contract_history_begin_data_wait()
+        self.reqHeadTimeStamp(req_id, contract, what_to_show, use_regular_trading_hours,
+                              format_date)
+        self.contract_details_data_req_timestamp = datetime.datetime.now()
 
     # pylint: disable=C0301
     def req_historical_data(self,
@@ -485,9 +493,9 @@ class TwsApiClient(TwsThreadMngr):
         if chart_options is None:
             chart_options = []
 
-        self.reqHistoricalData(self.req_id, contract, end_date_time, duration_str,
-                               bar_size_setting, what_to_show, use_regular_trading_hours,
-                               format_date, keep_up_to_date, chart_options)
+        self.reqHistoricalData(self.req_id, contract, end_date_time, duration_str, bar_size_setting,
+                               what_to_show, use_regular_trading_hours, format_date,
+                               keep_up_to_date, chart_options)
 
         self.data[self.req_id] = []
         return self.req_id
@@ -550,13 +558,13 @@ class TwsApiClient(TwsThreadMngr):
         """
         self.reqManagedAccts()
 
-    def req_market_data(
-            self,
-            contract: Contract,
-            generic_tick_list: str = "221, 232, 233, 236, 258, 293, 294, 295, 318, 375, 411, 456, 595, 619",
-            snapshot: bool = False,
-            regulatory_snapshot: bool = False,
-            market_data_options: Optional[list] = None):
+    def req_market_data(self,
+                        req_id: int,
+                        contract: Contract,
+                        generic_tick_list: Optional[str] = None,
+                        snapshot: Optional[bool] = False,
+                        regulatory_snapshot: Optional[bool] = False,
+                        market_data_options: Optional[list] = None):
         """!
         Requests real time market data. Returns market data for an instrument either in real time or
         10-15 minutes delayed (depending on the market data type specified)
@@ -609,7 +617,9 @@ class TwsApiClient(TwsThreadMngr):
 
         @return req_id: The rquest's identifier
         """
-        self.req_id += 1
+        if not generic_tick_list:
+            generic_tick_list = "221, 232, 233, 236, 258, 293, 294, 295,"
+            generic_tick_list += " 318, 375, 411, 456, 595, 619"
 
         if contract.secType == "STK":
             # Legal ones for (STK) are:
@@ -648,10 +658,8 @@ class TwsApiClient(TwsThreadMngr):
             else:
                 generic_tick_list += ", 100, 101, 104, 105, 106, 165, 292"
 
-        self.reqMktData(self.req_id, contract, generic_tick_list, snapshot, regulatory_snapshot,
+        self.reqMktData(req_id, contract, generic_tick_list, snapshot, regulatory_snapshot,
                         market_data_options)
-
-        return self.req_id
 
     def req_real_time_bars(self,
                            contract: Contract,
@@ -700,7 +708,10 @@ class TwsApiClient(TwsThreadMngr):
             # want to actually make the request before setting a new timer.
             return self.req_id
 
-    def req_sec_def_opt_params(self, req_id: int, contract: Contract, exchange: Optional[str] = None):
+    def req_sec_def_opt_params(self,
+                               req_id: int,
+                               contract: Contract,
+                               exchange: Optional[str] = None):
         """!
         Requests security definition option parameters for viewing a contract's option chain
 
@@ -715,8 +726,7 @@ class TwsApiClient(TwsThreadMngr):
             exchange = ""
         elif exchange not in contract.Exchange:
             raise InvalidExchange(f"Invalid Exchange: {exchange} not in {contract.Exchange}")
-        self.reqSecDefOptParams(req_id, contract.symbol, exchange, contract.secType,
-                                contract.conId)
+        self.reqSecDefOptParams(req_id, contract.symbol, exchange, contract.secType, contract.conId)
 
     def req_tick_by_tick_data(self,
                               contract: Contract,
@@ -734,19 +744,20 @@ class TwsApiClient(TwsThreadMngr):
         @return req_id: The request's identifier
         """
         # Ensure we have the tick type formatted correctly for TWSAPI
-        match tick_type.lower():
-            case "last":
-                tick_type = "Last"
-            case "alllast":
-                tick_type = "AllLast"
-            case "bidask":
-                tick_type = "BidAsk"
-            case "midpoint":
-                tick_type = "MidPoint"
-            case _:
-                raise InvalidTickType("Invalid Tick Type")
+        # match tick_type.lower():
+        #     case "last":
+        #         tick_type = "Last"
+        #     case "alllast":
+        #         tick_type = "AllLast"
+        #     case "bidask":
+        #         tick_type = "BidAsk"
+        #     case "midpoint":
+        #         tick_type = "MidPoint"
+        #     case _:
+        #         raise InvalidTickType("Invalid Tick Type")
 
-        logger.debug("Req Tick-by-Tick %s %s %s %s", contract, tick_type, number_of_ticks, ignore_size)
+        logger.debug("Req Tick-by-Tick %s %s %s %s", contract, tick_type, number_of_ticks,
+                     ignore_size)
 
     def set_server_loglevel(self, log_level: int = 2):
         """!

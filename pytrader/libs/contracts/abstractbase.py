@@ -127,7 +127,12 @@ class AbstractBaseContract(DatabaseContract, ABC):
 
     def get_contract_history_begin_date(self, sender: str = "downloader") -> None:
         # Ensure we have set self.id
-        self.query_contracts()
+
+        if self.sec_type == "OPT":
+            additional_criteria = self._set_additional_criteria()
+            self.query_contracts(additional_criteria)
+        else:
+            self.query_contracts()
 
         raw_results = self.query_history_begin_date()
 
@@ -139,7 +144,7 @@ class AbstractBaseContract(DatabaseContract, ABC):
             last_updated = db_history_begin_date["last_updated"]
             if last_updated < oldest_allowed_date:
                 logger.debug("Too Old! Last Updated: %s", last_updated)
-                self.req_contract_details(sender)
+                self.req_contract_history_begin_date(sender)
             else:
                 self.local_queue.put("Done")
         else:
@@ -183,6 +188,10 @@ class AbstractBaseContract(DatabaseContract, ABC):
 
     def get_option_parameters(self) -> None:
         return (self.expirations, self.strikes, self.options_multiplier)
+
+    def get_option_contract_parameters(self) -> None:
+        return (self.contract.lastTradeDateOrContractMonth, self.contract.strike,
+                self.contract.right)
 
     def req_contract_details(self, sender: str) -> None:
         """!
@@ -233,17 +242,58 @@ class AbstractBaseContract(DatabaseContract, ABC):
 
         self.contract = details.contract
         self.details = details
+        self.sec_type = details.contract.secType
 
-        #self.query_contracts()
-        logger.debug("Saving Contract")
-        self.details = details
+        self._log_contract()
+        self._log_contract_details()
+
+        self.select_columns()
+
+        if self.contract.secType == "OPT":
+            additional_criteria = self._set_additional_criteria()
+            self.contract_table.insert(self.columns["contract"], additional_criteria)
+            self.query_contracts(additional_criteria)
+        else:
+            self.contract_table.insert(self.columns["contract"])
+            self.query_contracts()
+
         self.add_details_columns()
+        self.contract_details_table.insert(self.columns["details"])
 
-        if details.contract.secType == "IND":
-            self.sec_type = "IND"
-        elif details.contract.secType == "STK":
-            self.sec_type = details.stockType
+        self._save_contract_hours("liquid")
+        self._save_contract_hours("trading")
 
+    def save_invalid_contract(self, additional_criteria):
+        columns = [
+            self.contract.symbol, additional_criteria["last_trading_date"],
+            additional_criteria["strike"], additional_criteria["opt_right"]
+        ]
+        self.invalid_contract_table.insert(columns, additional_criteria)
+
+    def set_contract_parameters(self, db_contract):
+        self.contract.conId = db_contract["contract_id"]
+        self.contract.exchange = db_contract["exchange"]
+        self.contract.currency = db_contract["currency"]
+        self.contract.localSymbol = db_contract["local_symbol"]
+
+        if self.sec_type in ["STK"]:
+            self.contract.primaryExchange = db_contract["primary_exchange"]
+
+        if self.sec_type in ["STK", "OPT"]:
+            self.contract.tradingClass = db_contract["trading_class"]
+
+        if self.sec_type in ["OPT"]:
+            self.contract.lastTradeDateOrContractMonth = db_contract["last_trading_date"]
+            self.contract.strike = db_contract["strike"]
+            self.contract.right = db_contract["opt_right"]
+            self.contract.multiplier = db_contract["multiplier"]
+
+    # ==============================================================================================
+    #
+    # Private Functions
+    #
+    # ==============================================================================================
+    def _log_contract(self) -> None:
         logger.debug("Contract Info Received")
         logger.debug("Contract ID: %s", self.contract.conId)
         logger.debug("Symbol: %s", self.contract.symbol)
@@ -264,6 +314,7 @@ class AbstractBaseContract(DatabaseContract, ABC):
         if hasattr(self.contract, 'issuerId'):
             logger.debug("Issuer Id: %s", self.contract.issuerId)
 
+    def _log_contract_details(self) -> None:
         logger.debug("Contract Detail Info")
         logger.debug("Market name: %s", self.details.marketName)
         logger.debug("Min Tick: %s", self.details.minTick)
@@ -344,32 +395,13 @@ class AbstractBaseContract(DatabaseContract, ABC):
         if hasattr(self.details, 'suggestedSizeIncrement'):
             logger.debug("Suggested Contract Size: %s", self.details.suggestedSizeIncrement)
 
-        logger.debug("Details: %s", self.details)
+    def _save_contract_hours(self, hours_type: str) -> None:
+        if hours_type == "liquid":
+            hours_list = self.details.liquidHours.split(";")
+        elif hours_type == "trading":
+            hours_list = self.details.tradingHours.split(";")
 
-        self.select_columns()
-
-        if self.contract.secType == "OPT":
-            additional_criteria = {
-                "opt_right": [self.contract.right],
-                "strike": [self.contract.strike],
-                "last_trading_date": [self.contract.lastTradeDateOrContractMonth]
-            }
-            self.contract_table.insert(self.columns["contract"], additional_criteria)
-        else:
-            self.contract_table.insert(self.columns["contract"])
-
-        self.query_contracts()
-        self.add_details_columns()
-
-        if self.contract.secType == "OPT":
-            additional_criteria = {"ibkr_contract_id": [self.id]}
-            self.contract_details_table.insert(self.columns["details"], additional_criteria)
-        else:
-            self.contract_details_table.insert(self.columns["details"])
-
-        liquid_hours_list = self.details.liquidHours.split(";")
-
-        for item in liquid_hours_list:
+        for item in hours_list:
             if "CLOSED" not in item:
                 item_list = item.split("-")
                 begin = item_list[0]
@@ -383,40 +415,9 @@ class AbstractBaseContract(DatabaseContract, ABC):
                 end_dt = datetime.strptime(
                     end, "%Y%m%d:%H%M").replace(tzinfo=ZoneInfo(self.details.timeZoneId))
 
-                self.contract_liquid_hours_table.insert([self.id, begin_dt, end_dt],
-                                                        {"begin_dt": [begin_dt]})
-
-        trading_hours_list = self.details.tradingHours.split(";")
-
-        for item in trading_hours_list:
-            if "CLOSED" not in item:
-                item_list = item.split("-")
-                begin = item_list[0]
-                end = item_list[1]
-
-                logger.debug("Begin Time: %s", begin)
-                logger.debug("End Time: %s", end)
-
-                begin_dt = datetime.strptime(
-                    begin, "%Y%m%d:%H%M").replace(tzinfo=ZoneInfo(self.details.timeZoneId))
-                end_dt = datetime.strptime(
-                    end, "%Y%m%d:%H%M").replace(tzinfo=ZoneInfo(self.details.timeZoneId))
-
-                self.contract_trading_hours_table.insert([self.id, begin_dt, end_dt],
-                                                         {"begin_dt": [begin_dt]})
-
-    def set_contract_parameters(self, db_contract):
-        self.contract.conId = db_contract["contract_id"]
-        self.contract.exchange = db_contract["exchange"]
-        self.contract.currency = db_contract["currency"]
-        self.contract.localSymbol = db_contract["local_symbol"]
-
-        if self.sec_type in ["ETF", "STK"]:
-            self.contract.primaryExchange = db_contract["primary_exchange"]
-            self.contract.tradingClass = db_contract["trading_class"]
-
-    # ==============================================================================================
-    #
-    # Private Functions
-    #
-    # ==============================================================================================
+                if hours_type == "liquid":
+                    self.contract_liquid_hours_table.insert([self.id, begin_dt, end_dt],
+                                                            {"begin_dt": [begin_dt]})
+                elif hours_type == "trading":
+                    self.contract_trading_hours_table.insert([self.id, begin_dt, end_dt],
+                                                             {"begin_dt": [begin_dt]})

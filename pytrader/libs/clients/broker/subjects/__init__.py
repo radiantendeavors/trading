@@ -138,6 +138,8 @@ class BrokerContractHistoryBeginDate(ContractHistoryBeginDate):
         self.req_id = req_id
         self.history_begin_date[req_id] = history_begin_date
         self.notify()
+        self.history_begin_date.pop(req_id, None)
+        self.history_begin_ids.pop(req_id, None)
 
 
 class BrokerContractOptionParametersData(ContractOptionParametrsData):
@@ -146,6 +148,8 @@ class BrokerContractOptionParametersData(ContractOptionParametrsData):
         self.req_id = req_id
         self.option_parameters[req_id] = option_parameters
         self.notify()
+        self.option_parameters.pop(req_id, None)
+        self.req_ids.pop(req_id, None)
 
 
 class BrokerMarketData(MarketData):

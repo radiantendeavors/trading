@@ -99,35 +99,6 @@ class TwsReader(EWrapper, EClient, BaseBroker):
         EClient.__init__(self, self)
         BaseBroker.__init__(self)
 
-        self.history_begin_ids = {}
-        self.req_id = 0
-
-    def req_head_timestamp(self,
-                           req_id: int,
-                           contract: Contract,
-                           what_to_show: Optional[str] = "TRADES",
-                           use_regular_trading_hours: Optional[bool] = True,
-                           format_date: Optional[bool] = True) -> None:
-        """!
-        Requests the earliest available bar data for a contract.
-
-        @param contract: The contract
-        @param what_to_show: Type of information to show, defaults to "TRADES"
-        @param use_regular_trading_hours: Defaults to 'True'
-        @param format_date: Defaults to 'True'
-
-        @return req_id: The request identifier
-        """
-        logger.debug("Process Name: %s", multiprocessing.current_process().name)
-        logger.debug("Thread Name: %s", threading.current_thread().name)
-        self.history_begin_ids[req_id] = contract.localSymbol
-        self.req_id += 1
-        logger.debug(self)
-        logger.debug(self.history_begin_ids)
-        logger.debug(self.contract_history_begin_subjects)
-        self.reqHeadTimeStamp(req_id, contract, what_to_show, use_regular_trading_hours,
-                              format_date)
-
     # ==============================================================================================
     #
     # The following functions respond to data received from Interactive Brokers.  The function
@@ -506,10 +477,6 @@ class TwsReader(EWrapper, EClient, BaseBroker):
 
         @return None
         """
-        logger.debug(self.req_id)
-        logger.debug(self.history_begin_ids)
-        self.contract_history_begin_subjects.history_begin_ids = self.history_begin_ids
-        logger.debug(self.contract_history_begin_subjects)
         self.contract_history_begin_subjects.set_history_begin_date(reqId, headTimestamp)
 
     @iswrapper
@@ -1837,6 +1804,9 @@ class TwsReader(EWrapper, EClient, BaseBroker):
 
         if error_code == 200:
             self.contract_subjects.set_contract_details(req_id, "Error")
+
+        if error_code == 162:
+            self.contract_history_begin_subjects.set_history_begin_date(req_id, "Error")
 
         # match error_code:
         #     case 200:

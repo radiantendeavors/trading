@@ -37,8 +37,8 @@ from ibapi.contract import Contract as IbContract
 # Application Libraries
 from pytrader.libs.clients.database.mysql.ibkr.stk_opt_contracts import (
     IbkrStkOptContractDetails, IbkrStkOptContracts, IbkrStkOptHistoryBeginDate,
-    IbkrStkOptLiquidHours, IbkrStkOptTradingHours)
-from pytrader.libs.contracts.abstractbase import AbstractBaseContract
+    IbkrStkOptInvalidContracts, IbkrStkOptLiquidHours, IbkrStkOptTradingHours)
+from pytrader.libs.contracts.option import OptionContract
 from pytrader.libs.system import logging
 
 # ==================================================================================================
@@ -55,7 +55,7 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class StkOptionContract(AbstractBaseContract):
+class StkOptionContract(OptionContract):
     """!
     The AbstractBaseContract Class.
     """
@@ -64,69 +64,4 @@ class StkOptionContract(AbstractBaseContract):
     contract_liquid_hours_table = IbkrStkOptLiquidHours()
     contract_trading_hours_table = IbkrStkOptTradingHours()
     history_begin_date_table = IbkrStkOptHistoryBeginDate()
-
-    sec_type = "OPT"
-
-    def create_contract(self,
-                        exchange: str = "SMART",
-                        currency: str = "USD",
-                        expiry: Optional[str] = None,
-                        right: Optional[str] = None,
-                        strike: Optional[float] = None,
-                        multiplier: Optional[int] = 100) -> None:
-        """!
-        Creates a minimal contract that can be used to query the broker for further details.
-
-        @param sec_type: Type of security
-        @param exchange: Trading Exchange
-        @param currency: Currency
-        @param expiry: Options / Futures Expiration Date
-        @param strike: Options Strike Price.
-        @param right: Options right (Call or Put).
-
-        @return None
-        """
-        self.contract.exchange = exchange
-        self.contract.currency = currency
-        self.contract.lastTradeDateOrContractMonth = expiry
-        self.contract.multiplier = multiplier
-        self.contract.right = right
-        self.contract.strike = strike
-        #self.contract.localSymbol =
-
-        return self._gen_option_contract_name(expiry, right, strike)
-
-    def get_contract_details(self, sender: str = "downloader") -> None:
-        self.req_contract_details(sender)
-        sleep(1)
-
-    def select_columns(self):
-        logger.debug("Expiry: %s", self.contract.lastTradeDateOrContractMonth)
-        last_date = datetime.strptime(self.contract.lastTradeDateOrContractMonth, "%Y%m%d").date()
-        strike = float(self.contract.strike)
-        multiplier = int(self.contract.multiplier)
-        self.columns = {
-            "contract": [
-                self.contract.conId, self.contract.symbol, self.contract.secType, last_date, strike,
-                self.contract.right, multiplier, self.contract.exchange, self.contract.currency,
-                self.contract.localSymbol, self.contract.tradingClass
-            ]
-        }
-
-    def add_details_columns(self):
-        self.columns["details"] = [
-            self.id, self.details.marketName, self.details.minTick, self.details.priceMagnifier,
-            self.details.orderTypes, self.details.validExchanges, self.details.underConId,
-            datetime.strptime(self.details.contractMonth, "%Y%m"), self.details.timeZoneId,
-            self.details.evMultiplier, self.details.aggGroup, self.details.secIdList,
-            self.details.marketRuleIds, self.details.realExpirationDate, self.details.lastTradeTime
-        ]
-
-    def _gen_option_contract_name(self, expiry: str, right: str, strike: float) -> str:
-        strike_left = str(strike).split(".", maxsplit=1)[0]
-        strike_right = str(strike).split(".")[1]
-
-        strike_str = strike_left.rjust(5, "0") + strike_right.ljust(3, "0")
-        local_symbol = self.contract.symbol.ljust(6, " ")
-        option_name = local_symbol + expiry[-6:] + right[0] + strike_str
-        return option_name
+    invalid_contract_table = IbkrStkOptInvalidContracts()

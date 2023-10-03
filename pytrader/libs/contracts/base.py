@@ -26,6 +26,7 @@ Provides the Base Class for Contracts
 Provides the Base Class for Contracts
 """
 # System libraries
+from datetime import datetime, date
 from typing import Optional
 
 # 3rd Party libraries
@@ -57,6 +58,7 @@ class BaseContract():
     contract_liquid_hours_table = None
     contract_trading_hours_table = None
     history_begin_date_table = None
+    invalid_contract_table = None
     option_parameters_table = None
     sec_type = None
 
@@ -66,6 +68,7 @@ class BaseContract():
         """!
         Creates a contract
         """
+        self.id = 0
         if contract:
             self.contract = contract
             self.sec_type = contract.secType
@@ -86,8 +89,6 @@ class BaseContract():
         universe does not match the format required by the API.  This ensures that the security type
         is the correct type for the API.
 
-        @param sec_type: Input Security Type
-
         @return sec_type: Sanitized Security Type
         """
         match self.sec_type.upper():
@@ -96,3 +97,27 @@ class BaseContract():
             case _:
                 logger.debug9("No changes to make for Security Type '%s'", self.sec_type)
                 return self.sec_type
+
+    def _set_criteria(self, additional_criteria: Optional[bool] = False) -> dict:
+        criteria = {"ibkr_contract_id": [self.id]}
+
+        if self.contract.secType == "OPT" and additional_criteria:
+            additional_criteria = self._set_additional_criteria()
+            criteria = criteria | additional_criteria
+
+        return criteria
+
+    def _set_additional_criteria(self) -> dict:
+        if not isinstance(self.contract.lastTradeDateOrContractMonth, date):
+            last_trading_date = datetime.strptime(self.contract.lastTradeDateOrContractMonth,
+                                                  "%Y%m%d").date()
+        else:
+            last_trading_date = self.contract.lastTradeDateOrContractMonth
+
+        additional_criteria = {
+            "opt_right": [self.contract.right],
+            "strike": [self.contract.strike],
+            "last_trading_date": [last_trading_date]
+        }
+
+        return additional_criteria

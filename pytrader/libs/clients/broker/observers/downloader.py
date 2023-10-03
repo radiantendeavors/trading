@@ -91,7 +91,12 @@ class DownloaderContractHistoryBeginObserver(ContractHistoryBeginObserver):
         logger.debug(subject)
         ticker = subject.history_begin_ids[subject.req_id]
         history_begin_date = subject.history_begin_date[subject.req_id]
-        msg = {"contract_history_begin_date": {ticker: history_begin_date}}
+
+        if history_begin_date == "Error":
+            msg = "Done"
+        else:
+            msg = {"contract_history_begin_date": {ticker: history_begin_date}}
+
         self.msg_queue.put(msg)
 
 
