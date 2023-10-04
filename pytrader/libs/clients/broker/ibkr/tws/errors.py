@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class TwsErrors(BaseBroker):
+class TwsErrors(EWrapper, EClient, BaseBroker):
     """!
     Class for handling Errors received by TWSAPI.
     """

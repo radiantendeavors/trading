@@ -72,20 +72,10 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class TwsReader(EWrapper, EClient, TwsErrors):
+class TwsReader(TwsErrors):
     """!
     Serves as the client interface for Interactive Brokers
     """
-
-    def __init__(self) -> None:
-        """!
-        Initialize the IbkrClient class
-
-        @return None
-        """
-        EWrapper.__init__(self)
-        EClient.__init__(self, self)
-        TwsErrors.__init__(self)
 
     # ==============================================================================================
     #
