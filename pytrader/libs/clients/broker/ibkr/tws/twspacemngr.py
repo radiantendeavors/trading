@@ -89,11 +89,9 @@ class TwsPacingMngr(TwsThreadMngr):
                                                      hour=0,
                                                      minute=0,
                                                      second=0)
-
     __historical_data_sleep_time = 0
     __contract_details_sleep_time = 0
-    __contract_history_begin_count = 0
-    __contract_history_begin_sleep_time = 30
+    __contract_history_begin_sleep_time = 15
     __small_bar_sleep_time = 15
     __small_bar_sizes = ["1 secs", "5 secs", "10 secs", "15 secs", "30 secs"]
     __intraday_bar_sizes = __small_bar_sizes + [
