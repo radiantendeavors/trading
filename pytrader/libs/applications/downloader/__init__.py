@@ -31,8 +31,11 @@ from ibapi.contract import ContractDetails
 
 # Application Libraries
 from pytrader.libs.clients.broker.ibkr.webscraper import IbkrWebScraper
-from pytrader.libs.clients.database.mysql.ibkr.contract_universe import \
-    IbkrContractUniverse
+from pytrader.libs.clients.database.mysql.ibkr import (
+    IbkrContractUniverse, IbkrIndOptHistoryBeginDate,
+    IbkrIndOptInvalidContracts, IbkrIndOptNoHistory,
+    IbkrStkOptHistoryBeginDate, IbkrStkOptInvalidContracts,
+    IbkrStkOptNoHistory)
 from pytrader.libs.contracts import (IndexContract, IndOptionContract,
                                      StkOptionContract, StockContract)
 from pytrader.libs.system import logging
@@ -100,6 +103,7 @@ class DownloadProcess():
         #
         # ==========================================================================================
         self._get_contract_universe()
+        self._clean_invalid_contracts()
 
         loop_list = []
 
@@ -145,6 +149,19 @@ class DownloadProcess():
     # Private Functions
     #
     # ==============================================================================================
+    def _clean_invalid_contracts(self):
+        db_table = IbkrIndOptInvalidContracts()
+        db_table.clean_invalid()
+
+        db_table = IbkrIndOptHistoryBeginDate()
+        db_table.clean_history()
+
+        db_table = IbkrStkOptInvalidContracts()
+        db_table.clean_invalid()
+
+        db_table = IbkrStkOptHistoryBeginDate()
+        db_table.clean_history()
+
     def _create_contract(self, symbol, asset_class):
         if asset_class.upper() == "STK":
             self.contracts[symbol] = StockContract(self.cmd_queue, self.data_queue, symbol)
