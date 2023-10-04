@@ -353,6 +353,7 @@ class TwsApiClient(TwsPacingMngr):
 
         @return req_id: The unique request identifier.
         """
+        self.add_command(req_id, "contract_details")
         self.contract_details_data_wait()
         self.reqContractDetails(req_id, contract)
         self.contract_details_data_req_timestamp = datetime.datetime.now()
@@ -384,6 +385,7 @@ class TwsApiClient(TwsPacingMngr):
 
         @return req_id: The request identifier
         """
+        self.add_command(req_id, "history_begin")
         self.contract_history_begin_data_wait()
         self.reqHeadTimeStamp(req_id, contract, what_to_show, use_regular_trading_hours,
                               format_date)

@@ -81,16 +81,6 @@ class TwsAccountClient(AbstractBrokerClient):
       - IbgReal
       - IbgDemo
     """
-    ##
-    __contract_details_sleep_time = 0
-
-    ## Used to track when the last contract details data request was made
-    __contract_details_data_req_timestamp = datetime.datetime(year=1970,
-                                                              month=1,
-                                                              day=1,
-                                                              hour=0,
-                                                              minute=0,
-                                                              second=0)
 
     def __init__(self, data_queue: dict) -> None:
         """!
@@ -161,10 +151,8 @@ class TwsAccountClient(AbstractBrokerClient):
 
     def request_contract_details(self, contract: Contract):
         self.req_id += 1
-        self._contract_details_data_wait()
-        logger.debug("Contract: %s", contract)
+        logger.debug9("Contract: %s", contract)
         self.brokerclient.req_contract_details(self.req_id, contract)
-        self.__contract_details_data_req_timestamp = datetime.datetime.now()
 
     def request_global_cancel(self) -> None:
         self.brokerclient.req_global_cancel()

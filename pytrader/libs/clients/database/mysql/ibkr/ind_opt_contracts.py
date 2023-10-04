@@ -24,6 +24,7 @@ Provides the database client
 
 @file pytrader/libs/clients/database/mysql/ibkr/stk_opt_contracts.py
 """
+from datetime import date, timedelta
 from typing import Optional
 
 from pytrader.libs.clients.database.mysql.ibkr.base_contracts import \
@@ -74,11 +75,39 @@ class IbkrIndOptInvalidContracts(IbkrBaseContracts):
     insert_column_names = ["symbol", "last_trading_date", "strike", "opt_right"]
     update_column_names = insert_column_names + ["last_updated"]
 
+    def clean_invalid(self):
+        self._clean_last_updated()
+        self._clean_expired()
+
+    def _clean_last_updated(self):
+        today = date.today()
+        num_days = timedelta(days=7)
+        last_update_min = today - num_days
+        criteria = {"last_updated": last_update_min}
+
+        self.delete(criteria)
+
+    def _clean_expired(self):
+        today = date.today()
+        criteria = {"last_trading_date": today}
+        self.delete(criteria)
+
 
 class IbkrIndOptHistoryBeginDate(IbkrBaseContracts):
     table_name = "z_ibkr_ind_opt_history_begin_date"
     insert_column_names = ["ibkr_contract_id", "oldest_datetime"]
     update_column_names = insert_column_names + ["last_updated"]
+
+    def clean_history(self):
+        self._clean_last_updated()
+
+    def _clean_last_updated(self):
+        today = date.today()
+        num_days = timedelta(days=7)
+        last_update_min = today - num_days
+        criteria = {"last_updated": last_update_min}
+
+        self.delete(criteria)
 
 
 class IbkrIndOptLiquidHours(IbkrBaseContracts):
@@ -91,3 +120,20 @@ class IbkrIndOptTradingHours(IbkrBaseContracts):
     table_name = "z_ibkr_ind_opt_trading_hours"
     insert_column_names = ["ibkr_contract_id", "begin_dt", "end_dt"]
     update_column_names = insert_column_names
+
+
+class IbkrIndOptNoHistory(IbkrBaseContracts):
+    table_name = "z_ibkr_ind_opt_no_history"
+    insert_column_names = ["ibkr_contract_id"]
+    update_column_names = insert_column_names + ["last_updated"]
+
+    def clean_history(self):
+        self._clean_last_updated()
+
+    def _clean_last_updated(self):
+        today = date.today()
+        num_days = timedelta(days=7)
+        last_update_min = today - num_days
+        criteria = {"last_updated": last_update_min}
+
+        self.delete(criteria)

@@ -112,6 +112,14 @@ class IbkrBase(mysql.MySQLDatabase):
         else:
             self._insert(columns)
 
+    def delete(self, criteria: dict) -> None:
+        sql = f"DELETE FROM `{self.table_name}`\n"
+
+        criteria_name = list(criteria)[0]
+        sql += f"WHERE `{criteria_name}` < %s"
+
+        self._execute(sql, criteria[criteria_name])
+
     # ==============================================================================================
     #
     # Private Functions

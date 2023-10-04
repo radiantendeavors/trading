@@ -230,6 +230,14 @@ class IbkrStkHistoryBeginDate(Base):
                 print("Error committing ticker:", self.ibkr_etf)
 
 
+class IbkrStkNoHistory(Base):
+    __tablename__ = "z_ibkr_stk_no_history"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_stk_contracts.id"))
+    ibkr_contract: Mapped["IbkrStkContracts"] = relationship()
+    last_updated: Mapped[date] = mapped_column(server_default=func.current_timestamp())
+
+
 class IbkrStkOptionParams(Base):
     __tablename__ = "z_ibkr_stk_option_parameters"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

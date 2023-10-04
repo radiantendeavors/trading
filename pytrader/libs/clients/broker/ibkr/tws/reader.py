@@ -42,14 +42,9 @@ abstract function names, and their variables.
 # pylint: disable=C0103,C0104,C0302,R0913,R0904
 #
 # ==================================================================================================
-# Standard Libraries
 import datetime
-import multiprocessing
-import threading
 from decimal import Decimal
-from typing import Optional
 
-# 3rd Party Libraries
 from ibapi.client import EClient
 from ibapi.commission_report import CommissionReport
 from ibapi.common import BarData, TickAttrib, TickAttribBidAsk, TickAttribLast
@@ -60,10 +55,8 @@ from ibapi.order_state import OrderState
 from ibapi.utils import iswrapper
 from ibapi.wrapper import EWrapper
 
-# Application Libraries
-from pytrader.libs.clients.broker.baseclient import BaseBroker
+from pytrader.libs.clients.broker.ibkr.tws.errors import TwsErrors
 from pytrader.libs.system import logging
-from pytrader.libs.utilities.exceptions import BrokerNotAvailable
 
 # ==================================================================================================
 #
@@ -79,15 +72,10 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class TwsReader(EWrapper, EClient, BaseBroker):
+class TwsReader(EWrapper, EClient, TwsErrors):
     """!
     Serves as the client interface for Interactive Brokers
     """
-    ## Used to track the number of available market data lines
-    __available_market_data_lines = 100
-
-    ## Used to track available streams of level 2 data
-    __available_deep_data_allotment = 3
 
     def __init__(self) -> None:
         """!
@@ -97,7 +85,7 @@ class TwsReader(EWrapper, EClient, BaseBroker):
         """
         EWrapper.__init__(self)
         EClient.__init__(self, self)
-        BaseBroker.__init__(self)
+        TwsErrors.__init__(self)
 
     # ==============================================================================================
     #
@@ -302,6 +290,7 @@ class TwsReader(EWrapper, EClient, BaseBroker):
 
         @return None
         """
+        self.remove_command(reqId)
         self.contract_subjects.set_contract_details(reqId, contractDetails)
 
     @iswrapper
@@ -378,7 +367,7 @@ class TwsReader(EWrapper, EClient, BaseBroker):
               reqId: int,
               errorCode: int,
               errorString: str,
-              advanced_order_rejection: str = "") -> None:
+              advancedOrderRejection: str = "") -> None:
         """!
         Errors sent by the TWS are received here.
 
@@ -393,29 +382,7 @@ class TwsReader(EWrapper, EClient, BaseBroker):
 
         @return None
         """
-        critical_codes = [1300]
-        error_codes = [
-            100, 102, 103, 104, 105, 106, 107, 109, 110, 111, 113, 116, 117, 118, 119, 120, 121,
-            122, 123, 124, 125, 126, 129, 131, 132, 162, 200, 320, 321, 502, 503, 504, 1101, 2100,
-            2101, 2102, 2103, 2168, 2169, 10038, 10147
-        ]
-        warning_codes = [101, 501, 1100, 2105, 2107, 2108, 2109, 2110, 2137]
-        info_codes = [1102]
-        debug_codes = [2104, 2106, 2158]
-
-        if errorCode in critical_codes:
-            self._process_critical_code(reqId, errorCode, errorString, advanced_order_rejection)
-        elif errorCode in error_codes:
-            self._process_error_code(reqId, errorCode, errorString, advanced_order_rejection)
-        elif errorCode in warning_codes:
-            self._process_warning_code(reqId, errorCode, errorString, advanced_order_rejection)
-        elif errorCode in info_codes:
-            self._process_info_code(reqId, errorCode, errorString, advanced_order_rejection)
-        elif errorCode in debug_codes:
-            self._process_debug_code(reqId, errorCode, errorString, advanced_order_rejection)
-        else:
-            logger.error("Error Code Level has not been identified")
-            self._process_error_code(reqId, errorCode, errorString, advanced_order_rejection)
+        self.process_error_code(reqId, errorCode, errorString, advancedOrderRejection)
 
     @iswrapper
     def execDetails(self, reqId: int, contract: Contract, execution: Execution) -> None:
@@ -477,7 +444,9 @@ class TwsReader(EWrapper, EClient, BaseBroker):
 
         @return None
         """
+        self.remove_command(reqId)
         self.contract_history_begin_subjects.set_history_begin_date(reqId, headTimestamp)
+        self.cancelHeadTimeStamp(reqId)
 
     @iswrapper
     def histogramData(self, reqId: int, items: list) -> None:
@@ -1781,61 +1750,3 @@ class TwsReader(EWrapper, EClient, BaseBroker):
         @return None
         """
         logger.debug("ReqId: %s  Data: %s", reqId, dataJson)
-
-    # ==============================================================================================
-    #
-    # Private Functions
-    #
-    # ==============================================================================================
-    def _process_critical_code(self, req_id: int, error_code, error_string,
-                               advanced_order_rejection):
-        if advanced_order_rejection:
-            logger.critical("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id,
-                            error_code, error_string, advanced_order_rejection)
-        else:
-            logger.critical("ReqID# %s, Code: %s (%s)", req_id, error_code, error_string)
-
-    def _process_error_code(self, req_id: int, error_code, error_string, advanced_order_rejection):
-        if advanced_order_rejection:
-            logger.error("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id,
-                         error_code, error_string, advanced_order_rejection)
-        else:
-            logger.error("ReqID# %s, Code: %s (%s)", req_id, error_code, error_string)
-
-        if error_code == 200:
-            self.contract_subjects.set_contract_details(req_id, "Error")
-
-        if error_code == 162:
-            self.contract_history_begin_subjects.set_history_begin_date(req_id, "Error")
-
-        # match error_code:
-        #     case 200:
-        #         msg = {"Error": error_string}
-        #         logger.debug("Message: %s", msg)
-        #     case 103 | 10147:
-        #         msg = {"order_status": {req_id: {"status": "TWS_CLOSED"}}}
-        #         logger.debug("Message: %s", msg)
-        #     case 502:
-        #         raise BrokerNotAvailable(error_string)
-
-    def _process_warning_code(self, req_id: int, error_code, error_string,
-                              advanced_order_rejection):
-        if advanced_order_rejection:
-            logger.warning("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id,
-                           error_code, error_string, advanced_order_rejection)
-        else:
-            logger.warning("ReqID# %s, Code: %s (%s)", req_id, error_code, error_string)
-
-    def _process_info_code(self, req_id: int, error_code, error_string, advanced_order_rejection):
-        if advanced_order_rejection:
-            logger.info("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id,
-                        error_code, error_string, advanced_order_rejection)
-        else:
-            logger.info("ReqID# %s, Code: %s (%s)", req_id, error_code, error_string)
-
-    def _process_debug_code(self, req_id: int, error_code, error_string, advanced_order_rejection):
-        if advanced_order_rejection:
-            logger.debug("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id,
-                         error_code, error_string, advanced_order_rejection)
-        else:
-            logger.debug("ReqID# %s, Code: %s (%s)", req_id, error_code, error_string)

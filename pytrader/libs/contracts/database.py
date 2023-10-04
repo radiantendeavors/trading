@@ -102,9 +102,12 @@ class DatabaseContract(BaseContract):
         return self.option_parameters_table.select(criteria=criteria)
 
     def save_history_begin_date(self, history_begin_date) -> None:
-        logger.debug("History Begin Date: %s", history_begin_date)
-        begin_datetime = datetime.strptime(history_begin_date, "%Y%m%d  %H:%M:%S")
-        self.history_begin_date_table.insert([self.id, begin_datetime])
+        if history_begin_date == "NoHistory":
+            logger.debug("No History Found")
+        else:
+            logger.debug("History Begin Date: %s", history_begin_date)
+            begin_datetime = datetime.strptime(history_begin_date, "%Y%m%d  %H:%M:%S")
+            self.history_begin_date_table.insert([self.id, begin_datetime])
 
     def save_option_parameters(self, option_parameters) -> None:
         logger.debug("Option Parameters: %s", option_parameters)

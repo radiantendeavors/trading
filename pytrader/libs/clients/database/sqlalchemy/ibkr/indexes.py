@@ -80,18 +80,6 @@ class IbkrIndContractDetails(Base):
     market_rule_ids: Mapped[str] = mapped_column(Text)
 
 
-class IbkrIndOptionParams(Base):
-    __tablename__ = "z_ibkr_ind_option_parameters"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_ind_contracts.id"))
-    ibkr_contract: Mapped["IbkrIndContracts"] = relationship()
-    exchange: Mapped[str] = mapped_column(String(12))
-    multiplier: Mapped[int]
-    expirations: Mapped[str] = mapped_column(Text)
-    strikes: Mapped[str] = mapped_column(Text)
-    last_updated: Mapped[date] = mapped_column(server_default=func.current_timestamp())
-
-
 class IbkrIndTradingHours(Base):
     __tablename__ = "z_ibkr_ind_trading_hours"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -108,6 +96,18 @@ class IbkrIndLiquidHours(Base):
     ibkr_contract: Mapped["IbkrIndContracts"] = relationship()
     begin_dt: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     end_dt: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class IbkrIndOptionParams(Base):
+    __tablename__ = "z_ibkr_ind_option_parameters"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_ind_contracts.id"))
+    ibkr_contract: Mapped["IbkrIndContracts"] = relationship()
+    exchange: Mapped[str] = mapped_column(String(12))
+    multiplier: Mapped[int]
+    expirations: Mapped[str] = mapped_column(Text)
+    strikes: Mapped[str] = mapped_column(Text)
+    last_updated: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
 
 class IbkrIndBarHistoryBeginDate(Base):
@@ -164,6 +164,14 @@ class IbkrIndBarHistoryBeginDate(Base):
             except Exception as msg:
                 logger.error("Exception: %s", msg)
                 print("Error committing ticker:", self.ibkr_contract)
+
+
+class IbkrIndNoHistory(Base):
+    __tablename__ = "z_ibkr_ind_no_history"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_ind_contracts.id"))
+    ibkr_contract: Mapped["IbkrIndContracts"] = relationship()
+    last_updated: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
 
 # class IbkrIndBarDailyTrades(Base):
