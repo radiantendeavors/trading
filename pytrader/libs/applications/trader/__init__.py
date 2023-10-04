@@ -188,7 +188,7 @@ class ProcessManager():
         try:
             # We add this check here because if the strategies aren't started above because we never
             # receive the next order id, then self.strategies will still be NoneType.
-            if self.strategies is not None:
+            if self.strategies is not None and len(self.strategies) > 0:
                 self.strategy_mngr.stop()
                 self.strategy_process.join()
         except AttributeError as msg:
