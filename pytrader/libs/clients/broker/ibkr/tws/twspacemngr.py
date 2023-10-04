@@ -93,7 +93,7 @@ class TwsPacingMngr(TwsThreadMngr):
     __historical_data_sleep_time = 0
     __contract_details_sleep_time = 0
     __contract_history_begin_count = 0
-    __contract_history_begin_sleep_time = 0
+    __contract_history_begin_sleep_time = 30
     __small_bar_sleep_time = 15
     __small_bar_sizes = ["1 secs", "5 secs", "10 secs", "15 secs", "30 secs"]
     __intraday_bar_sizes = __small_bar_sizes + [
@@ -121,11 +121,6 @@ class TwsPacingMngr(TwsThreadMngr):
 
         @return
         """
-        self.__contract_history_begin_count += 1
-
-        if self.__contract_history_begin_count > 5:
-            self.__contract_history_begin_sleep_time = 15
-
         self._data_wait(self.contract_history_begin_data_req_timestamp,
                         self.__contract_history_begin_sleep_time)
 
@@ -157,7 +152,6 @@ class TwsPacingMngr(TwsThreadMngr):
     def _data_wait(self, timestamp, sleep_time):
         time_diff = datetime.datetime.now() - timestamp
 
-        # TODO: Why is this a loop?
         while time_diff.total_seconds() < sleep_time:
 
             logger.debug6("Now: %s", datetime.datetime.now())
