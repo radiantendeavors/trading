@@ -142,12 +142,23 @@ class TwsAccountClient(AbstractBrokerClient):
         new_order = order_request["order"]
         order_id = new_order.orderId
 
-        self.order_subjects.create_order(order_contract, new_order, order_id)
+        self.brokerclient.place_order(order_contract, new_order, order_id)
         self.order_observers[strategy_id].add_order_id(order_id)
 
-    def request_bar_history(self) -> None:
-        self.bar_subjects.request_bars()
-        self.bar_subjects.notify()
+    def request_bar_history(self, request: dict) -> None:
+        self.req_id += 1
+        contract = request["contract"]
+        bar_size_setting = request["bar_size_setting"]
+        end_date_time = request["end_date_time"]
+        duration_str = request["duration_str"]
+        what_to_show = request["what_to_show"]
+        use_regular_trading_hours = request["use_regular_trading_hours"]
+        format_date = request["format_date"]
+        keep_up_to_date = request["keep_up_to_date"]
+        self.brokerclient.req_historical_data(self.req_id, contract, bar_size_setting,
+                                              end_date_time, duration_str, what_to_show,
+                                              use_regular_trading_hours, format_date,
+                                              keep_up_to_date)
 
     def request_contract_details(self, contract: Contract):
         self.req_id += 1
@@ -214,30 +225,6 @@ class TwsAccountClient(AbstractBrokerClient):
     # Internal Helper Functions
     #
     # ==============================================================================================
-    def _data_wait(self, timestamp, sleep_time):
-        time_diff = datetime.datetime.now() - timestamp
-
-        # FIXME: Why is this a loop?
-        while time_diff.total_seconds() < sleep_time:
-
-            logger.debug6("Now: %s", datetime.datetime.now())
-            logger.debug6("Last Request: %s", timestamp)
-            logger.debug6("Time Difference: %s seconds", time_diff.total_seconds())
-            remaining_sleep_time = sleep_time - time_diff.total_seconds()
-            logger.debug6("Sleep Time: %s", remaining_sleep_time)
-            sleep(sleep_time - time_diff.total_seconds())
-            time_diff = datetime.datetime.now() - timestamp
-
-    def _historical_data_wait(self):
-        """!
-        Ensure that we wait between historical data requests.
-
-        @param self
-
-        @return
-        """
-        self._data_wait(self.__historical_data_req_timestamp, HISTORICAL_DATA_SLEEP_TIME)
-
     def _req_tick_by_tick_data(self, contract: Contract, tick_type: str, number_of_ticks: int,
                                ignore_size: bool):
         self.req_id += 1
@@ -247,42 +234,3 @@ class TwsAccountClient(AbstractBrokerClient):
         self.__historical_data_req_timestamp = datetime.datetime.now()
         logger.debug("End Function")
         return self.req_id
-
-    def _small_bar_data_wait(self):
-        """!
-        Ensure that we wait between historical data requests.
-
-        @param self
-
-        @return
-        """
-        self._data_wait(self.__small_bar_data_req_timestamp, SMALL_BAR_SLEEP_TIME)
-
-    def _contract_details_data_wait(self):
-        """!
-        Ensure that we wait between historical data requests.
-
-        @param self
-
-        @return
-        """
-        self._data_wait(self.__contract_details_data_req_timestamp,
-                        self.__contract_details_sleep_time)
-
-    def _calculate_deep_data_allotment(self):
-        """!
-        Caclulates the allowed dep data requests available.
-        """
-        min_allotment = 3
-        max_allotment = 60
-
-        basic_allotment = self.__available_market_data_lines % 100
-
-        if basic_allotment < min_allotment:
-            self.__available_deep_data_allotment = min_allotment
-        elif basic_allotment > max_allotment:
-            self.__available_deep_data_allotment = max_allotment
-        else:
-            self.__available_deep_data_allotment = basic_allotment
-
-        logger.debug("Deep Data Allotment: %s", self.__available_deep_data_allotment)

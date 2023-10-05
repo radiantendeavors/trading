@@ -488,7 +488,7 @@ class TwsApiClient(TwsPacingMngr):
         if keep_up_to_date:
             end_date_time = ""
 
-        self._historical_data_wait()
+        self.historical_data_wait()
 
         logger.debug6("Requesting Historical Bars for: %s", contract.localSymbol)
 

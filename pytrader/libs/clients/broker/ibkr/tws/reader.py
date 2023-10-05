@@ -45,7 +45,6 @@ abstract function names, and their variables.
 import datetime
 from decimal import Decimal
 
-from ibapi.client import EClient
 from ibapi.commission_report import CommissionReport
 from ibapi.common import BarData, TickAttrib, TickAttribBidAsk, TickAttribLast
 from ibapi.contract import Contract, ContractDetails, DeltaNeutralContract
@@ -53,7 +52,6 @@ from ibapi.execution import Execution
 from ibapi.order import Order
 from ibapi.order_state import OrderState
 from ibapi.utils import iswrapper
-from ibapi.wrapper import EWrapper
 
 from pytrader.libs.clients.broker.ibkr.tws.errors import TwsErrors
 from pytrader.libs.system import logging
@@ -503,7 +501,7 @@ class TwsReader(TwsErrors):
 
         send_item = [reqId, date_time, bar]
         logger.debug("Sending Queue Item: %s", send_item)
-        self.queue.put(send_item)
+        # self.queue.put(send_item)
 
         logger.debug("End Function")
 

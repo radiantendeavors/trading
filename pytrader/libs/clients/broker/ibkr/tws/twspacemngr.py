@@ -38,7 +38,6 @@ Creates a basic interface for interacting with a broker
 # ==================================================================================================
 import datetime
 import time
-from typing import Optional
 
 from pytrader.libs.clients.broker.ibkr.tws.thread import TwsThreadMngr
 from pytrader.libs.system import logging
@@ -61,14 +60,7 @@ class TwsPacingMngr(TwsThreadMngr):
     """!
     The Command interface for the TWS API Client.
     """
-
-    historical_data_req_timestamp = datetime.datetime(year=1970,
-                                                      month=1,
-                                                      day=1,
-                                                      hour=0,
-                                                      minute=0,
-                                                      second=0)
-
+    ## Used to track when the last contract details data request was made
     contract_details_data_req_timestamp = datetime.datetime(year=1970,
                                                             month=1,
                                                             day=1,
@@ -83,22 +75,56 @@ class TwsPacingMngr(TwsThreadMngr):
                                                                   minute=0,
                                                                   second=0)
 
+    ## Used to track when the last historical data request was made
+    historical_data_req_timestamp = datetime.datetime(year=1970,
+                                                      month=1,
+                                                      day=1,
+                                                      hour=0,
+                                                      minute=0,
+                                                      second=0)
+
+    ##  Used to track when the last small bar data request was made
     small_bar_data_req_timestamp = datetime.datetime(year=1970,
                                                      month=1,
                                                      day=1,
                                                      hour=0,
                                                      minute=0,
                                                      second=0)
+
+    ## Used to track the number of active historical data requests.
+    __active_historical_data_requests = 0
+
+    ## Used to track available streams of level 2 data
+    __available_deep_data_allotment = 3
+
+    ## Used to track the number of available market data lines
+    __available_market_data_lines = 100
+
+    ## Amount of time to sleep to avoid pacing violations.
     __historical_data_sleep_time = 0
+
+    ## Amount of time to sleep to avoid pacing violations.
     __contract_details_sleep_time = 0
+
+    ## Amount of time to sleep to avoid pacing violations.
     __contract_history_begin_sleep_time = 0
+
+    ## Amount of time to sleep to avoid pacing violations.
     __contract_history_begin_req_count = 0
+
+    ## Amount of time to sleep to avoid pacing violations.
     __small_bar_sleep_time = 15
+
+    ## Used to store bar sizes with pacing violations
     __small_bar_sizes = ["1 secs", "5 secs", "10 secs", "15 secs", "30 secs"]
+
+    ## Used to store allowed intraday bar sizes
     __intraday_bar_sizes = __small_bar_sizes + [
         "1 min", "2 mins", "3 mins", "5 mins", "10 mins", "15 mins", "20 mins", "30 mins", "1 hour",
         "2 hours", "3 hours", "4 hours", "8 hours"
     ]
+
+    ## Used to store allowed bar sizes
     __bar_sizes = __intraday_bar_sizes + ["1 day", "1 week", "1 month"]
 
     def contract_details_data_wait(self):
@@ -123,10 +149,11 @@ class TwsPacingMngr(TwsThreadMngr):
         self.__contract_history_begin_req_count += 1
 
         if self.__contract_history_begin_req_count % 60 == 0:
-            # Sleep for 20 minutes
+            # Sleep for 30 minutes
+            num_minutes = 30
             now = datetime.datetime.today()
-            logger.debug("Sleep for 20 minutes to avoid pacing violation at %s.", now)
-            sleep_time = 1200
+            logger.debug("Sleep for %s minutes to avoid pacing violation at %s.", num_minutes, now)
+            sleep_time = num_minutes * 60
         else:
             sleep_time = self.__contract_history_begin_sleep_time
 
