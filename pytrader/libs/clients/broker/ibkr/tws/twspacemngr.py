@@ -187,11 +187,11 @@ class TwsPacingMngr(TwsThreadMngr):
 
         while time_diff.total_seconds() < sleep_time:
 
-            logger.debug6("Now: %s", datetime.datetime.now())
-            logger.debug6("Last Request: %s", timestamp)
-            logger.debug6("Time Difference: %s seconds", time_diff.total_seconds())
+            logger.debug("Now: %s", datetime.datetime.now())
+            logger.debug("Last Request: %s", timestamp)
+            logger.debug("Time Difference: %s seconds", time_diff.total_seconds())
             remaining_sleep_time = sleep_time - time_diff.total_seconds()
-            logger.debug6("Sleep Time: %s", remaining_sleep_time)
+            logger.debug("Sleep Time: %s", remaining_sleep_time)
             time.sleep(sleep_time - time_diff.total_seconds())
             time_diff = datetime.datetime.now() - timestamp
 

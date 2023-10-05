@@ -55,6 +55,7 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
+# pylint: disable=R0902
 class DownloadProcess():
     """!
     Managers the Data Downloading Process.
