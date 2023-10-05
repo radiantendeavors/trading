@@ -102,8 +102,8 @@ class DatabaseContract(BaseContract):
         return self.option_parameters_table.select(criteria=criteria)
 
     def save_history_begin_date(self, history_begin_date) -> None:
-        if history_begin_date == "NoHistory":
-            logger.debug("No History Found")
+        if history_begin_date == "NoHistory" and self.no_history_table:
+            self.no_history_table.insert([self.id])
         else:
             logger.debug("History Begin Date: %s", history_begin_date)
             begin_datetime = datetime.strptime(history_begin_date, "%Y%m%d  %H:%M:%S")

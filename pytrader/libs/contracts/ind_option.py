@@ -27,7 +27,8 @@ Provides the Base Class for Contracts
 """
 from pytrader.libs.clients.database.mysql.ibkr.ind_opt_contracts import (
     IbkrIndOptContractDetails, IbkrIndOptContracts, IbkrIndOptHistoryBeginDate,
-    IbkrIndOptInvalidContracts, IbkrIndOptLiquidHours, IbkrIndOptTradingHours)
+    IbkrIndOptInvalidContracts, IbkrIndOptLiquidHours, IbkrIndOptNoHistory,
+    IbkrIndOptTradingHours)
 from pytrader.libs.contracts.option import OptionContract
 from pytrader.libs.system import logging
 
@@ -55,3 +56,4 @@ class IndOptionContract(OptionContract):
     contract_trading_hours_table = IbkrIndOptTradingHours()
     history_begin_date_table = IbkrIndOptHistoryBeginDate()
     invalid_contract_table = IbkrIndOptInvalidContracts()
+    no_history_table = IbkrIndOptNoHistory()

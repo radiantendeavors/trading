@@ -37,7 +37,8 @@ from ibapi.contract import Contract as IbContract
 # Application Libraries
 from pytrader.libs.clients.database.mysql.ibkr.stk_opt_contracts import (
     IbkrStkOptContractDetails, IbkrStkOptContracts, IbkrStkOptHistoryBeginDate,
-    IbkrStkOptInvalidContracts, IbkrStkOptLiquidHours, IbkrStkOptTradingHours)
+    IbkrStkOptInvalidContracts, IbkrStkOptLiquidHours, IbkrStkOptNoHistory,
+    IbkrStkOptTradingHours)
 from pytrader.libs.contracts.option import OptionContract
 from pytrader.libs.system import logging
 
@@ -65,3 +66,4 @@ class StkOptionContract(OptionContract):
     contract_trading_hours_table = IbkrStkOptTradingHours()
     history_begin_date_table = IbkrStkOptHistoryBeginDate()
     invalid_contract_table = IbkrStkOptInvalidContracts()
+    no_history_table = IbkrStkOptNoHistory()

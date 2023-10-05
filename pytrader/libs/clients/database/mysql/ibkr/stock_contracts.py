@@ -25,7 +25,7 @@ Provides the database client
 @file pytrader/libs/clients/mysql/etf_info.py
 """
 # System Libraries
-from datetime import date
+from datetime import date, timedelta
 
 # 3rd Party Libraries
 import pymysql
@@ -92,3 +92,20 @@ class IbkrStockTradingHours(IbkrBaseContracts):
     table_name = "z_ibkr_stk_trading_hours"
     insert_column_names = ["ibkr_contract_id", "begin", "end"]
     update_column_names = insert_column_names
+
+
+class IbkrStockNoHistory(IbkrBaseContracts):
+    table_name = "z_ibkr_stk_no_history"
+    insert_column_names = ["ibkr_contract_id"]
+    update_column_names = insert_column_names + ["last_updated"]
+
+    def clean_history(self):
+        self._clean_last_updated()
+
+    def _clean_last_updated(self):
+        today = date.today()
+        num_days = timedelta(days=7)
+        last_update_min = today - num_days
+        criteria = {"last_updated": last_update_min}
+
+        self.delete(criteria)

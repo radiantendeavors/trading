@@ -372,7 +372,7 @@ class TwsApiClient(TwsPacingMngr):
                            req_id: int,
                            contract: Contract,
                            what_to_show: Optional[str] = "TRADES",
-                           use_regular_trading_hours: Optional[bool] = True,
+                           use_regular_trading_hours: Optional[bool] = False,
                            format_date: Optional[bool] = True) -> None:
         """!
         Requests the earliest available bar data for a contract.
@@ -380,7 +380,9 @@ class TwsApiClient(TwsPacingMngr):
         @param req_id: The request id to use for this request.
         @param contract: The contract
         @param what_to_show: Type of information to show, defaults to "TRADES"
-        @param use_regular_trading_hours: Defaults to 'True'
+        @param use_regular_trading_hours: Limit to regular trading hourse.
+                                          Defaults to 'False' because I only want to get this once
+                                          due to rate limitations.
         @param format_date: Defaults to 'True'
 
         @return req_id: The request identifier

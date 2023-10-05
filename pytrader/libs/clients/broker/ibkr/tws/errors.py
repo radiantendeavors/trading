@@ -29,6 +29,7 @@ Provides the client for Interactive Brokers TWSAPI.
 This is the only file to not use snake_case for functions or variables.  This is to match TWSAPI
 abstract function names, and their variables.
 """
+import datetime
 import time
 
 from ibapi.client import EClient
@@ -184,9 +185,13 @@ class TwsErrors(EWrapper, EClient, BaseBroker):
         if self.request_commands[req_id] == "history_begin":
             self.remove_command(req_id)
             if error_string == "Historical Market Data Service error message:No head time stamp":
-                # self.cancelHeadTimeStamp(req_id)
+                self.cancelHeadTimeStamp(req_id)
                 self.contract_history_begin_subjects.set_history_begin_date(req_id, "NoHistory")
             else:
+                self.cancelHeadTimeStamp(req_id)
+                self.contract_history_begin_subjects.set_history_begin_date(req_id, "Error")
+                now = datetime.datetime.today()
+                logger.debug("Paused for 10 min at %s", now)
                 time.sleep(600)
 
     def _process_code_200(self, req_id: int, error_string: str) -> None:

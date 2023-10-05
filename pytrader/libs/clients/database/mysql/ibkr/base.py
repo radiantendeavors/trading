@@ -113,10 +113,9 @@ class IbkrBase(mysql.MySQLDatabase):
             self._insert(columns)
 
     def delete(self, criteria: dict) -> None:
-        sql = f"DELETE FROM `{self.table_name}`\n"
-
         criteria_name = list(criteria)[0]
-        sql += f"WHERE `{criteria_name}` < %s"
+        sql = (f"DELETE FROM `{self.table_name}`\n"
+               f"WHERE `{criteria_name}` < '%s'")
 
         self._execute(sql, criteria[criteria_name])
 
@@ -127,7 +126,7 @@ class IbkrBase(mysql.MySQLDatabase):
     # ==============================================================================================
     def _execute(self, sql: str, values: Optional[list] = None) -> None:
         query_type = sql.split(" ")[0]
-        logger.debug("\nSQL\n%s Values: %s", sql, values)
+        logger.debug("\nSQL\n%s\nValues: %s", sql, values)
         try:
             if values:
                 self.mycursor.execute(sql, values)

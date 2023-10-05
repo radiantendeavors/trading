@@ -103,7 +103,7 @@ class DownloadProcess():
         #
         # ==========================================================================================
         self._get_contract_universe()
-        self._clean_invalid_contracts()
+        # self._clean_invalid_contracts()
 
         loop_list = []
 
@@ -212,7 +212,13 @@ class DownloadProcess():
 
     def _get_contract_history_begin_date(self, symbol: str) -> None:
         logger.debug("Getting History Begin Date for %s", symbol)
-        self.contracts[symbol].get_contract_history_begin_date()
+        no_history = self.contracts[symbol].query_no_history()
+
+        if no_history:
+            logger.debug("No History Exists for Contract, Skipping")
+            self.data_queue.put("Done")
+        else:
+            self.contracts[symbol].get_contract_history_begin_date()
 
     def _get_contract_option_params(self, ticker: dict) -> None:
         logger.debug("Getting Contract Option Parameters for '%s'", ticker["ib_symbol"])

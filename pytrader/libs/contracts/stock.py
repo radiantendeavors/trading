@@ -36,7 +36,8 @@ from ibapi.contract import Contract as IbContract
 # Application Libraries
 from pytrader.libs.clients.database.mysql.ibkr.stock_contracts import (
     IbkrStockContractDetails, IbkrStockContracts, IbkrStockHistoryBeginDate,
-    IbkrStockLiquidHours, IbkrStockOptParams, IbkrStockTradingHours)
+    IbkrStockLiquidHours, IbkrStockNoHistory, IbkrStockOptParams,
+    IbkrStockTradingHours)
 from pytrader.libs.contracts.abstractbase import AbstractBaseContract
 from pytrader.libs.system import logging
 
@@ -64,6 +65,7 @@ class StockContract(AbstractBaseContract):
     contract_trading_hours_table = IbkrStockTradingHours()
     history_begin_date_table = IbkrStockHistoryBeginDate()
     option_parameters_table = IbkrStockOptParams()
+    no_history_table = IbkrStockNoHistory()
     sec_type = "STK"
 
     def __init__(self,

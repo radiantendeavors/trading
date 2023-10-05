@@ -59,6 +59,7 @@ class BaseContract():
     contract_trading_hours_table = None
     history_begin_date_table = None
     invalid_contract_table = None
+    no_history_table = None
     option_parameters_table = None
     sec_type = None
 

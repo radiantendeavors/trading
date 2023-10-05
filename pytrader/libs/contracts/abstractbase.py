@@ -225,6 +225,10 @@ class AbstractBaseContract(DatabaseContract, ABC):
         message = {sender: {"req": {"option_details": self.contract}}}
         self.queue.put(message)
 
+    def query_no_history(self):
+        criteria = self._set_criteria()
+        return self.no_history_table.select(criteria=criteria)
+
     @abstractmethod
     def select_columns(self) -> None:
         """!
