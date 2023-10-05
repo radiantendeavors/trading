@@ -175,7 +175,7 @@ class BrokerClient():
 
         match command:
             case "bar_history":
-                self.brokerclient.request_bar_history()
+                self.brokerclient.request_bar_history(subcommand[command])
             case "contract_details":
                 self.brokerclient.request_contract_details(subcommand[command])
             case "history_begin_date":

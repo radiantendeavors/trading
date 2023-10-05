@@ -85,6 +85,7 @@ class ProcessManager(metaclass=SingletonMeta):
     strategies = None
     tickers = None
     asset_classes = None
+    currencies = None
     regions = None
     fed_event = None
     enable_downloader = None
@@ -98,16 +99,7 @@ class ProcessManager(metaclass=SingletonMeta):
         @return None
         """
         logger.debug9("Args: %s", args)
-        self.brokers = args.brokers
-        self.address = args.address
-        self.client_id = args.client_id
-        self.strategies = args.strategies
-        self.tickers = args.tickers
-        self.asset_classes = args.asset_classes
-        self.currencies = args.currencies
-        self.regions = args.regions
-        self.fed_event = args.fed
-        self.enable_downloader = args.enable_downloader
+        self._process_args(args)
 
         if len(self.strategies) > 0:
             for strategy_id in self.strategies:
@@ -179,6 +171,18 @@ class ProcessManager(metaclass=SingletonMeta):
                 self.next_order_id = message["next_order_id"]
 
         logger.debug("Next Order Id: %s", self.next_order_id)
+
+    def _process_args(self, args: argparse.Namespace) -> None:
+        self.brokers = args.brokers
+        self.address = args.address
+        self.client_id = args.client_id
+        self.strategies = args.strategies
+        self.tickers = args.tickers
+        self.asset_classes = args.asset_classes
+        self.currencies = args.currencies
+        self.regions = args.regions
+        self.fed_event = args.fed
+        self.enable_downloader = args.enable_downloader
 
     def _run_broker_process(self) -> None:
         self.broker_process = multiprocessing.Process(target=self.broker_mngr.run, args=())

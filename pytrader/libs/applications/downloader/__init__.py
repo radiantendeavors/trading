@@ -99,12 +99,16 @@ class DownloadProcess():
         self._get_contract_universe(asset_classes, regions, currencies, tickers)
         # self._clean_invalid_contracts()
 
-        for x in range(4):
-            self.loop_list.append(self.contract_universe.copy())
+        self.loop_list = [self.contract_universe[:] for _ in range(4)]
 
         self.enabled = True
 
     def enable_options(self) -> None:
+        """!
+        Enable downloading options.
+
+        @return None
+        """
         self.download_options = True
 
     def run(self) -> None:

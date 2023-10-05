@@ -1,12 +1,9 @@
 """!
-@package pytrader.libs.clients.broker.ibkr.tws.twsreal
-Creates a basic interface for interacting with a broker
+@package pytrader.libs.clients.broker.ibkr.tws.twspacemngr
 
-@file pytrader/libs/clients/broker/ibkr/tws/twsreal.py
+Provides functionality to manage request pacing to avoid pacing violations.
 
-Creates a basic interface for interacting with a broker
-
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -23,6 +20,7 @@ Creates a basic interface for interacting with a broker
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+@file pytrader/libs/clients/broker/ibkr/tws/twspacemngr.py
 """
 # ==================================================================================================
 #
