@@ -32,7 +32,7 @@ from ibapi.order import Order
 
 from pytrader.libs.clients.broker.ibkr.tws.twspacemngr import TwsPacingMngr
 from pytrader.libs.system import logging
-from pytrader.libs.utilities.exceptions import InvalidExchange, InvalidTickType
+from pytrader.libs.utilities.exceptions import InvalidExchange
 
 # ==================================================================================================
 #
@@ -48,6 +48,7 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
+#pylint: disable=R0904
 class TwsApiClient(TwsPacingMngr):
     """!
     The Command interface for the TWS API Client.
@@ -62,12 +63,14 @@ class TwsApiClient(TwsPacingMngr):
     # All functions in alphabetical order.
     #
     # ==============================================================================================
+    # pylint: disable=R0913
     def calculate_implied_volatility(
             self,
+            req_id: int,
             contract: Contract,
             option_price: float,
             under_price: float,
-            implied_option_volatility_options: Optional[list] = None) -> int:
+            implied_option_volatility_options: Optional[list] = None) -> None:
         """!
         Calculate the volatility for an option.
         Request the calculation of the implied volatility based on hypothetical option and its
@@ -81,22 +84,20 @@ class TwsApiClient(TwsPacingMngr):
 
         @return req_id: The request identifier used.
         """
-        self.req_id += 1
-
         # TWSAPI will crash if implied_option_volatility_options is NoneType.  Since setting the
         # default value to and empty list '[]' is dangerous, we do this instead.
         if implied_option_volatility_options is None:
             implied_option_volatility_options = []
-        self.calculateImpliedVolatility(self.req_id, contract, option_price, under_price,
+        self.calculateImpliedVolatility(req_id, contract, option_price, under_price,
                                         implied_option_volatility_options)
 
-        return self.req_id
-
+    # pylint: disable=R0913
     def calculate_option_price(self,
+                               req_id: int,
                                contract: Contract,
                                volatility: float,
                                under_price: float,
-                               option_price_options: Optional[list] = None) -> int:
+                               option_price_options: Optional[list] = None) -> None:
         """!
         Calculates an option's price based on the provided volatility and its underlying's price.
         The calculation will be return in EWrapper's tickOptionComputation callback.
@@ -108,13 +109,9 @@ class TwsApiClient(TwsPacingMngr):
 
         @return req_id: The request identifier used
         """
-        self.req_id += 1
         if option_price_options is None:
             option_price_options = []
-        self.calculateOptionPrice(self.req_id, contract, volatility, under_price,
-                                  option_price_options)
-
-        return self.req_id
+        self.calculateOptionPrice(req_id, contract, volatility, under_price, option_price_options)
 
     def cancel_account_summary(self, req_id: int) -> None:
         """!
@@ -196,7 +193,7 @@ class TwsApiClient(TwsPacingMngr):
         """
         self.cancelNewsBulletins()
 
-    def cancel_order(self, order_id: int, manual_order_cancel_time: str = "") -> None:
+    def cancel_order(self, order_id: int, manual_order_cancel_time: Optional[str] = "") -> None:
         """!
         Cancels an active order placed by from the same API client ID.
         Note: API clients cannot cancel individual orders placed by other clients. Only
@@ -213,7 +210,7 @@ class TwsApiClient(TwsPacingMngr):
 
         self.cancelOrder(order_id, manual_order_cancel_time)
 
-    def is_connected(self):
+    def is_connected(self) -> bool:
         """!
         Indicates whether the API-TWS connection has been closed. NOTE: This function is not
         automatically invoked and must be by the API client.
@@ -243,7 +240,10 @@ class TwsApiClient(TwsPacingMngr):
         self.req_ids()
         return order_id
 
-    def req_account_summary(self, account_types: str = "ALL", tags: Optional[list] = None) -> int:
+    def req_account_summary(self,
+                            req_id: int,
+                            account_types: str = "ALL",
+                            tags: Optional[list] = None) -> None:
         """!
         Requests a specific account's summary.
         This method will subscribe to the account summary as presented in the TWS' Account Summary
@@ -313,10 +313,8 @@ class TwsApiClient(TwsPacingMngr):
 
         @return req_id: The request identifier used.
         """
-        self.req_id += 1
         tags_string = ", ".join([str(item) for item in tags])
-        self.reqAccountSummary(self.req_id, account_types, tags_string)
-        return self.req_id
+        self.reqAccountSummary(req_id, account_types, tags_string)
 
     def req_account_updates(self, subscribe: bool, account_code: str) -> None:
         """!
@@ -338,7 +336,7 @@ class TwsApiClient(TwsPacingMngr):
         """
         self.reqAccountUpdates(subscribe, account_code)
 
-    def req_contract_details(self, req_id: int, contract: Contract):
+    def req_contract_details(self, req_id: int, contract: Contract) -> None:
         """!
         Requests contract information.
         This method will provide all the contracts matching the contract provided. It can also be
@@ -368,6 +366,7 @@ class TwsApiClient(TwsPacingMngr):
         """
         self.reqGlobalCancel()
 
+    # pylint: disable=R0913
     def req_head_timestamp(self,
                            req_id: int,
                            contract: Contract,
@@ -395,6 +394,7 @@ class TwsApiClient(TwsPacingMngr):
 
     # pylint: disable=C0301
     def req_historical_data(self,
+                            req_id: int,
                             contract: Contract,
                             bar_size_setting: str,
                             end_date_time: str = "",
@@ -403,7 +403,7 @@ class TwsApiClient(TwsPacingMngr):
                             use_regular_trading_hours: bool = True,
                             format_date: bool = True,
                             keep_up_to_date: bool = False,
-                            chart_options: Optional[list] = None) -> int:
+                            chart_options: Optional[list] = None) -> None:
         """!
         Requests contracts' historical data. When requesting historical data, a finishing time and
         date is required along with a duration string. For example, having:
@@ -482,7 +482,6 @@ class TwsApiClient(TwsPacingMngr):
         logger.debug6("Format date: %s", format_date)
         logger.debug6("Keep Up to Date: %s", keep_up_to_date)
         logger.debug6("Chart Options: %s", chart_options)
-        self.req_id += 1
 
         # if keep_up_to_date is true, end_date_time must be blank.
         # https://interactivebrokers.github.io/tws-api/historical_bars.html
@@ -497,14 +496,13 @@ class TwsApiClient(TwsPacingMngr):
         if chart_options is None:
             chart_options = []
 
-        self.reqHistoricalData(self.req_id, contract, end_date_time, duration_str, bar_size_setting,
+        self.reqHistoricalData(req_id, contract, end_date_time, duration_str, bar_size_setting,
                                what_to_show, use_regular_trading_hours, format_date,
                                keep_up_to_date, chart_options)
 
-        self.data[self.req_id] = []
-        return self.req_id
-
+    # pylint: disable=R0913
     def req_historical_ticks(self,
+                             req_id: int,
                              contract: Contract,
                              start_date_time: str,
                              end_date_time: str,
@@ -512,7 +510,7 @@ class TwsApiClient(TwsPacingMngr):
                              what_to_show: str,
                              use_regular_trading_hours: int,
                              ignore_size: bool,
-                             misc_options: Optional[list] = None) -> int:
+                             misc_options: Optional[list] = None) -> None:
         """!
         Requests historical Time&Sales data for an instrument.
 
@@ -529,8 +527,6 @@ class TwsApiClient(TwsPacingMngr):
 
         @return req_id: The request's identifier
         """
-        self.req_id += 1
-
         # The maximum allowed is 1000 per request
         number_of_ticks = min(number_of_ticks, 1000)
 
@@ -538,10 +534,8 @@ class TwsApiClient(TwsPacingMngr):
         if misc_options is None:
             misc_options = []
 
-        self.reqHistoricalTicks(self.req_id, contract, start_date_time, end_date_time,
-                                number_of_ticks, what_to_show, use_regular_trading_hours,
-                                ignore_size, misc_options)
-        return self.req_id
+        self.reqHistoricalTicks(req_id, contract, start_date_time, end_date_time, number_of_ticks,
+                                what_to_show, use_regular_trading_hours, ignore_size, misc_options)
 
     def req_ids(self) -> None:
         """!
@@ -562,13 +556,14 @@ class TwsApiClient(TwsPacingMngr):
         """
         self.reqManagedAccts()
 
+    # pylint: disable=R0913
     def req_market_data(self,
                         req_id: int,
                         contract: Contract,
                         generic_tick_list: Optional[str] = None,
                         snapshot: Optional[bool] = False,
                         regulatory_snapshot: Optional[bool] = False,
-                        market_data_options: Optional[list] = None):
+                        market_data_options: Optional[list] = None) -> None:
         """!
         Requests real time market data. Returns market data for an instrument either in real time or
         10-15 minutes delayed (depending on the market data type specified)
@@ -666,11 +661,12 @@ class TwsApiClient(TwsPacingMngr):
                         market_data_options)
 
     def req_real_time_bars(self,
+                           req_id: int,
                            contract: Contract,
                            bar_size_setting: int = 5,
                            what_to_show: str = "TRADES",
                            use_regular_trading_hours: bool = True,
-                           real_time_bar_options: Optional[list] = None) -> int:
+                           real_time_bar_options: Optional[list] = None) -> None:
         """!
         Requests real time bars
         Currently, only 5 seconds bars are provided. This request is subject to the same pacing as
@@ -699,23 +695,17 @@ class TwsApiClient(TwsPacingMngr):
         allowed_bar_types = ["TRADES", "MIDPOINT", "BID", "ASK"]
 
         if what_to_show in allowed_bar_types:
-            self.req_id += 1
-
             # TWSAPI expects real_time_bar_options type to be a list
             if real_time_bar_options is None:
                 real_time_bar_options = []
 
-            self.reqRealTimeBars(self.req_id, contract, bar_size_setting, what_to_show,
+            self.reqRealTimeBars(req_id, contract, bar_size_setting, what_to_show,
                                  use_regular_trading_hours, real_time_bar_options)
-
-            # This is updated here, rather than in the _historical_data_wait function because we
-            # want to actually make the request before setting a new timer.
-            return self.req_id
 
     def req_sec_def_opt_params(self,
                                req_id: int,
                                contract: Contract,
-                               exchange: Optional[str] = None):
+                               exchange: Optional[str] = None) -> None:
         """!
         Requests security definition option parameters for viewing a contract's option chain
 
@@ -733,10 +723,11 @@ class TwsApiClient(TwsPacingMngr):
         self.reqSecDefOptParams(req_id, contract.symbol, exchange, contract.secType, contract.conId)
 
     def req_tick_by_tick_data(self,
+                              req_id: int,
                               contract: Contract,
                               tick_type: str = "Last",
                               number_of_ticks: int = 0,
-                              ignore_size: bool = False):
+                              ignore_size: bool = False) -> None:
         """!
         Requests tick-by-tick data.
 
@@ -760,10 +751,10 @@ class TwsApiClient(TwsPacingMngr):
         #     case _:
         #         raise InvalidTickType("Invalid Tick Type")
 
-        logger.debug("Req Tick-by-Tick %s %s %s %s", contract, tick_type, number_of_ticks,
-                     ignore_size)
+        logger.debug("ReqId %s Tick-by-Tick %s %s %s %s", req_id, contract, tick_type,
+                     number_of_ticks, ignore_size)
 
-    def set_server_loglevel(self, log_level: int = 2):
+    def set_server_loglevel(self, log_level: int = 2) -> None:
         """!
         Changes the TWS/GW log level. The default is 2 = ERROR
         5 = DETAIL is required for capturing all API messages and troubleshooting API programs

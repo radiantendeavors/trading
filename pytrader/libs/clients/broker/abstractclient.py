@@ -101,6 +101,8 @@ class AbstractBrokerClient(ABC):
         Stops the broker client thread.
         """
 
+    # Disable 'R0913' as these variables were determined by TWSAPI.
+    # pylint: disable=R0913
     @abstractmethod
     def calculate_implied_volatility(self,
                                      req_id: int,
@@ -126,6 +128,11 @@ class AbstractBrokerClient(ABC):
         """
 
     def is_connected(self) -> bool:
+        """!
+        Returns the status of the connection to the client.
+
+        @return bool: True if connected, False if disconnected.
+        """
         return self.connection_status
 
     @abstractmethod

@@ -82,14 +82,34 @@ class BaseBroker():
     data_queue = {}
 
     def add_history_begin_ticker(self, req_id: int, ticker: str) -> None:
+        """!
+        Add req_id and ticker to dictionary matching req_ids to tickers.
+
+        @param req_id:
+        @param ticker:
+
+        @return None
+        """
         self.contract_history_begin_subjects.add_ticker(req_id, ticker)
 
     def add_contract_option_params_ticker(self, req_id: int, ticker: str) -> None:
+        """!
+        Add req_id and ticker to dictionary matching req_ids to tickers.
+
+        @param req_id:
+        @param ticker:
+
+        @return None
+        """
         self.contract_option_parameter_subjects.add_ticker(req_id, ticker)
 
     def set_data_queue(self, data_queue: dict) -> None:
         """!
         Sets the Data Queue.
+
+        @param data_queue:
+
+        @return None
         """
         self.data_queue = data_queue
 

@@ -118,7 +118,7 @@ class AbstractBaseContract(DatabaseContract, ABC):
                 self.req_contract_details(sender)
             else:
                 logger.debug("Last Updated: %s", last_updated)
-                self.local_queue.put("Done")
+                self.local_queue.put("Next")
         else:
             msg = (f"Contract Details are not in the database for {self.contract.symbol}, "
                    f"requesting details from broker.")
@@ -146,7 +146,7 @@ class AbstractBaseContract(DatabaseContract, ABC):
                 logger.debug("Too Old! Last Updated: %s", last_updated)
                 self.req_contract_history_begin_date(sender)
             else:
-                self.local_queue.put("Done")
+                self.local_queue.put("Next")
         else:
             self.req_contract_history_begin_date(sender)
 

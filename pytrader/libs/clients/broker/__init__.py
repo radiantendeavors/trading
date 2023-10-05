@@ -59,20 +59,24 @@ class BrokerClient():
     """
     address = None
     strategies = None
-    client_classes = {
-        "tws_real": TwsRealAccountClient,
-        "tws_demo": TwsDemoAccountClient,
-        "ibg_real": IbgRealAccountClient,
-        "ibg_demo": IbgDemoAccountClient
-    }
     role = None
 
     def __init__(self,
                  brokerclient: str,
                  cmd_queue: Queue,
                  data_queue: dict,
-                 client_id: Optional[int] = 0):
-        self.brokerclient = TwsDemoAccountClient(data_queue)
+                 client_id: Optional[int] = 0) -> None:
+        """!
+        Initializes an instance of the BrokerClient Class.
+
+        @param brokerclient:
+        @param cmd_queue:
+        @param data_queue:
+        @param client_id:
+
+        @return None
+        """
+        self.brokerclient = self._select_broker_client(brokerclient, data_queue)
         self.cmd_queue = cmd_queue
         self.data_queue = data_queue
         self.client_id = client_id
@@ -105,9 +109,23 @@ class BrokerClient():
         self.strategies = strategy_list
 
     def set_address(self, address: str) -> None:
+        """!
+        Sets the address for the brokerclient.
+
+        @param address:
+
+        @return None
+        """
         self.address = address
 
     def set_role(self, role: str) -> None:
+        """!
+        Sets the role for the brokerclient.
+
+        @param role:
+
+        @return None
+        """
         self.role = role
 
     # ==============================================================================================
@@ -143,8 +161,6 @@ class BrokerClient():
         @return None
         """
         logger.debug4("Processing Command: %s", cmd)
-        if cmd.get("set"):
-            self._set_cmd(cmd["set"], strategy_id)
         if cmd.get("req"):
             self._req_cmd(cmd["req"], strategy_id)
         if cmd.get("place_order"):
@@ -188,14 +204,12 @@ class BrokerClient():
     #             target=self.ticks[key].run, daemon=True)
     #         self.tick_thread[key].start()
 
-    def _set_cmd(self, subcommand: dict, strategy_id: str) -> None:
-        """!
-        Processes any subcommand from the 'set' command received from the strategy process.
-        """
-        logger.debug4("Subcommand received: %s", subcommand)
-        if subcommand.get("tickers"):
-            self.brokerclient.set_contracts(subcommand["tickers"], strategy_id)
-            self.data_queue[strategy_id].put("Contracts Created")
-        if subcommand.get("bar_sizes"):
-            self.brokerclient.set_bar_sizes(subcommand["bar_sizes"], strategy_id)
-            self.data_queue[strategy_id].put("Bar Sizes Set")
+    def _select_broker_client(self, brokerclient: str, data_queue):
+        client_classes = {
+            "tws_real": TwsRealAccountClient,
+            "tws_demo": TwsDemoAccountClient,
+            "ibg_real": IbgRealAccountClient,
+            "ibg_demo": IbgDemoAccountClient
+        }
+
+        return client_classes[brokerclient](data_queue)

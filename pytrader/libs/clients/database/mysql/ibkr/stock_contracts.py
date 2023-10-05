@@ -78,7 +78,7 @@ class IbkrStockHistoryBeginDate(IbkrBaseContracts):
 
 class IbkrStockLiquidHours(IbkrBaseContracts):
     table_name = "z_ibkr_stk_liquid_hours"
-    insert_column_names = ["ibkr_contract_id", "begin", "end"]
+    insert_column_names = ["ibkr_contract_id", "begin_dt", "end_dt"]
     update_column_names = insert_column_names
 
 
@@ -90,7 +90,7 @@ class IbkrStockOptParams(IbkrBaseContracts):
 
 class IbkrStockTradingHours(IbkrBaseContracts):
     table_name = "z_ibkr_stk_trading_hours"
-    insert_column_names = ["ibkr_contract_id", "begin", "end"]
+    insert_column_names = ["ibkr_contract_id", "begin_dt", "end_dt"]
     update_column_names = insert_column_names
 
 

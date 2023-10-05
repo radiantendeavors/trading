@@ -25,6 +25,7 @@ The main user interface for the trading program.
 from datetime import date, datetime, time, timedelta
 from multiprocessing import Queue
 from time import sleep
+from typing import Optional
 
 # 3rd Party
 from ibapi.contract import ContractDetails
@@ -63,30 +64,48 @@ class DownloadProcess():
     option_contracts = []
     option_contract_symbols = []
     symbol_list = []
+    loop_list = []
     next_order_id = 0
+    enabled = False
+    download_options = False
 
-    def __init__(self, cmd_queue: Queue, data_queue: Queue, tickers: list, asset_classes: list,
-                 currencies: list, regions: list) -> None:
+    def __init__(self, cmd_queue: Queue, data_queue: Queue) -> None:
         """!
         Initializes the Downloader Process
 
         @param cmd_queue:
         @param data_queue:
-        @param tickers:
-        @param enable_options:
-        @param asset_classes:
-        @param currencies:
-        @param regions:
-        @param export:
 
         @return None
         """
         self.cmd_queue = cmd_queue
         self.data_queue = data_queue
-        self.ticker_list = tickers
-        self.asset_classes = asset_classes
-        self.currencies = currencies
-        self.regions = regions
+
+    def enable_historical_downloader(self,
+                                     asset_classes: list,
+                                     regions: list,
+                                     currencies: list,
+                                     tickers: Optional[list] = None) -> None:
+        """!
+        Enable Downloading Historical Data.
+
+        @param asset_classes:
+        @param currencies:
+        @param regions:
+        @param tickers:
+
+        @return None
+        """
+        self._get_contract_universe(asset_classes, regions, currencies, tickers)
+        # self._clean_invalid_contracts()
+
+        for x in range(4):
+            self.loop_list.append(self.contract_universe.copy())
+
+        self.enabled = True
+
+    def enable_options(self) -> None:
+        self.download_options = True
 
     def run(self) -> None:
         """!
@@ -102,47 +121,19 @@ class DownloadProcess():
         # 2. Slow down the requests a bit to play nice with the broker's servers.
         #
         # ==========================================================================================
-        self._get_contract_universe()
-        # self._clean_invalid_contracts()
-
-        loop_list = []
-
-        for x in range(4):
-            loop_list.append(self.contract_universe.copy())
-
-        x = 0
+        counter = 0
         continue_loop = True
 
         while continue_loop:
             message = self.data_queue.get()
 
-            if message != "Done":
-                self._process_data(message)
+            if isinstance(message, dict):
+                message = self._process_data(message)
 
-            if len(loop_list[0]) > 0:
-                self._get_contract_details(loop_list[0].pop())
-            elif len(loop_list[1]) > 0:
-                self._get_contract_option_params(loop_list[1].pop())
-            elif len(loop_list[2]) > 0:
-                self._gen_options_contracts(loop_list[2].pop())
-                self.data_queue.put("Done")
-            elif len(list(self.option_contracts)) > 0 and x == 0:
-                self._get_option_contract_details(self.option_contracts.pop())
-            elif len(loop_list[3]) > 0:
-                x = 1
-                self._gen_options_contracts(loop_list[3].pop())
-                logger.debug("Number of Options Contracts: %s", len(self.option_contracts))
-                self.data_queue.put("Done")
-            elif len(list(self.option_contracts)) > 0 and x == 1:
-                self._get_invalid_option_contracts(self.option_contracts.pop())
-            elif x == 1:
-                self.symbol_list = list(self.contracts.copy())
-                x = 2
-                self.data_queue.put("Done")
-            elif len(self.symbol_list) > 0:
-                self._get_contract_history_begin_date(self.symbol_list.pop())
-            else:
+            if message == "Done":
                 continue_loop = False
+            elif message == "Next" and self.enabled:
+                counter = self._next_step(counter)
 
     # ==============================================================================================
     #
@@ -168,16 +159,17 @@ class DownloadProcess():
         elif asset_class.upper() == "IND":
             self.contracts[symbol] = IndexContract(self.cmd_queue, self.data_queue, symbol)
 
-    def _download_contract_universe(self):
+    def _download_contract_universe(self, asset_classes: list, regions: list,
+                                    currencies: list) -> None:
         """!
         Downloads the stock universe
         """
         scraper = IbkrWebScraper()
-        scraper.get_exchange_listings(self.regions)
+        scraper.get_exchange_listings(regions)
         scraper.get_asset_classes()
-        scraper.get_asset_class_pages(self.asset_classes)
+        scraper.get_asset_class_pages(asset_classes)
         scraper.get_assets()
-        scraper.filter_assets(self.currencies)
+        scraper.filter_assets(currencies)
         scraper.to_sql()
 
     def _gen_options_contracts(self, ticker: dict) -> None:
@@ -216,7 +208,7 @@ class DownloadProcess():
 
         if no_history:
             logger.debug("No History Exists for Contract, Skipping")
-            self.data_queue.put("Done")
+            self.data_queue.put("Next")
         else:
             self.contracts[symbol].get_contract_history_begin_date()
 
@@ -225,7 +217,11 @@ class DownloadProcess():
         symbol = ticker["ib_symbol"]
         self.contracts[symbol].get_contract_option_parameters()
 
-    def _get_contract_universe(self):
+    def _get_contract_universe(self,
+                               asset_classes: list,
+                               regions: list,
+                               currencies: list,
+                               tickers: Optional[list] = None) -> None:
         db = IbkrContractUniverse()
         max_date = db.max_date()
 
@@ -239,11 +235,11 @@ class DownloadProcess():
         logger.debug("Max Date: %s", max_date)
         logger.debug("Renew Date: %s", renew_data_date)
         if max_date and max_date > renew_data_date:
-            self._query_contract_universe()
+            self._query_contract_universe(tickers)
         else:
             logger.debug("Updating Contract Universe")
-            self._download_contract_universe()
-            self._query_contract_universe()
+            self._download_contract_universe(asset_classes, regions, currencies)
+            self._query_contract_universe(tickers)
 
     def _get_invalid_option_contracts(self, opt_contract) -> None:
         option_params = opt_contract.get_option_contract_parameters()
@@ -263,7 +259,7 @@ class DownloadProcess():
         if not db_contract:
             opt_contract.save_invalid_contract(additional_criteria)
 
-        self.data_queue.put("Done")
+        self.data_queue.put("Next")
 
     def _get_option_contract_details(self, opt_contract) -> None:
         option_params = opt_contract.get_option_contract_parameters()
@@ -283,12 +279,12 @@ class DownloadProcess():
             opt_contract.set_contract_parameters(db_contract)
             self.contracts[db_contract["local_symbol"]] = opt_contract
             self.option_contract_symbols.append(db_contract["local_symbol"])
-            self.data_queue.put("Done")
+            self.data_queue.put("Next")
         else:
             invalid_contract = opt_contract.query_invalid_contracts()
             if invalid_contract:
                 logger.debug("Contract is invalid, skipping")
-                self.data_queue.put("Done")
+                self.data_queue.put("Next")
             else:
                 opt_contract.req_contract_details("downloader")
 
@@ -310,19 +306,60 @@ class DownloadProcess():
             logger.debug("Local Symbol: %s", local_symbol)
             self.option_contracts.append(opt_contract)
 
-    def _process_data(self, data):
+    def _next_step(self, counter: int) -> int:
+        if len(self.loop_list[0]) > 0:
+            self._get_contract_details(self.loop_list[0].pop())
+        elif len(self.loop_list[1]) > 0:
+            self._get_contract_option_params(self.loop_list[1].pop())
+        elif len(self.loop_list[2]) > 0:
+            self._gen_options_contracts(self.loop_list[2].pop())
+            self.data_queue.put("Next")
+        elif len(list(self.option_contracts)) > 0 and counter == 0:
+            self._get_option_contract_details(self.option_contracts.pop())
+        elif len(self.loop_list[3]) > 0:
+            counter = 1
+            self._gen_options_contracts(self.loop_list[3].pop())
+            logger.debug("Number of Options Contracts: %s", len(self.option_contracts))
+            self.data_queue.put("Next")
+        elif len(list(self.option_contracts)) > 0 and counter == 1:
+            self._get_invalid_option_contracts(self.option_contracts.pop())
+        elif counter == 1:
+            counter = 2
+            self.symbol_list = list(self.contracts.copy())
+            self.data_queue.put("Next")
+        elif len(self.symbol_list) > 0:
+            self._get_contract_history_begin_date(self.symbol_list.pop())
+        else:
+            logger.debug("All Data Downloaded, shutting down")
+            self.data_queue.put("Done")
+
+        return counter
+
+    def _process_data(self, data: dict) -> str | bool:
         logger.debug("Data: %s", data)
         if data.get("contract_details"):
             contract_details = data["contract_details"]
             self._process_contract_details(contract_details)
+            return "Next"
+
         if data.get("contract_history_begin_date"):
             history_begin_date = data["contract_history_begin_date"]
             self._process_history_begin_date(history_begin_date)
+            return "Next"
+
         if data.get("contract_option_parameters"):
             option_parameters = data["contract_option_parameters"]
             self._process_option_parameters(option_parameters)
+            return "Next"
+
+        if data.get("db_option_parameters"):
+            return "Next"
+
         if data.get("next_order_id"):
             self.next_order_id = data["next_order_id"]
+            return "Next"
+
+        return False
 
     def _process_contract_details(self, contract_details: ContractDetails) -> None:
         logger.debug("Contract Details: %s", contract_details)
@@ -350,11 +387,11 @@ class DownloadProcess():
         ticker = list(option_parameters)[0]
         self.contracts[ticker].save_option_parameters(option_parameters[ticker])
 
-    def _query_contract_universe(self):
+    def _query_contract_universe(self, tickers: Optional[list] = None) -> None:
         universe_db = IbkrContractUniverse()
 
-        if len(self.ticker_list) > 0:
-            criteria = {"ib_symbol": self.ticker_list}
+        if tickers and len(tickers) > 0:
+            criteria = {"ib_symbol": tickers}
             self.contract_universe = universe_db.select(criteria=criteria)
             logger.debug9("Contract Universe: %s", self.contract_universe)
         else:

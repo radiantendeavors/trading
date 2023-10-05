@@ -154,6 +154,10 @@ class PyTrader():
 
     def _add_download_options(self) -> None:
         download_options = self.parser.add_argument_group("Data Downloader Options")
+        download_options.add_argument("--enable-downloader",
+                                      action="store_true",
+                                      default=False,
+                                      help="Enable Downloader")
         download_options.add_argument("-t",
                                       "--tickers",
                                       nargs="*",

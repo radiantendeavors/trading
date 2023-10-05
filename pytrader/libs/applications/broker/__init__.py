@@ -134,7 +134,6 @@ class BrokerProcessManager():
             if cmd == "Quit":
                 broker_connection = False
             else:
-                logger.debug(self.broker_cmd_queues)
                 sender = "tws_demo_" + sender
                 self.broker_cmd_queues[sender].put(cmd)
 

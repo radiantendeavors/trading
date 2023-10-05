@@ -46,7 +46,26 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class ProcessManager():
+class SingletonMeta(type):
+    """!
+    This class is to ensure we only ever have 1 instance of the process manager.
+    """
+
+    __instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        """!
+
+        @param *args:
+        @param *kwargs:
+        """
+        if cls not in cls.__instances:
+            instance = super().__call__(*args, **kwargs)
+            cls.__instances[cls] = instance
+        return cls.__instances[cls]
+
+
+class ProcessManager(metaclass=SingletonMeta):
     """!
     This class is responsible for managing the various processes that are running.
     """
@@ -60,6 +79,15 @@ class ProcessManager():
     strategy_process = None
     downloader_process = None
     next_order_id = 0
+    brokers = None
+    address = None
+    client_id = None
+    strategies = None
+    tickers = None
+    asset_classes = None
+    regions = None
+    fed_event = None
+    enable_downloader = None
 
     def __init__(self, args: argparse.Namespace) -> None:
         """!
@@ -79,6 +107,7 @@ class ProcessManager():
         self.currencies = args.currencies
         self.regions = args.regions
         self.fed_event = args.fed
+        self.enable_downloader = args.enable_downloader
 
         if len(self.strategies) > 0:
             for strategy_id in self.strategies:
@@ -161,9 +190,10 @@ class ProcessManager():
 
     def _run_downloader_process(self) -> None:
         self.downloader_mngr = downloader.DownloadProcess(self.cmd_queue,
-                                                          self.reply_queue["downloader"],
-                                                          self.tickers, self.asset_classes,
-                                                          self.currencies, self.regions)
+                                                          self.reply_queue["downloader"])
+        if self.enable_downloader:
+            self.downloader_mngr.enable_historical_downloader(self.asset_classes, self.regions,
+                                                              self.currencies, self.tickers)
         self.downloader_process = multiprocessing.Process(target=self.downloader_mngr.run, args=())
         self.downloader_process.start()
 

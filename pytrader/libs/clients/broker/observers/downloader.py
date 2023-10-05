@@ -78,7 +78,7 @@ class DownloaderContractDataObserver(ContractDataObserver):
         Saves the historical bar data to the database.
         """
         if subject.contract == "Error":
-            msg = "Done"
+            msg = "Next"
         else:
             msg = {"contract_details": subject.contract}
 
@@ -93,7 +93,7 @@ class DownloaderContractHistoryBeginObserver(ContractHistoryBeginObserver):
         history_begin_date = subject.history_begin_date[subject.req_id]
 
         if history_begin_date == "Error":
-            msg = "Done"
+            msg = "Next"
         else:
             msg = {"contract_history_begin_date": {ticker: history_begin_date}}
 

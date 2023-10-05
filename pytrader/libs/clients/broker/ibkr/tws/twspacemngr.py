@@ -91,7 +91,8 @@ class TwsPacingMngr(TwsThreadMngr):
                                                      second=0)
     __historical_data_sleep_time = 0
     __contract_details_sleep_time = 0
-    __contract_history_begin_sleep_time = 15
+    __contract_history_begin_sleep_time = 0
+    __contract_history_begin_req_count = 0
     __small_bar_sleep_time = 15
     __small_bar_sizes = ["1 secs", "5 secs", "10 secs", "15 secs", "30 secs"]
     __intraday_bar_sizes = __small_bar_sizes + [
@@ -119,8 +120,17 @@ class TwsPacingMngr(TwsThreadMngr):
 
         @return
         """
-        self._data_wait(self.contract_history_begin_data_req_timestamp,
-                        self.__contract_history_begin_sleep_time)
+        self.__contract_history_begin_req_count += 1
+
+        if self.__contract_history_begin_req_count % 60 == 0:
+            # Sleep for 20 minutes
+            now = datetime.datetime.today()
+            logger.debug("Sleep for 20 minutes to avoid pacing violation at %s.", now)
+            sleep_time = 1200
+        else:
+            sleep_time = self.__contract_history_begin_sleep_time
+
+        self._data_wait(self.contract_history_begin_data_req_timestamp, sleep_time)
 
     def historical_data_wait(self):
         """!
