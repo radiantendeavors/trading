@@ -25,15 +25,15 @@ Manages the configuration for TWS API clients
 
 # 3rd Party Libraries
 
+# Other Application Libraries
+from pytrader import git_branch
+from pytrader.libs.clients.broker.ibkr.tws.twsdemo import TwsDemoAccountClient
+from pytrader.libs.clients.broker.ibkr.tws.twsreal import TwsRealAccountClient
 # Application Libraries
 # System Library Overrides
 from pytrader.libs.system import logging
-
-# Other Application Libraries
-from pytrader import git_branch
-from pytrader.libs.clients.broker.ibkr.tws.twsreal import TwsRealAccountClient
-from pytrader.libs.clients.broker.ibkr.tws.twsdemo import TwsDemoAccountClient
-from pytrader.libs.utilities.config.broker.abstractbrokerconfig import AbstractBrokerConfig
+from pytrader.libs.utilities.config.broker.abstractbrokerconfig import \
+    AbstractBrokerConfig
 
 # Conditional Libraries
 

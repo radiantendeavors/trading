@@ -1,8 +1,8 @@
 """!@package pytrader.libs.utilities.config.brokerconfig
 
-Provides the config for the broker
+Parse the config settings for the broker.
 
-@author G S Derber
+@author G. S. Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -19,16 +19,11 @@ Provides the config for the broker
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 @file pytrader/libs/utilities/config/brokerconfig.py
 """
-# ==================================================================================================
-#
-# Libraries
-#
-# ==================================================================================================
-from pytrader import git_branch
+from pytrader import CLIENT_ID, git_branch
 from pytrader.libs.system import logging
-from pytrader.libs.utilities.config.broker import twsconfig
 
 # ==================================================================================================
 #
@@ -39,8 +34,6 @@ from pytrader.libs.utilities.config.broker import twsconfig
 # create logger
 logger = logging.getLogger(__name__)
 
-BROKERS = {"twsapi": twsconfig.TwsConfig}
-
 
 # ==================================================================================================
 #
@@ -49,22 +42,16 @@ BROKERS = {"twsapi": twsconfig.TwsConfig}
 # ==================================================================================================
 class BrokerConfig():
 
-    def __init__(self, broker_id: str):
-        self.config = BROKERS[broker_id]()
+    def __init__(self, *args, **kwargs):
+        self.brokerclient_address = "127.0.0.1"
+        self.brokerclient_id = CLIENT_ID
         self.brokerclient_account = None
-
-    def get_client_address(self):
-        return self.config.get_client_address()
-
-    def identify_clients(self):
-        return self.config.identify_clients()
 
     def read_config(self, *args, **kwargs):
         config = kwargs["config"]
 
-        if git_branch == "main":
-            if "ibkr_real_account" in config:
-                self.brokerclient_account = config["ibkr_real_account"]
-        else:
-            if "ibkr_demo_account" in config:
-                self.brokerclient_account = config["ibkr_demo_account"]
+        if "brokerclient_address" in config:
+            self.brokerclient_address = config["brokerclient_address"]
+
+    def get_brokerclient_address(self):
+        return self.brokerclient_address

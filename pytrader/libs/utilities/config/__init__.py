@@ -49,16 +49,17 @@ config = yaml.safe_load(config_stream)
 # Classes
 #
 # ==================================================================================================
-class Config(database.DatabaseConfig, logconfig.LogConfig, polygon.PolygonConfig,
-             redditconfig.RedditConfig):
+class Config(broker.BrokerConfig, database.DatabaseConfig, logconfig.LogConfig,
+             polygon.PolygonConfig, redditconfig.RedditConfig):
 
     def __init__(self, *args, **kwargs):
         self.nasdaq_client_key = None
         self.nasdaq_client_secret = None
-        super().__init__()
+        super().__init__("twsapi")
         return None
 
     def read_config(self, *args, **kwargs):
+        broker.BrokerConfig.read_config(self, config=config)
         logconfig.LogConfig.read_config(self, config=config)
         database.DatabaseConfig.read_config(self, config=config)
         polygon.PolygonConfig.read_config(self, config=config)
