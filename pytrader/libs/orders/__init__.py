@@ -21,20 +21,12 @@ Provides order management.
 
 @file pytrader/libs/orders/__init__.py
 """
-# System Libraries
 from multiprocessing import Queue
 
-# 3rd Party Libraries
-from ibapi.contract import Contract
 from ibapi import order
-
-# Application Libraries
-# System Library Overrides
+from ibapi.contract import Contract
 from pytrader.libs.system import logging
-
-# Other Application Libraries
-
-# Conditional Libraries
+from pytrader.libs.utilities.config import Config
 
 # ==================================================================================================
 #
@@ -73,6 +65,10 @@ class BaseOrder():
         self.order.orderType = order_type
         self.order.totalQuantity = quantity
         self.order.transmit = transmit
+
+        conf = Config()
+        conf.read_config()
+        self.order.account = conf.brokerclient_account
 
     def set_limit_order_price(self, price: float):
         price = round(price, 2)
