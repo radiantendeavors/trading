@@ -251,21 +251,20 @@ class IbkrStkOptNoHistory(Base):
     last_updated: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
 
-class IbkrStkOptBar1MinTrades(Base):
-    __tablename__ = "z_ibkr_stk_opt_bar_1min_trades"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_stk_opt_contracts.id"))
-    ibkr_contract: Mapped["IbkrStkOptContracts"] = relationship()
-    date_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    bar_volume: Mapped[int]
-    bar_count: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(server_default=func.current_timestamp())
-
+# class IbkrStkOptBar1MinTrades(Base):
+#     __tablename__ = "z_ibkr_stk_opt_bar_1min_trades"
+#     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+#     ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_stk_opt_contracts.id"))
+#     ibkr_contract: Mapped["IbkrStkOptContracts"] = relationship()
+#     date_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     bar_volume: Mapped[int]
+#     bar_count: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
 # class IbkrStkOptBar1MinBids(Base):
 #     __tablename__ = "z_ibkr_stk_opt_bar_1min_bids"
@@ -338,22 +337,20 @@ class IbkrStkOptBar1MinTrades(Base):
 #     date_downloaded: Mapped[date] = mapped_column(
 #         server_default=func.current_timestamp())
 
-
-class IbkrStkOptBar5SecTrades(Base):
-    __tablename__ = "z_ibkr_stk_opt_bar_5sec_trades"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_stk_opt_contracts.id"))
-    ibkr_contract: Mapped["IbkrStkOptContracts"] = relationship()
-    date_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    bar_open: Mapped[float]
-    bar_high: Mapped[float]
-    bar_low: Mapped[float]
-    bar_close: Mapped[float]
-    bar_volume: Mapped[int]
-    bar_count: Mapped[float]
-    outside_trading_hours: Mapped[bool]
-    date_downloaded: Mapped[date] = mapped_column(server_default=func.current_timestamp())
-
+# class IbkrStkOptBar5SecTrades(Base):
+#     __tablename__ = "z_ibkr_stk_opt_bar_5sec_trades"
+#     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+#     ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_stk_opt_contracts.id"))
+#     ibkr_contract: Mapped["IbkrStkOptContracts"] = relationship()
+#     date_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     bar_volume: Mapped[int]
+#     bar_count: Mapped[float]
+#     outside_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
 # class IbkrStkOptBar5minTrades(Base):
 #     __tablename__ = "z_ibkr_stk_opt_bar_5min_trades"

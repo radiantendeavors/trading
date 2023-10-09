@@ -28,7 +28,8 @@ information.
 from datetime import date, datetime
 
 # 3rd Party Libraries
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, select
+from sqlalchemy import (BigInteger, DateTime, ForeignKey, Integer, String,
+                        Text, select)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -253,17 +254,19 @@ class IbkrStkOptionParams(Base):
 # class IbkrStkBarDailyTrades(Base):
 #     __tablename__ = "z_ibkr_stk_bar_daily_trades"
 #     id: Mapped[int] = mapped_column(primary_key=True)
-#     stk_id: Mapped[] = mapped_column(Integer, ForeignKey("z_ibkr_stk_info.id"))
-#     stk = relationship(IbkrStkContract)
-#     date: Mapped[] = mapped_column(Date)
-#     bar_open: Mapped[] = mapped_column(Float)
-#     bar_high: Mapped[] = mapped_column(Float)
-#     bar_low: Mapped[] = mapped_column(Float)
-#     bar_close: Mapped[] = mapped_column(Float)
-#     volume: Mapped[] = mapped_column(BigInteger)
-#     date_downloaded: Mapped[] = mapped_column(Date,
-#                              server_default=func.current_timestamp(),
-#                              nullable=False)
+#     ibkr_contract_id: Mapped[int] = mapped_column(ForeignKey("z_ibkr_stk_contracts.id"))
+#     ibkr_contract: Mapped["IbkrStkContracts"] = relationship()
+#     exchange: Mapped[str] = mapped_column(String(12))
+#     date: Mapped[date]
+#     bar_open: Mapped[float]
+#     bar_high: Mapped[float]
+#     bar_low: Mapped[float]
+#     bar_close: Mapped[float]
+#     bar_volume: Mapped[int] = mapped_column(BigInteger)
+#     bar_wap: Mapped[float]
+#     bar_count: Mapped[int] = mapped_column(BigInteger)
+#     regular_trading_hours: Mapped[bool]
+#     date_downloaded: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
 # class IbkrStkBarDailyBids(Base):
 #     __tablename__ = "z_ibkr_stk_bar_daily_bids"
