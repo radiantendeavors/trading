@@ -39,11 +39,11 @@ import datetime
 from abc import ABCMeta, abstractmethod
 from multiprocessing import Queue
 from time import sleep
-
 from typing import Optional
 
 # 3rd Party libraries
 from ibapi import contract
+
 # from pytrader.libs import contracts
 # Application Libraries
 from pytrader.libs import bars, ticks
