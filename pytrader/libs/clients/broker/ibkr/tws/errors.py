@@ -37,6 +37,7 @@ from ibapi.wrapper import EWrapper
 
 from pytrader.libs.clients.broker.baseclient import BaseBroker
 from pytrader.libs.system import logging
+from pytrader.libs.utilities.exceptions import BrokerNotAvailable
 
 # ==================================================================================================
 #
@@ -100,19 +101,22 @@ class TwsErrors(EWrapper, EClient, BaseBroker):
 
         @return None
         """
-        if error_code in self.__critical_codes:
-            self._process_critical_code(req_id, error_code, error_string, advanced_order_rejection)
-        elif error_code in self.__error_codes:
-            self._process_error_code(req_id, error_code, error_string, advanced_order_rejection)
-        elif error_code in self.__warning_codes:
-            self._process_warning_code(req_id, error_code, error_string, advanced_order_rejection)
-        elif error_code in self.__info_codes:
-            self._process_info_code(req_id, error_code, error_string, advanced_order_rejection)
-        elif error_code in self.__debug_codes:
-            self._process_debug_code(req_id, error_code, error_string, advanced_order_rejection)
-        else:
-            logger.error("Error Code Level has not been identified")
-            self._process_error_code(req_id, error_code, error_string, advanced_order_rejection)
+        match error_code:
+            case self.__critical_codes:
+                self._process_critical_code(req_id, error_code, error_string,
+                                            advanced_order_rejection)
+            case self.__error_codes:
+                self._process_error_code(req_id, error_code, error_string, advanced_order_rejection)
+            case self.__warning_codes:
+                self._process_warning_code(req_id, error_code, error_string,
+                                           advanced_order_rejection)
+            case self.__info_codes:
+                self._process_info_code(req_id, error_code, error_string, advanced_order_rejection)
+            case self.__debug_codes:
+                self._process_debug_code(req_id, error_code, error_string, advanced_order_rejection)
+            case _:
+                logger.error("Error Code Level has not been identified")
+                self._process_error_code(req_id, error_code, error_string, advanced_order_rejection)
 
     def remove_command(self, req_id: int) -> None:
         """!
@@ -144,20 +148,18 @@ class TwsErrors(EWrapper, EClient, BaseBroker):
         else:
             logger.error("ReqID# %s, Code: %s (%s)", req_id, error_code, error_string)
 
-        if error_code == 162:
-            self._process_code_162(req_id, error_string)
-        elif error_code == 200:
-            self._process_code_200(req_id, error_string)
-
-        # match error_code:
-        #     case 200:
-        #         msg = {"Error": error_string}
-        #         logger.debug("Message: %s", msg)
-        #     case 103 | 10147:
-        #         msg = {"order_status": {req_id: {"status": "TWS_CLOSED"}}}
-        #         logger.debug("Message: %s", msg)
-        #     case 502:
-        #         raise BrokerNotAvailable(error_string)
+        match error_code:
+            case 162:
+                self._process_code_162(req_id, error_string)
+            case 200:
+                self._process_code_200(req_id, error_string)
+            case 103 | 10147:
+                msg = {"order_status": {req_id: {"status": "TWS_CLOSED"}}}
+                logger.debug("Message: %s", msg)
+            case 502:
+                raise BrokerNotAvailable(error_string)
+            case _:
+                pass
 
     def _process_warning_code(self, req_id: int, error_code, error_string,
                               advanced_order_rejection):
