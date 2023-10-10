@@ -22,12 +22,6 @@ Provides the observer classes for the DownloaderProcess
 
 @file pytrader/libs/applications/broker/observers/downloader.py
 """
-# System Libraries
-
-# 3rd Party Libraries
-from ibapi.contract import ContractDetails
-
-# Application Libraries
 from pytrader.libs.clients.broker.observers.base import (
     BarDataObserver, ContractDataObserver, ContractHistoryBeginObserver,
     ContractOptionParameterObserver, MarketDataObserver, OrderDataObserver,
@@ -51,12 +45,16 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 class DownloaderBarDataObserver(BarDataObserver):
     """!
-    Observer for historical bar data.
+    Downloader observer for historical bar data.
     """
 
     def update(self, subject: Subject) -> None:
         """!
-        Saves the historical bar data to the database.
+        Sends the bar data to the downloader process.
+
+        @param subject:
+
+        @return None
         """
         for ticker, bar_sizes_dict in self.ticker_bar_sizes.items():
             for bar_size, sent_status in bar_sizes_dict.items():
@@ -72,10 +70,17 @@ class DownloaderBarDataObserver(BarDataObserver):
 
 
 class DownloaderContractDataObserver(ContractDataObserver):
+    """!
+    Downloader observer for contract information.
+    """
 
     def update(self, subject: Subject) -> None:
         """!
-        Saves the historical bar data to the database.
+        Sends the contract data to the downloader process.
+
+        @param subject:
+
+        @return None
         """
         if subject.contract == "Error":
             msg = "Next"
@@ -86,8 +91,18 @@ class DownloaderContractDataObserver(ContractDataObserver):
 
 
 class DownloaderContractHistoryBeginObserver(ContractHistoryBeginObserver):
+    """!
+    Downloader observer for contract history begin dates.
+    """
 
     def update(self, subject: Subject) -> None:
+        """!
+        Sends the history begin date to the downloader process.
+
+        @param subject:
+
+        @return None
+        """
         logger.debug(subject)
         ticker = subject.history_begin_ids[subject.req_id]
         history_begin_date = subject.history_begin_date[subject.req_id]
@@ -101,8 +116,18 @@ class DownloaderContractHistoryBeginObserver(ContractHistoryBeginObserver):
 
 
 class DownloaderContractOptionParametersObserver(ContractOptionParameterObserver):
+    """!
+    Downloader observer for contract option parameters.
+    """
 
     def update(self, subject: Subject) -> None:
+        """!
+        Sends the contract option parameters to the downloader process.
+
+        @param subject:
+
+        @return None
+        """
         ticker = subject.req_ids[subject.req_id]
         opt_params = subject.option_parameters[subject.req_id]
         msg = {"contract_option_parameters": {ticker: opt_params}}
