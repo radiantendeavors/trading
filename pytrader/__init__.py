@@ -85,7 +85,7 @@ git_branch = pygit2.Repository(module_path).head.shorthand
 
 if git_branch == "main":
     CLIENT_ID = 1001
-elif git_branch.startswith("release"):
+elif git_branch.startswith("release") or git_branch.startswith("hotfix"):
     CLIENT_ID = 2001
 else:
     CLIENT_ID = 3001
