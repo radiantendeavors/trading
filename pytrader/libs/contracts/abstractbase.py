@@ -104,6 +104,14 @@ class AbstractBaseContract(DatabaseContract, ABC):
         """
 
     def get_contract_details(self, sender: str = "downloader") -> None:
+        """!
+        Will set the contract details if they are available in the database.  Otherwise, it will
+        request the contract details from the broker.
+
+        @param sender:
+
+        @return None
+        """
         db_contract = self.query_contracts()
 
         if db_contract:
@@ -126,8 +134,15 @@ class AbstractBaseContract(DatabaseContract, ABC):
             self.req_contract_details(sender)
 
     def get_contract_history_begin_date(self, sender: str = "downloader") -> None:
-        # Ensure we have set self.id
+        """!
+        Queries the begin history date from the database.  If not available, it will request the
+        information from the broker.
 
+        @param sender:
+
+        @return None
+        """
+        # Run query_contracts to ensure we have set self.id
         if self.sec_type == "OPT":
             additional_criteria = self._set_additional_criteria()
             self.query_contracts(additional_criteria)
