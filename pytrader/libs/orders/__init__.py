@@ -1,4 +1,5 @@
-"""!@package pytrader.libs.orders
+"""!
+@package pytrader.libs.orders
 
 Provides order management.
 
@@ -23,8 +24,9 @@ Provides order management.
 """
 from multiprocessing import Queue
 
-from ibapi import order
 from ibapi.contract import Contract
+from ibapi.order import Order
+
 from pytrader.libs.system import logging
 from pytrader.libs.utilities.config import Config
 
@@ -43,24 +45,46 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class BaseOrder():
+    """!
+    Base Class for Orders
+    """
 
     def __init__(self, data_queue: Queue, contract: Contract, strategy: str):
         self.contract = contract
         self.data_queue = data_queue
-        self.order = order.Order()
+        self.order = Order()
         self.status = None
         self.strategy_id = strategy
 
-    def get_order(self):
+    def get_order(self) -> Order:
+        """!
+        Returns the order
+        """
         return self.order
 
     def get_status(self):
+        """!
+        Returns the order's status.
+        """
         return self.status
 
-    def get_parent_id(self):
+    def get_parent_id(self) -> int:
+        """!
+        Returns the parent id of the order
+        """
         return self.order.parentId
 
-    def set_order(self, action: str, order_type: str, quantity: int, transmit: bool):
+    def set_order(self, action: str, order_type: str, quantity: int, transmit: bool) -> None:
+        """!
+        Sets the basic order details
+
+        @param action:
+        @param order_type:
+        @param quantity:
+        @param transmit:
+
+        @return None
+        """
         self.order.action = action
         self.order.orderType = order_type
         self.order.totalQuantity = quantity
@@ -70,30 +94,82 @@ class BaseOrder():
         conf.read_config()
         self.order.account = conf.brokerclient_account
 
-    def set_limit_order_price(self, price: float):
+    def set_limit_order_price(self, price: float) -> None:
+        """!
+        Sets limit order prices.
+
+        @param price:
+
+        @return None
+        """
+        # Ensure we have a valid price for orders.
         price = round(price, 2)
         self.order.lmtPrice = price
 
-    def set_order_id(self, order_id: int):
+    def set_order_id(self, order_id: int) -> None:
+        """!
+        Set's the order id for the order.
+
+        @param order_id:
+
+        @return None
+        """
         self.order.orderId = order_id
 
-    def set_order_type(self, order_type: str):
+    def set_order_type(self, order_type: str) -> None:
+        """!
+        Sets the order type.
+
+        @param order_type:
+
+        @return None
+        """
         self.order.orderType = order_type
 
-    def set_parent_order_id(self, order_id: int):
+    def set_parent_order_id(self, order_id: int) -> None:
+        """!
+        Set's the parent order id.
+
+        @param order_id:
+
+        @return None
+        """
         self.order.parentId = order_id
 
-    def set_status(self, status: str):
+    def set_status(self, status: str) -> None:
+        """!
+        Sets the order status.
+
+        @param status:
+
+        @return None
+        """
         self.status = status
 
-    def set_stop_price(self, price: float):
+    def set_stop_price(self, price: float) -> None:
+        """!
+        Sets the stop price for the order
+
+        @param price:
+
+        @return None
+        """
+        # Ensure we have a valid price for orders.
         price = round(price, 2)
         self.order.auxPrice = price
 
 
 class Order(BaseOrder):
+    """!
+    Main Order Class
+    """
 
-    def send_order(self):
+    def send_order(self) -> None:
+        """!
+        Sends an order to the broker.
+
+        @return None
+        """
         message = {
             self.strategy_id: {
                 "place_order": {
@@ -106,6 +182,11 @@ class Order(BaseOrder):
         self.data_queue.put(message)
 
     def send_order_cancel(self):
+        """!
+        Sends a cancellation request to the broker.
+
+        @return None
+        """
         message = {self.strategy_id: {"cancel_order": self.order.orderId}}
         self.data_queue.put(message)
 

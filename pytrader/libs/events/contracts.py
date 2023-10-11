@@ -21,10 +21,8 @@ Provides Observers of Bar Data
 
 @file pytrader/libs/events/contracts.py
 """
-# System Libraries
 from typing import List
 
-# Application Libraries
 from pytrader.libs.events.base import Observer, Subject
 from pytrader.libs.system import logging
 
@@ -53,6 +51,14 @@ class ContractData(Subject):
     req_id = 0
 
     def add_ticker(self, req_id: int, ticker: str) -> None:
+        """!
+        Adds a ticker to the req_ids dictionary for tracking.
+
+        @req_id: The request id the ticker uses
+        @ticker: The ticker symbol to track
+
+        @return None
+        """
         self.req_ids[req_id] = ticker
 
     def attach(self, observer: Observer) -> None:

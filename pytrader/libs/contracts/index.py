@@ -25,15 +25,11 @@ Provides the Base Class for Contracts
 
 Provides the Base Class for Contracts
 """
-# System libraries
-from datetime import date, datetime, timedelta
 from multiprocessing import Queue
 from typing import Optional
 
-# 3rd Party libraries
 from ibapi.contract import Contract as IbContract
 
-# Application Libraries
 from pytrader.libs.clients.database.mysql.ibkr.index_contracts import (
     IbkrIndexContractDetails, IbkrIndexContracts, IbkrIndexHistoryBeginDate,
     IbkrIndexLiquidHours, IbkrIndexNoHistory, IbkrIndexOptParams,

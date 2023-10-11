@@ -1,4 +1,4 @@
-"""!@package pytrader.libs.events.bars
+"""!@package pytrader.libs.events.marketdata
 
 Provides Observers of Bar Data
 
@@ -19,13 +19,10 @@ Provides Observers of Bar Data
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file pytrader/libs/events/bars.py
+@file pytrader/libs/events/marketdata.py
 """
-# System Libraries
-from abc import ABC, abstractmethod
 from typing import List
 
-# Application Libraries
 from pytrader.libs.events.base import Observer, Subject
 from pytrader.libs.system import logging
 
@@ -44,8 +41,11 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class MarketData(Subject):
+    """!
+    Market Data Subject
+    """
 
-    _observers: list[Observer] = []
+    _observers: List[Observer] = []
     contracts = {}
     ticker = None
     market_data = {}
@@ -55,7 +55,15 @@ class MarketData(Subject):
         self.tickers = []
         self.brokerclient = None
 
-    def add_tickers(self, tickers: list, contracts: dict):
+    def add_tickers(self, tickers: list, contracts: dict) -> None:
+        """!
+        Adds tickers to tracker
+
+        @param tickers:
+        @param contracts:
+
+        @return None
+        """
         for ticker in tickers:
             if ticker not in self.tickers:
                 self.tickers.append(ticker)
@@ -64,16 +72,15 @@ class MarketData(Subject):
             if ticker not in list(self.contracts):
                 self.contracts[ticker] = contract_
 
-    def attach(self, observer: Observer, brokerclient):
-        self.brokerclient = brokerclient
+    def attach(self, observer: Observer) -> None:
         if observer not in self._observers:
             self._observers.append(observer)
 
-    def detach(self, observer):
+    def detach(self, observer) -> None:
         if observer in self._observers:
             self._observers.remove(observer)
 
-    def notify(self, modifier=None):
+    def notify(self, modifier=None) -> None:
         for observer in self._observers:
             if modifier != observer:
                 observer.update(self)

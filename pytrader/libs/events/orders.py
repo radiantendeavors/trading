@@ -21,11 +21,8 @@ The main user interface for the trading program.
 
 @file pytrader/libs/events/orders.py
 """
-# System Libraries
-from abc import ABC, abstractmethod
 from typing import List
 
-# Application Libraries
 from pytrader.libs.events.base import Observer, Subject
 from pytrader.libs.system import logging
 
@@ -44,7 +41,9 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class OrderData(Subject):
-
+    """!
+    Order Data Subject.
+    """
     _observers: List[Observer] = []
     valid_order_ids = []
     order_id = None
@@ -53,36 +52,36 @@ class OrderData(Subject):
     def __init__(self):
         self.brokerclient = None
 
-    def attach(self, observer: Observer, brokerclient):
-        self.brokerclient = brokerclient
-
+    def attach(self, observer: Observer) -> None:
         if observer not in self._observers:
             self._observers.append(observer)
 
-    def detach(self, observer: Observer):
+    def detach(self, observer: Observer) -> None:
         if observer in self._observers:
             self._observers.remove(observer)
 
-    def notify(self, modifier=None):
+    def notify(self, modifier=None) -> None:
         for observer in self._observers:
             if modifier != observer:
                 observer.update(self)
 
 
 class OrderIdData(Subject):
-
+    """!
+    Order Id Subject
+    """
     _observers: List[Observer] = []
     order_id = None
 
-    def attach(self, observer: Observer):
+    def attach(self, observer: Observer) -> None:
         if observer not in self._observers:
             self._observers.append(observer)
 
-    def detach(self, observer: Observer):
+    def detach(self, observer: Observer) -> None:
         if observer in self._observers:
             self._observers.remove(observer)
 
-    def notify(self, modifier=None):
+    def notify(self, modifier=None) -> None:
         for observer in self._observers:
             if modifier != observer:
                 observer.update(self)

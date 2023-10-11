@@ -1,6 +1,6 @@
-"""!@package pytrader.libs.events.contracts
+"""!@package pytrader.libs.events.ticks
 
-Provides Observers of Bar Data
+Provides Observers of Tick Data
 
 @author G S Derber
 @date 2022-2023
@@ -19,7 +19,7 @@ Provides Observers of Bar Data
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file pytrader/libs/events/contracts.py
+@file pytrader/libs/events/ticks.py
 """
 # System Libraries
 from typing import List
@@ -43,6 +43,8 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class TickData(Subject):
+    """!
+    Tick Subject"""
     _observers: List[Observer] = []
     tick = None
 

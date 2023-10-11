@@ -44,17 +44,33 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class BarData(Subject):
-
+    """!
+    Class for storing bar data
+    """
     _observers: List[Observer] = []
     contracts = {}
     ohlc_bars = {}
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """!
+        Initializes the BarData class
+
+        @return None
+        """
         self.tickers = []
         self.bar_sizes = []
         self.brokerclient = None
 
-    def add_bar_sizes(self, tickers: list, contracts: dict, bar_sizes: list):
+    def add_bar_sizes(self, tickers: list, contracts: dict, bar_sizes: list) -> None:
+        """!
+        Add's bar sizes for monitoring.
+
+        @param tickers:
+        @param contacts
+        @param bar_sizes:
+
+        @return None
+        """
         for ticker in tickers:
             if ticker not in self.tickers:
                 self.tickers.append(ticker)
@@ -67,9 +83,7 @@ class BarData(Subject):
             if ticker not in list(self.contracts):
                 self.contracts[ticker] = contract_
 
-    def attach(self, observer: Observer, brokerclient):
-        self.brokerclient = brokerclient
-
+    def attach(self, observer: Observer):
         if observer not in self._observers:
             self._observers.append(observer)
 

@@ -71,6 +71,13 @@ class DatabaseContract(BaseContract):
         self.columns = {}
 
     def query_contracts(self, additional_criteria: Optional[dict] = None) -> list | tuple:
+        """!
+        Query Contracts Table
+
+        @param additional_criteria: Contains additional query criteria.
+
+        @return tuple: Query results
+        """
         criteria = {"symbol": [self.contract.symbol]}
 
         if additional_criteria:
@@ -98,10 +105,22 @@ class DatabaseContract(BaseContract):
         return self.history_begin_date_table.select(criteria=criteria)
 
     def query_option_parameters(self) -> list | tuple:
+        """!
+        Queries the Options Parameters table for information.
+
+        @return list: The Query results.
+        """
         criteria = self._set_criteria()
         return self.option_parameters_table.select(criteria=criteria)
 
-    def save_history_begin_date(self, history_begin_date) -> None:
+    def save_history_begin_date(self, history_begin_date: str) -> None:
+        """!
+        Saves the history begin date to the database.
+
+        @param history_begin_date: The first date with bar history available.
+
+        @return None
+        """
         if history_begin_date == "NoHistory" and self.no_history_table:
             self.no_history_table.insert([self.id])
         else:
@@ -109,7 +128,13 @@ class DatabaseContract(BaseContract):
             begin_datetime = datetime.strptime(history_begin_date, "%Y%m%d  %H:%M:%S")
             self.history_begin_date_table.insert([self.id, begin_datetime])
 
-    def save_option_parameters(self, option_parameters) -> None:
+    def save_option_parameters(self, option_parameters: dict) -> None:
+        """!
+        Saves Option Parameters to the database.
+
+        @param option_parameters:
+
+        @return None"""
         logger.debug("Option Parameters: %s", option_parameters)
         expirations = ",".join(list(option_parameters["expirations"]))
 

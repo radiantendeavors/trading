@@ -41,7 +41,9 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class IbkrBaseContracts(IbkrBase):
-
+    """!
+    Base Class for interacting with Interactive Brokers Contract Specific Tables.
+    """
     table_name = None
 
     # ==============================================================================================

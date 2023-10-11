@@ -1,7 +1,7 @@
 """!
-@package pytrader.libs.contracts.abstractbase
+@package pytrader.libs.contracts.option
 
-Provides the Base Class for Contracts
+Provides common functionality for Options Contracts.
 
 @author G S Derber
 @date 2022-2023
@@ -21,20 +21,12 @@ Provides the Base Class for Contracts
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file pytrader/libs/contracts/__init__.py
-
-Provides the Base Class for Contracts
+@file pytrader/libs/contracts/option.py
 """
-# System libraries
-from datetime import date, datetime, timedelta
-from multiprocessing import Queue
+from datetime import datetime
 from time import sleep
 from typing import Optional
 
-# 3rd Party libraries
-from ibapi.contract import Contract as IbContract
-
-# Application Libraries
 from pytrader.libs.contracts.abstractbase import AbstractBaseContract
 from pytrader.libs.system import logging
 
@@ -88,10 +80,22 @@ class OptionContract(AbstractBaseContract):
         self.local_symbol = self._gen_option_contract_name(expiry, right, strike)
 
     def get_contract_details(self, sender: str = "downloader") -> None:
+        """!
+        Request contract details from the broker.
+
+        @param sender: The process sending the request.
+
+        @return None
+        """
         self.req_contract_details(sender)
         sleep(1)
 
-    def select_columns(self):
+    def select_columns(self) -> None:
+        """!
+        Selects the contract's columns for the database.
+
+        @return None
+        """
         logger.debug("Expiry: %s", self.contract.lastTradeDateOrContractMonth)
         last_date = datetime.strptime(self.contract.lastTradeDateOrContractMonth, "%Y%m%d").date()
         strike = float(self.contract.strike)
@@ -104,7 +108,12 @@ class OptionContract(AbstractBaseContract):
             ]
         }
 
-    def add_details_columns(self):
+    def add_details_columns(self) -> None:
+        """!
+        Add the Contract Details columns for the database.
+
+        @return None
+        """
         self.columns["details"] = [
             self.id, self.details.marketName, self.details.minTick, self.details.priceMagnifier,
             self.details.orderTypes, self.details.validExchanges, self.details.underConId,
@@ -113,7 +122,12 @@ class OptionContract(AbstractBaseContract):
             self.details.marketRuleIds, self.details.realExpirationDate, self.details.lastTradeTime
         ]
 
-    def query_invalid_contracts(self):
+    def query_invalid_contracts(self) -> list | tuple:
+        """!
+        Query's the invalid contracts table.
+
+        @return list: The database results.
+        """
         criteria = {
             "symbol": [self.contract.symbol],
             "last_trading_date": [self.contract.lastTradeDateOrContractMonth],
@@ -122,6 +136,11 @@ class OptionContract(AbstractBaseContract):
         }
         return self.invalid_contract_table.select(criteria=criteria)
 
+    # ==============================================================================================
+    #
+    # Private Functions
+    #
+    # ==============================================================================================
     def _gen_option_contract_name(self, expiry: str, right: str, strike: float) -> str:
         strike_left = str(strike).split(".", maxsplit=1)[0]
         strike_right = str(strike).split(".")[1]

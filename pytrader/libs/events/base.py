@@ -1,6 +1,6 @@
 """!@package pytrader.libs.events.base
 
-The main user interface for the trading program.
+Provides the Base Subject and Observer classes for the observer pattern implementation.
 
 @author G S Derber
 @date 2022-2023
@@ -20,11 +20,11 @@ The main user interface for the trading program.
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 @file pytrader/libs/events/base.py
+
+Provides the Base Subject and Observer classes for the observer pattern implementation.
 """
-# System Libraries
 from abc import ABC, abstractmethod
 
-# Application Libraries
 from pytrader.libs.system import logging
 
 # ==================================================================================================
@@ -42,6 +42,9 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class Subject(ABC):
+    """
+    Provides the Base Subject class for the observer pattern implementation.
+    """
 
     @abstractmethod
     def attach(self, observer) -> None:

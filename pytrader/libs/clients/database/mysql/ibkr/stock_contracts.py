@@ -88,10 +88,10 @@ class IbkrStockLiquidHours(IbkrBaseContracts):
 
 
 class IbkrStockOptParams(IbkrBaseContracts):
-    table_name = "z_ibkr_stk_option_parameters"
     """!
     Class for interacting with the Stock Contracts Options Parameters Table.
     """
+    table_name = "z_ibkr_stk_option_parameters"
     insert_column_names = ["ibkr_contract_id", "exchange", "multiplier", "expirations", "strikes"]
     update_column_names = insert_column_names + ["last_updated"]
 
