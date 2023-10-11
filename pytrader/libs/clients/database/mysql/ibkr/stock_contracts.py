@@ -24,17 +24,11 @@ Provides the database client
 
 @file pytrader/libs/clients/mysql/etf_info.py
 """
-# System Libraries
 from datetime import date, timedelta
 
-# 3rd Party Libraries
-import pymysql
-
-# Application Libraries
 from pytrader.libs.clients.database.mysql.ibkr.base_contracts import \
     IbkrBaseContracts
 from pytrader.libs.system import logging
-from pytrader.libs.utilities import text
 
 # ==================================================================================================
 #
@@ -51,7 +45,9 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class IbkrStockContracts(IbkrBaseContracts):
-
+    """!
+    Class for interacting with the Stock Contracts Table.
+    """
     table_name = "z_ibkr_stk_contracts"
     insert_column_names = [
         "contract_id", "symbol", "security_type", "exchange", "currency", "local_symbol",
@@ -61,6 +57,9 @@ class IbkrStockContracts(IbkrBaseContracts):
 
 
 class IbkrStockContractDetails(IbkrBaseContracts):
+    """!
+    Class for interacting with the Stock Contracts Details Table.
+    """
     table_name = "z_ibkr_stk_contract_details"
     insert_column_names = [
         "ibkr_contract_id", "market_name", "min_tick", "price_magnifier", "order_types",
@@ -71,12 +70,18 @@ class IbkrStockContractDetails(IbkrBaseContracts):
 
 
 class IbkrStockHistoryBeginDate(IbkrBaseContracts):
+    """!
+    Class for interacting with the Stock Contracts History Begin Table.
+    """
     table_name = "z_ibkr_stk_history_begin_date"
     insert_column_names = ["ibkr_contract_id", "oldest_datetime"]
     update_column_names = insert_column_names + ["last_updated"]
 
 
 class IbkrStockLiquidHours(IbkrBaseContracts):
+    """!
+    Class for interacting with the Stock Contracts Liquid Hours Table.
+    """
     table_name = "z_ibkr_stk_liquid_hours"
     insert_column_names = ["ibkr_contract_id", "begin_dt", "end_dt"]
     update_column_names = insert_column_names
@@ -84,22 +89,36 @@ class IbkrStockLiquidHours(IbkrBaseContracts):
 
 class IbkrStockOptParams(IbkrBaseContracts):
     table_name = "z_ibkr_stk_option_parameters"
+    """!
+    Class for interacting with the Stock Contracts Options Parameters Table.
+    """
     insert_column_names = ["ibkr_contract_id", "exchange", "multiplier", "expirations", "strikes"]
     update_column_names = insert_column_names + ["last_updated"]
 
 
 class IbkrStockTradingHours(IbkrBaseContracts):
+    """!
+    Class for interacting with the Stock Contracts Trading Hours Table.
+    """
     table_name = "z_ibkr_stk_trading_hours"
     insert_column_names = ["ibkr_contract_id", "begin_dt", "end_dt"]
     update_column_names = insert_column_names
 
 
 class IbkrStockNoHistory(IbkrBaseContracts):
+    """!
+    Class for interacting with the Stock Contracts No History Table.
+    """
     table_name = "z_ibkr_stk_no_history"
     insert_column_names = ["ibkr_contract_id"]
     update_column_names = insert_column_names + ["last_updated"]
 
     def clean_history(self):
+        """!
+        Cleans old data from table
+
+        @return None
+        """
         self._clean_last_updated()
 
     def _clean_last_updated(self):

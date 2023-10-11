@@ -24,13 +24,8 @@ Provides the database client
 
 @file pytrader/libs/clients/mysql/etf_info.py
 """
-# System Libraries
 from datetime import date, timedelta
 
-# 3rd Party Libraries
-import pymysql
-
-# Application Libraries
 from pytrader.libs.clients.database.mysql.ibkr.base_contracts import \
     IbkrBaseContracts
 from pytrader.libs.system import logging
@@ -50,7 +45,9 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class IbkrIndexContracts(IbkrBaseContracts):
-
+    """!
+    Class for interacting with the Index Contracts Table.
+    """
     table_name = "z_ibkr_ind_contracts"
     insert_column_names = [
         "contract_id", "symbol", "security_type", "exchange", "currency", "local_symbol"
@@ -59,6 +56,9 @@ class IbkrIndexContracts(IbkrBaseContracts):
 
 
 class IbkrIndexContractDetails(IbkrBaseContracts):
+    """!
+    Class for interacting with the Index Contracts Details Table.
+    """
     table_name = "z_ibkr_ind_contract_details"
     insert_column_names = [
         "ibkr_contract_id", "market_name", "min_tick", "price_magnifier", "long_name", "industry",
@@ -67,45 +67,59 @@ class IbkrIndexContractDetails(IbkrBaseContracts):
     update_column_names = insert_column_names
 
 
-class IbkrIndexExchanges(IbkrBaseContracts):
-    table_name = "z_ibkr_ind_exchanges"
-    insert_column_names = ["ibkr_contract_id", "exchange"]
-    update_column_names = insert_column_names
-
-
 class IbkrIndexHistoryBeginDate(IbkrBaseContracts):
+    """!
+    Class for interacting with the Index Contracts History Begin Table.
+    """
     table_name = "z_ibkr_ind_history_begin_date"
     insert_column_names = ["ibkr_contract_id", "oldest_datetime"]
     update_column_names = insert_column_names + ["last_updated"]
 
 
 class IbkrIndexLiquidHours(IbkrBaseContracts):
+    """!
+    Class for interacting with the Index Contracts Liquid Hours Table.
+    """
     table_name = "z_ibkr_ind_liquid_hours"
     insert_column_names = ["ibkr_contract_id", "begin_dt", "end_dt"]
     update_column_names = insert_column_names
 
 
 class IbkrIndexOptParams(IbkrBaseContracts):
+    """!
+    Class for interacting with the Index Contracts Options Parameters Table.
+    """
     table_name = "z_ibkr_ind_option_parameters"
     insert_column_names = ["ibkr_contract_id", "exchange", "multiplier", "expirations", "strikes"]
     update_column_names = insert_column_names + ["last_updated"]
 
 
 class IbkrIndexTradingHours(IbkrBaseContracts):
+    """!
+    Class for interacting with the Index Contracts Trading Hours Table.
+    """
     table_name = "z_ibkr_ind_trading_hours"
     insert_column_names = ["ibkr_contract_id", "begin_dt", "end_dt"]
     update_column_names = insert_column_names
 
 
 class IbkrIndexNoHistory(IbkrBaseContracts):
+    """!
+    Class for interacting with the Index Contracts No History Table.
+    """
     table_name = "z_ibkr_ind_no_history"
     insert_column_names = ["ibkr_contract_id"]
     update_column_names = insert_column_names + ["last_updated"]
 
-    def clean_history(self):
+    def clean_history(self) -> None:
+        """!
+        Cleans old data from table
+
+        @return None
+        """
         self._clean_last_updated()
 
-    def _clean_last_updated(self):
+    def _clean_last_updated(self) -> None:
         today = date.today()
         num_days = timedelta(days=7)
         last_update_min = today - num_days

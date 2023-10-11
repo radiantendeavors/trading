@@ -28,6 +28,15 @@ In addition, all functions are named using more modern python naming conventions
 
 Implements the TWSAPI Client functions
 """
+# ==================================================================================================
+#
+# This file requires special pylint rules to match the API format.
+#
+# C0302: too many lines
+#
+# pylint: disable=C0302
+#
+# ==================================================================================================
 from datetime import datetime
 from typing import Optional
 

@@ -146,7 +146,7 @@ class TwsPacingMngr(TwsThreadMngr):
         """
         self.__contract_history_begin_req_count += 1
 
-        if self.__contract_history_begin_req_count % 50 == 0:
+        if self.__contract_history_begin_req_count % 60 == 0:
             # Sleep for 30 minutes
             num_minutes = 30
             now = datetime.datetime.today()
@@ -211,3 +211,5 @@ class TwsPacingMngr(TwsThreadMngr):
             self.__available_deep_data_allotment = max_allotment
         else:
             self.__available_deep_data_allotment = basic_allotment
+
+        logger.debugu("Deep Data Allotment: %s", self.__available_deep_data_allotment)

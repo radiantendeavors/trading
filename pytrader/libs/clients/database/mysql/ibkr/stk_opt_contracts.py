@@ -46,6 +46,9 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class IbkrStkOptContracts(IbkrBaseContracts):
+    """!
+    Class for interacting with the Stock Options Contracts Table.
+    """
     table_name = "z_ibkr_stk_opt_contracts"
     insert_column_names = [
         "contract_id", "symbol", "security_type", "last_trading_date", "strike", "opt_right",
@@ -55,6 +58,9 @@ class IbkrStkOptContracts(IbkrBaseContracts):
 
 
 class IbkrStkOptContractDetails(IbkrBaseContracts):
+    """!
+    Class for interacting with the Stock Options Contracts Details Table.
+    """
     table_name = "z_ibkr_stk_opt_contract_details"
     insert_column_names = [
         "ibkr_contract_id", "market_name", "min_tick", "price_magnifier", "order_types",
@@ -65,17 +71,33 @@ class IbkrStkOptContractDetails(IbkrBaseContracts):
     update_column_names = insert_column_names
 
     def insert(self, columns: list, additional_criteria: Optional[dict] = None) -> None:
+        """!
+        Inserts data into the table.
+
+        @param columns:
+        @param additional_criteria
+
+        @return None
+        """
         if columns[-1] == "":
             columns[-1] = None
         super().insert(columns, additional_criteria)
 
 
 class IbkrStkOptInvalidContracts(IbkrBaseContracts):
+    """!
+    Class for interacting with the Stock Options Invalid Contracts Table.
+    """
     table_name = "z_ibkr_stk_opt_invalid_contracts"
     insert_column_names = ["symbol", "last_trading_date", "strike", "opt_right"]
     update_column_names = insert_column_names + ["last_updated"]
 
     def clean_invalid(self):
+        """!
+        Cleans table of old data.
+
+        @return None
+        """
         self._clean_last_updated()
         self._clean_expired()
 
@@ -94,11 +116,19 @@ class IbkrStkOptInvalidContracts(IbkrBaseContracts):
 
 
 class IbkrStkOptHistoryBeginDate(IbkrBaseContracts):
+    """!
+    Class for interacting with the Stock Options History Begin Table.
+    """
     table_name = "z_ibkr_stk_opt_history_begin_date"
     insert_column_names = ["ibkr_contract_id", "oldest_datetime"]
     update_column_names = insert_column_names + ["last_updated"]
 
     def clean_history(self):
+        """!
+        Cleans old data from table.
+
+        @return None
+        """
         self._clean_last_updated()
 
     def _clean_last_updated(self):
@@ -111,23 +141,37 @@ class IbkrStkOptHistoryBeginDate(IbkrBaseContracts):
 
 
 class IbkrStkOptLiquidHours(IbkrBaseContracts):
+    """!
+    Class for interacting with the Stock Options Liquid Hours Table.
+    """
     table_name = "z_ibkr_stk_opt_liquid_hours"
     insert_column_names = ["ibkr_contract_id", "begin_dt", "end_dt"]
     update_column_names = insert_column_names
 
 
 class IbkrStkOptTradingHours(IbkrBaseContracts):
+    """!
+    Class for interacting with the Stock Options Trading Hours Table.
+    """
     table_name = "z_ibkr_stk_opt_trading_hours"
     insert_column_names = ["ibkr_contract_id", "begin_dt", "end_dt"]
     update_column_names = insert_column_names
 
 
 class IbkrStkOptNoHistory(IbkrBaseContracts):
+    """!
+    Class for interacting with Stock Options No History Table.
+    """
     table_name = "z_ibkr_stk_opt_no_history"
     insert_column_names = ["ibkr_contract_id"]
     update_column_names = insert_column_names + ["last_updated"]
 
     def clean_history(self):
+        """!
+        Cleans table of old data.
+
+        @return None
+        """
         self._clean_last_updated()
 
     def _clean_last_updated(self):

@@ -1,11 +1,10 @@
 """!
-@package pytrader.libs.clients.mysql.etf_info
+@package pytrader.libs.clients.database.mysql.ibkr.base_contracts
 
-Provides the database client
+Provides the base class for contracts
 
-@author Geoff S. derber
-@version HEAD
-@date 2022
+@author G S Derber
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -22,37 +21,18 @@ Provides the database client
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file pytrader/libs/clients/mysql/etf_info.py
+@file pytrader/libs/clients/database/mysql/ibkr/base_contracts.py
 """
-from datetime import date
-from typing import Optional
-
-# System Libraries
-import pymysql
-
-# Other Application Libraries
 from pytrader.libs.clients.database.mysql.ibkr.base import IbkrBase
-# Application Libraries
-# System Library Overrides
 from pytrader.libs.system import logging
-from pytrader.libs.utilities import text
-
-# 3rd Party Libraries
 
 # ==================================================================================================
 #
 # Global Variables
 #
 # ==================================================================================================
-"""!
-@var logger
-The base logger.
-
-@var colortext
-Allows Color text on the console
-"""
+## The base logger.
 logger = logging.getLogger(__name__)
-colortext = text.ConsoleText()
 
 
 # ==================================================================================================

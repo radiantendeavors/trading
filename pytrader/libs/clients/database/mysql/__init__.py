@@ -24,13 +24,9 @@ Provides the mysql/mariadb database client
 
 @file pytrader/libs/clients/mysql/__init__.py
 """
-# System Libraries
 import pymysql
 
-# Application Libraries
-# System Library Overrides
 from pytrader.libs.system import logging
-# Other Application Libraries
 from pytrader.libs.utilities import config
 
 # 3rd Party Libraries
@@ -40,13 +36,7 @@ from pytrader.libs.utilities import config
 # Global Variables
 #
 # ==================================================================================================
-"""!
-@var logger
-The base logger.
-
-@var colortext
-Allows Color text on the console
-"""
+## The base logger.
 logger = logging.getLogger(__name__)
 
 
@@ -56,11 +46,11 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class MySQLDatabase():
-    """!Class MySQLDatabase
-
+    """!
+    Class for interacting with a MySQL (or MariaDB) Database
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self) -> None:
         self.conf = config.Config()
         self.conf.read_config()
 
@@ -76,11 +66,17 @@ class MySQLDatabase():
                                         database=self.database_name,
                                         cursorclass=pymysql.cursors.DictCursor)
             self.mycursor = self.mydb.cursor()
-            return None
-        except pymysql.Error as e:
-            logger.error("Connection failed: %s", e)
+        except pymysql.Error as msg:
+            logger.error("Connection failed: %s", msg)
 
-    def check_database_exists(self):
+    def check_database_exists(self) -> bool:
+        """!
+        Checks if the database exist.
+
+        @return bool:
+             - True if the database exists
+             - False if the database does not exist
+        """
         logger.debug("Begin Function")
         sql = "SHOW DATABASES LIKE '" + self.conf.database_name + "'"
         logger.debug("SQL: %s", sql)
@@ -88,28 +84,33 @@ class MySQLDatabase():
             row = self.mycursor.execute(sql)
             logger.debug("Row: %s", row)
             return True
-        except pymysql.Error as e:
-            logger.error("Check Database's Existance Failed: %s", e)
+        except pymysql.Error as msg:
+            logger.error("Check Database's Existance Failed: %s", msg)
             return False
 
-    def check_table_exists(self, table_name):
+    def check_table_exists(self, table_name: str) -> bool:
+        """!
+        Checks if a given table exists
+
+        @param table_name: The table being verified for existence.
+
+        @return bool:
+             - True if the database exists
+             - False if the database does not exist
+        """
         logger.debug("Begin Function")
         sql = "SELECT * FROM information_schema.tables Where table_name = '" + table_name + "'"
         logger.debug("SQL: %s", sql)
         try:
             row = self.mycursor.execute(sql)
             logger.debug("Row: %s", row)
-        except pymysql.Error as e:
-            logger.error("Check Table's Existance Failed: %s", e)
-
-    def create_database(self, table_name: str):
-        sql = "CREATE TABLE IF NOT EXISTS " + table_name
-        logger.debug("Create Database SQL: %s", sql)
-
-        try:
-            self.mycursor.execute(sql)
-        except pymysql.Error as e:
-            logger.error("Connection Error: %s", e)
+            return True
+        except pymysql.Error as msg:
+            logger.error("Check Table's Existance Failed: %s", msg)
+            return False
 
     def substitute_list(self, values: list) -> str:
+        """!
+        Turns a list of values into a string for mysql string substitution.
+        """
         return ", ".join(list(map(lambda x: '%s', values)))

@@ -166,6 +166,14 @@ class AbstractBaseContract(DatabaseContract, ABC):
             self.req_contract_history_begin_date(sender)
 
     def get_contract_option_parameters(self, sender: str = "downloader") -> None:
+        """!
+        Queries the database for the contract option parameters.  If not available it will request
+        the information from the broker.
+
+        @param sender: Process making the data request.
+
+        @return None
+        """
         self.query_contracts()
 
         raw_results = self.query_option_parameters()
@@ -201,10 +209,19 @@ class AbstractBaseContract(DatabaseContract, ABC):
         else:
             self.req_contract_option_parameters(sender)
 
-    def get_option_parameters(self) -> None:
+    def get_option_parameters(self) -> tuple:
+        """!
+        Returns the option parameters for a given contract.
+
+        @return tuple: The option parameters for the contract.
+        """
         return (self.expirations, self.strikes, self.options_multiplier)
 
-    def get_option_contract_parameters(self) -> None:
+    def get_option_contract_parameters(self) -> tuple:
+        """!
+        Returns the option contract parameters.
+
+        @return tuple: The Option Contract Parameters."""
         return (self.contract.lastTradeDateOrContractMonth, self.contract.strike,
                 self.contract.right)
 
@@ -240,7 +257,12 @@ class AbstractBaseContract(DatabaseContract, ABC):
         message = {sender: {"req": {"option_details": self.contract}}}
         self.queue.put(message)
 
-    def query_no_history(self):
+    def query_no_history(self) -> dict:
+        """!
+        Check if the contract is in the no history table.
+
+        @return dict: Query results
+        """
         criteria = self._set_criteria()
         return self.no_history_table.select(criteria=criteria)
 
@@ -288,7 +310,12 @@ class AbstractBaseContract(DatabaseContract, ABC):
         self._save_contract_hours("liquid")
         self._save_contract_hours("trading")
 
-    def save_invalid_contract(self):
+    def save_invalid_contract(self) -> None:
+        """!
+        Saves a contract to the invalid contract table.
+
+        @return None
+        """
         if self.sec_type == "OPT":
             columns = [
                 self.contract.symbol, self.contract.lastTradeDateOrContractMonth,
@@ -302,7 +329,14 @@ class AbstractBaseContract(DatabaseContract, ABC):
 
             self.invalid_contract_table.insert(columns, additional_criteria)
 
-    def set_contract_parameters(self, db_contract):
+    def set_contract_parameters(self, db_contract: dict) -> None:
+        """!
+        Sets the contract parameters based on data from the database.
+
+        @param db_contract: dictionary containing contract information from the database.
+
+        @return None
+        """
         self.contract.conId = db_contract["contract_id"]
         self.contract.exchange = db_contract["exchange"]
         self.contract.currency = db_contract["currency"]

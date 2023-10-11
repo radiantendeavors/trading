@@ -24,18 +24,11 @@ Interface to the 'z_ibkr_contract_listing' table.
 @file pytrader/libs/clients/database/mysql/ibkr/contract_universe.py
 """
 from datetime import date
-from typing import Optional
 
-# System Libraries
 import pymysql
 
-# Other Application Libraries
 from pytrader.libs.clients.database.mysql.ibkr import base
-# Application Libraries
-# System Library Overrides
 from pytrader.libs.system import logging
-
-# 3rd Party Libraries
 
 # ==================================================================================================
 #

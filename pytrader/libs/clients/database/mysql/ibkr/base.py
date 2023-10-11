@@ -1,5 +1,5 @@
 """!
-@package pytrader.libs.clients.database.mysql.ibkr.base.py
+@package pytrader.libs.clients.database.mysql.ibkr.base
 
 Provides the base class for Interactive Brokers Database Tables
 
@@ -113,6 +113,13 @@ class IbkrBase(mysql.MySQLDatabase):
             self._insert(columns)
 
     def delete(self, criteria: dict) -> None:
+        """!
+        Deletes a row based on criteria
+
+        @param criteria: Dictionary containing criteria
+
+        @return None
+        """
         criteria_name = list(criteria)[0]
         sql = (f"DELETE FROM `{self.table_name}`\n"
                f"WHERE `{criteria_name}` < '%s'")
