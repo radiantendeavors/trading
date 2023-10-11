@@ -26,7 +26,6 @@ Provides the Base Class for Contracts
 Provides the Base Class for Contracts
 """
 from pytrader.libs.contracts.ind_option import IndOptionContract
-# Application Libraries
 from pytrader.libs.contracts.index import IndexContract
 from pytrader.libs.contracts.stk_option import StkOptionContract
 from pytrader.libs.contracts.stock import StockContract

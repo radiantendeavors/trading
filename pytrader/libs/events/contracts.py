@@ -46,9 +46,14 @@ class ContractData(Subject):
     """!
     Contract Data Base Class
     """
-
     _observers: List[Observer] = []
+    req_ids = {}
+    contracts = {}
     contract = None
+    req_id = 0
+
+    def add_ticker(self, req_id: int, ticker: str) -> None:
+        self.req_ids[req_id] = ticker
 
     def attach(self, observer: Observer) -> None:
         if observer not in self._observers:

@@ -21,19 +21,15 @@ Manages the broker processes
 
 @file pytrader/libs/applications/broker/__init__.py
 """
-# System Libraries
 import multiprocessing
 import threading
 from multiprocessing import Process, Queue
 from typing import Optional
 
-# Application Libraries
 from pytrader import git_branch
 from pytrader.libs.clients.broker import BrokerClient
 from pytrader.libs.system import logging
 from pytrader.libs.utilities.exceptions import BrokerNotAvailable
-
-# 3rd Party Libraries
 
 # ==================================================================================================
 #
@@ -94,6 +90,7 @@ class BrokerProcessManager():
 
         logger.debug("Strategies: %s", self.strategies)
 
+        # We don't want to run the other brokers if we're backtesting.
         if "backtester" in self.broker_list:
             self._configure_backtester()
         else:
@@ -126,10 +123,10 @@ class BrokerProcessManager():
         broker_connection = True
         while broker_connection:
             cmd = self.cmd_queue.get()
-            logger.debug("Command: %s", cmd)
+            logger.debug9("Command: %s", cmd)
 
             sender = list(cmd)[0]
-            logger.debug("Sender: %s", sender)
+            logger.debug9("Sender: %s", sender)
 
             if cmd == "Quit":
                 broker_connection = False

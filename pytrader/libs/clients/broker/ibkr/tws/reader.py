@@ -1,9 +1,9 @@
 """!
-@package pytrader.libs.clients.broker.ibkr.tws
+@package pytrader.libs.clients.broker.ibkr.tws.reader
 
-Provides the client for Interactive Brokers TWSAPI.
+Reads data received from TWSAPI.
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -22,9 +22,9 @@ Provides the client for Interactive Brokers TWSAPI.
 
   Creates a basic interface for interacting with Interactive Brokers.
 
-@file pytrader/libs/clients/broker/ibkr/tws/__init__.py
+@file pytrader/libs/clients/broker/ibkr/tws/reader.py
 
-Provides the client for Interactive Brokers TWSAPI.
+Reads data received from TWSAPI.
 
 This is the only file to not use snake_case for functions or variables.  This is to match TWSAPI
 abstract function names, and their variables.
@@ -355,7 +355,7 @@ class TwsReader(TwsErrors):
               reqId: int,
               errorCode: int,
               errorString: str,
-              advancedOrderRejection: str = "") -> None:
+              advancedOrderRejectJson: str = "") -> None:
         """!
         Errors sent by the TWS are received here.
 
@@ -370,7 +370,7 @@ class TwsReader(TwsErrors):
 
         @return None
         """
-        self.process_error_code(reqId, errorCode, errorString, advancedOrderRejection)
+        self.process_error_code(reqId, errorCode, errorString, advancedOrderRejectJson)
 
     @iswrapper
     def execDetails(self, reqId: int, contract: Contract, execution: Execution) -> None:
@@ -432,9 +432,17 @@ class TwsReader(TwsErrors):
 
         @return None
         """
+        logger.debug("Head Timstamp received for req_id %s: %s", reqId, headTimestamp)
         self.remove_command(reqId)
-        self.contract_history_begin_subjects.set_history_begin_date(reqId, headTimestamp)
-        self.cancelHeadTimeStamp(reqId)
+
+        if "-" in headTimestamp:
+            # Sometimes the string they send is in '%Y%m%d-%H:%M:%S' format instead of the more
+            # normal '%Y%m%d %H:%M:%S' format
+            head_timestamp = headTimestamp.replace("-", " ")
+        else:
+            head_timestamp = headTimestamp
+
+        self.contract_history_begin_subjects.set_history_begin_date(reqId, head_timestamp)
 
     @iswrapper
     def histogramData(self, reqId: int, items: list) -> None:
@@ -544,7 +552,7 @@ class TwsReader(TwsErrors):
         logger.debug("Has More: %s", hasMore)
 
     @iswrapper
-    def historicalSchedule(self, reqId: int, startDateTime: str, endDateTime: str, timezone: str,
+    def historicalSchedule(self, reqId: int, startDateTime: str, endDateTime: str, timeZone: str,
                            sessions: list) -> None:
         """!
         Returns historical Schedule when reqHistoricalData whatToShow="SCHEDULE"
@@ -561,7 +569,7 @@ class TwsReader(TwsErrors):
         logger.debug("ReqId: %s", reqId)
         logger.debug("Start DateTime: %s", startDateTime)
         logger.debug("End DateTime: %s", endDateTime)
-        logger.debug("Timezone: %s", timezone)
+        logger.debug("Timezone: %s", timeZone)
         logger.debug("Sessions: %s", sessions)
 
     @iswrapper

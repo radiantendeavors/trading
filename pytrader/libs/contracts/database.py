@@ -76,13 +76,13 @@ class DatabaseContract(BaseContract):
         if additional_criteria:
             criteria = criteria | additional_criteria
 
-        logger.debug("Criteria: %s", criteria)
+        logger.debug9("Criteria: %s", criteria)
 
         raw_results = self.contract_table.select(criteria=criteria)
 
         if raw_results:
             results = raw_results[0]
-            logger.debug("Results: %s", results)
+            logger.debug9("Results: %s", results)
             self.id = results["id"]
             return results
 

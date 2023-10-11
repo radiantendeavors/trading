@@ -146,7 +146,7 @@ class TwsPacingMngr(TwsThreadMngr):
         """
         self.__contract_history_begin_req_count += 1
 
-        if self.__contract_history_begin_req_count % 60 == 0:
+        if self.__contract_history_begin_req_count % 50 == 0:
             # Sleep for 30 minutes
             num_minutes = 30
             now = datetime.datetime.today()
@@ -179,17 +179,18 @@ class TwsPacingMngr(TwsThreadMngr):
 
     # ==============================================================================================
     #
-    # Internal Helper Functions
+    # Private Functions
     #
     # ==============================================================================================
     def _data_wait(self, timestamp, sleep_time):
+        logger.debug("Sleeping before next request: %s", sleep_time)
+        logger.debug("Now: %s", datetime.datetime.now())
+        logger.debug("Last Request: %s", timestamp)
+
         time_diff = datetime.datetime.now() - timestamp
+        logger.debug("Time Difference: %s seconds", time_diff.total_seconds())
 
         while time_diff.total_seconds() < sleep_time:
-
-            logger.debug("Now: %s", datetime.datetime.now())
-            logger.debug("Last Request: %s", timestamp)
-            logger.debug("Time Difference: %s seconds", time_diff.total_seconds())
             remaining_sleep_time = sleep_time - time_diff.total_seconds()
             logger.debug("Sleep Time: %s", remaining_sleep_time)
             time.sleep(sleep_time - time_diff.total_seconds())

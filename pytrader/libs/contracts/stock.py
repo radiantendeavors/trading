@@ -109,11 +109,16 @@ class StockContract(AbstractBaseContract):
         self.contract.localSymbol = self.contract.symbol
 
         if expiry:
-            logger.debug("Expiry Should not be set for ETF Contracts: %s", expiry)
+            logger.debug("Expiry Should not be set for STK Contracts: %s", expiry)
         if right:
-            logger.debug("Right Should not be set for ETF Contracts: %s", right)
+            logger.debug("Right Should not be set for STK Contracts: %s", right)
         if strike:
-            logger.debug("Expiry Should not be set for ETF Contracts: %s", strike)
+            logger.debug("Expiry Should not be set for STK Contracts: %s", strike)
+
+        self.local_symbol = self.contract.symbol
+
+    def query_invalid_contracts(self):
+        return None
 
     def select_columns(self):
         self.columns = {

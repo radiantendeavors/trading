@@ -92,6 +92,17 @@ class BaseBroker():
         """
         self.contract_history_begin_subjects.add_ticker(req_id, ticker)
 
+    def add_contract_details_ticker(self, req_id: int, ticker: str) -> None:
+        """!
+        Add req_id and ticker to dictionary matching req_ids to tickers.
+
+        @param req_id:
+        @param ticker:
+
+        @return None
+        """
+        self.contract_subjects.add_ticker(req_id, ticker)
+
     def add_contract_option_params_ticker(self, req_id: int, ticker: str) -> None:
         """!
         Add req_id and ticker to dictionary matching req_ids to tickers.

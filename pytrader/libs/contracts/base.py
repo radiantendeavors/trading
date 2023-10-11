@@ -26,7 +26,7 @@ Provides the Base Class for Contracts
 Provides the Base Class for Contracts
 """
 # System libraries
-from datetime import datetime, date
+from datetime import date, datetime
 from typing import Optional
 
 # 3rd Party libraries
@@ -63,13 +63,12 @@ class BaseContract():
     option_parameters_table = None
     sec_type = None
 
-    def __init__(self,
-                 ticker: Optional[str] = "",
-                 contract: Optional[IbContract] = None) -> None:
+    def __init__(self, ticker: Optional[str] = "", contract: Optional[IbContract] = None) -> None:
         """!
         Creates a contract
         """
         self.id = 0
+        self.local_symbol = None
         if contract:
             self.contract = contract
             self.sec_type = contract.secType

@@ -82,10 +82,13 @@ class DownloaderContractDataObserver(ContractDataObserver):
 
         @return None
         """
+        logger.debug("Subject tickers: %s", subject.req_ids)
+        ticker = subject.req_ids[subject.req_id]
+        contract_details = subject.contracts[subject.req_id]
         if subject.contract == "Error":
             msg = "Next"
         else:
-            msg = {"contract_details": subject.contract}
+            msg = {"contract_details": {ticker: contract_details}}
 
         self.msg_queue.put(msg)
 

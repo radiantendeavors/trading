@@ -30,7 +30,6 @@ import multiprocessing
 from pytrader.libs.applications import broker, downloader, strategy
 from pytrader.libs.applications.database import DatabaseManager
 from pytrader.libs.system import logging
-from pytrader.libs.utilities.exceptions import BrokerNotAvailable
 
 # ==================================================================================================
 #

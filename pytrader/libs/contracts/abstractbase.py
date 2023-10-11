@@ -215,7 +215,7 @@ class AbstractBaseContract(DatabaseContract, ABC):
         @param sender: identifies who is sending the contract
 
         @return None"""
-        message = {sender: {"req": {"contract_details": self.contract}}}
+        message = {sender: {"req": {"contract_details": {self.local_symbol: self.contract}}}}
         self.queue.put(message)
 
     def req_contract_history_begin_date(self, sender: str) -> None:
@@ -243,6 +243,12 @@ class AbstractBaseContract(DatabaseContract, ABC):
     def query_no_history(self):
         criteria = self._set_criteria()
         return self.no_history_table.select(criteria=criteria)
+
+    @abstractmethod
+    def query_invalid_contracts(self):
+        """!
+        Query Database for invalid contracts.
+        """
 
     @abstractmethod
     def select_columns(self) -> None:
@@ -282,12 +288,19 @@ class AbstractBaseContract(DatabaseContract, ABC):
         self._save_contract_hours("liquid")
         self._save_contract_hours("trading")
 
-    def save_invalid_contract(self, additional_criteria):
-        columns = [
-            self.contract.symbol, additional_criteria["last_trading_date"],
-            additional_criteria["strike"], additional_criteria["opt_right"]
-        ]
-        self.invalid_contract_table.insert(columns, additional_criteria)
+    def save_invalid_contract(self):
+        if self.sec_type == "OPT":
+            columns = [
+                self.contract.symbol, self.contract.lastTradeDateOrContractMonth,
+                self.contract.strike, self.contract.right[0]
+            ]
+            additional_criteria = {
+                "last_trading_date": [self.contract.lastTradeDateOrContractMonth],
+                "strike": [self.contract.strike],
+                "opt_right": [self.contract.right[0]],
+            }
+
+            self.invalid_contract_table.insert(columns, additional_criteria)
 
     def set_contract_parameters(self, db_contract):
         self.contract.conId = db_contract["contract_id"]

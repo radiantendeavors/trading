@@ -62,8 +62,6 @@ class DownloadProcess():
     """
     contracts = {}
     contract_universe = None
-    option_contracts = []
-    option_contract_symbols = []
     symbol_list = []
     loop_list = []
     next_order_id = 0
@@ -212,6 +210,7 @@ class DownloadProcess():
         no_history = self.contracts[symbol].query_no_history()
 
         if no_history:
+            # Should we remove this from the contracts dictionary?
             logger.debug("No History Exists for Contract, Skipping")
             self.data_queue.put("Next")
         else:
@@ -246,52 +245,35 @@ class DownloadProcess():
             self._download_contract_universe(asset_classes, regions, currencies)
             self._query_contract_universe(tickers)
 
-    def _get_invalid_option_contracts(self, opt_contract) -> None:
-        option_params = opt_contract.get_option_contract_parameters()
-        expiration = option_params[0]
-        strike = option_params[1]
-        right = option_params[2]
+    def _get_option_contract_details(self, symbol: str) -> None:
+        if self.contracts[symbol].sec_type == "OPT":
+            option_params = self.contracts[symbol].get_option_contract_parameters()
+            expiration = option_params[0]
+            strike = option_params[1]
+            right = option_params[2]
 
-        last_trading_date = datetime.strptime(expiration, "%Y%m%d").date()
+            last_trading_date = datetime.strptime(expiration, "%Y%m%d").date()
 
-        additional_criteria = {
-            "last_trading_date": [last_trading_date],
-            "strike": [strike],
-            "opt_right": [right[0]]
-        }
-        db_contract = opt_contract.query_contracts(additional_criteria)
-
-        if not db_contract:
-            opt_contract.save_invalid_contract(additional_criteria)
-
-        self.data_queue.put("Next")
-
-    def _get_option_contract_details(self, opt_contract) -> None:
-        option_params = opt_contract.get_option_contract_parameters()
-        expiration = option_params[0]
-        strike = option_params[1]
-        right = option_params[2]
-
-        last_trading_date = datetime.strptime(expiration, "%Y%m%d").date()
-
-        additional_criteria = {
-            "last_trading_date": [last_trading_date],
-            "strike": [strike],
-            "opt_right": [right[0]]
-        }
-        db_contract = opt_contract.query_contracts(additional_criteria)
-        if db_contract:
-            opt_contract.set_contract_parameters(db_contract)
-            self.contracts[db_contract["local_symbol"]] = opt_contract
-            self.option_contract_symbols.append(db_contract["local_symbol"])
-            self.data_queue.put("Next")
-        else:
-            invalid_contract = opt_contract.query_invalid_contracts()
-            if invalid_contract:
-                logger.debug("Contract is invalid, skipping")
+            additional_criteria = {
+                "last_trading_date": [last_trading_date],
+                "strike": [strike],
+                "opt_right": [right[0]]
+            }
+            db_contract = self.contracts[symbol].query_contracts(additional_criteria)
+            if db_contract:
+                self.contracts[symbol].set_contract_parameters(db_contract)
                 self.data_queue.put("Next")
             else:
-                opt_contract.req_contract_details("downloader")
+                invalid_contract = self.contracts[symbol].query_invalid_contracts()
+                if invalid_contract:
+                    # This contract doesn't exist, so we remove it to prevent any further data
+                    # requests.
+                    self.contracts.pop(symbol, None)
+                    self.data_queue.put("Next")
+                else:
+                    self.contracts[symbol].req_contract_details("downloader")
+        else:
+            self.data_queue.put("Next")
 
     def _loop_option_strikes(self, symbol, expiry, strikes, multiplier):
         if strikes:
@@ -306,10 +288,9 @@ class DownloadProcess():
                 opt_contract = StkOptionContract(self.cmd_queue, self.data_queue, symbol)
             elif underlying_type == "IND":
                 opt_contract = IndOptionContract(self.cmd_queue, self.data_queue, symbol)
-            local_symbol = opt_contract.create_contract("SMART", "USD", expiry, right, strike,
-                                                        multiplier)
-            logger.debug("Local Symbol: %s", local_symbol)
-            self.option_contracts.append(opt_contract)
+
+            opt_contract.create_contract("SMART", "USD", expiry, right, strike, multiplier)
+            self.contracts[opt_contract.local_symbol] = opt_contract
 
     def _next_step(self, counter: int) -> int:
         if len(self.loop_list[0]) > 0:
@@ -319,18 +300,15 @@ class DownloadProcess():
         elif len(self.loop_list[2]) > 0:
             self._gen_options_contracts(self.loop_list[2].pop())
             self.data_queue.put("Next")
-        elif len(list(self.option_contracts)) > 0 and counter == 0:
-            self._get_option_contract_details(self.option_contracts.pop())
-        elif len(self.loop_list[3]) > 0:
+        elif counter == 0:
             counter = 1
-            self._gen_options_contracts(self.loop_list[3].pop())
-            logger.debug("Number of Options Contracts: %s", len(self.option_contracts))
+            self.symbol_list = list(self.contracts).copy()
             self.data_queue.put("Next")
-        elif len(list(self.option_contracts)) > 0 and counter == 1:
-            self._get_invalid_option_contracts(self.option_contracts.pop())
-        elif counter == 1:
+        elif len(list(self.symbol_list)) > 0 and counter == 1:
+            self._get_option_contract_details(self.symbol_list.pop())
+        elif len(list(self.symbol_list)) == 0 and counter == 1:
             counter = 2
-            self.symbol_list = list(self.contracts.copy())
+            self.symbol_list = list(self.contracts).copy()
             self.data_queue.put("Next")
         elif len(self.symbol_list) > 0:
             self._get_contract_history_begin_date(self.symbol_list.pop())
@@ -340,11 +318,13 @@ class DownloadProcess():
 
         return counter
 
-    def _process_data(self, data: dict) -> str | bool:
+    def _process_data(self, data: dict) -> str:
         logger.debug("Data: %s", data)
         if data.get("contract_details"):
-            contract_details = data["contract_details"]
-            self._process_contract_details(contract_details)
+            contract_data = data["contract_details"]
+            ticker = list(contract_data)[0]
+            contract_details = contract_data[ticker]
+            self._process_contract_details(ticker, contract_details)
             return "Next"
 
         if data.get("contract_history_begin_date"):
@@ -364,25 +344,25 @@ class DownloadProcess():
             self.next_order_id = data["next_order_id"]
             return "Next"
 
-        return False
+        return "Next"
 
-    def _process_contract_details(self, contract_details: ContractDetails) -> None:
+    def _process_contract_details(self, ticker: str,
+                                  contract_details: ContractDetails | str) -> None:
         logger.debug("Contract Details: %s", contract_details)
-        local_symbol = contract_details.contract.localSymbol
 
-        if contract_details.contract.secType == "OPT":
-            symbol = contract_details.contract.symbol
-            underlying_type = self.contracts[symbol].sec_type
-            if underlying_type == "STK":
-                self.contracts[local_symbol] = StkOptionContract(self.cmd_queue, self.data_queue,
-                                                                 local_symbol)
-            else:
-                self.contracts[local_symbol] = IndOptionContract(self.cmd_queue, self.data_queue,
-                                                                 local_symbol)
+        if isinstance(contract_details, str):
+            self._process_contract_error(ticker, contract_details)
+        else:
+            self.contracts[ticker].save_contract(contract_details)
 
-            self.option_contract_symbols.append(local_symbol)
+    def _process_contract_error(self, ticker: str, error_type: str) -> None:
+        match error_type:
+            case "NonExistant":
+                self.contracts[ticker].save_invalid_contract()
 
-        self.contracts[local_symbol].save_contract(contract_details)
+                # This contract doesn't exist, so we remove it from our dictionary of contracts to
+                # avoid making further data requests for that contract.
+                self.contracts.pop(ticker, None)
 
     def _process_history_begin_date(self, history_begin_date: dict) -> None:
         ticker = list(history_begin_date)[0]

@@ -114,6 +114,11 @@ class IndexContract(AbstractBaseContract):
         if strike:
             logger.debug("Expiry Should not be set for ETF Contracts: %s", strike)
 
+        self.local_symbol = self.contract.symbol
+
+    def query_invalid_contracts(self):
+        return None
+
     def select_columns(self):
         self.columns = {
             "contract": [

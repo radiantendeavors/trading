@@ -21,14 +21,11 @@ The main user interface for the trading program.
 
 @file pytrader/libs/applications/broker/ibkr/tws/subjects.py
 """
-# System Libraries
 import datetime
 
-# 3rd Party Libraries
-from ibapi.contract import Contract
+from ibapi.contract import Contract, ContractDetails
 from ibapi.order import Order
 
-# Application Libraries
 from pytrader.libs.events import (BarData, ContractData,
                                   ContractHistoryBeginDate,
                                   ContractOptionParametrsData, MarketData,
@@ -50,6 +47,9 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class BrokerBarData(BarData):
+    """!
+    Broker specific bar data subject.
+    """
 
     def request_bars(self):
         for contract_ in list(self.contracts.values()):
@@ -127,9 +127,13 @@ class BrokerBarData(BarData):
 
 class BrokerContractData(ContractData):
 
-    def set_contract_details(self, req_id: int, contract_details) -> None:
-        self.contract = contract_details
+    def set_contract_details(self, req_id: int, contract_details: ContractDetails | str) -> None:
+        self.req_id = req_id
+        self.contracts[req_id] = contract_details
         self.notify()
+
+        self.contracts.pop(req_id, None)
+        self.req_ids.pop(req_id, None)
 
 
 class BrokerContractHistoryBeginDate(ContractHistoryBeginDate):
@@ -148,8 +152,11 @@ class BrokerContractOptionParametersData(ContractOptionParametrsData):
         self.req_id = req_id
         self.option_parameters[req_id] = option_parameters
         self.notify()
-        self.option_parameters.pop(req_id, None)
-        self.req_ids.pop(req_id, None)
+
+        # Shit! I thought I was being clever by removing this data when no longer needed.
+        # Unfortunately, it's sometimes needed for a little longer.
+        #self.option_parameters.pop(req_id, None)
+        #self.req_ids.pop(req_id, None)
 
 
 class BrokerMarketData(MarketData):

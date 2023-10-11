@@ -56,6 +56,9 @@ logger = logging.getLogger(__name__)
 class TwsErrors(EWrapper, EClient, BaseBroker):
     """!
     Class for handling Errors received by TWSAPI.
+
+    Error Code Definitions are available at:
+    https://interactivebrokers.github.io/tws-api/message_codes.html
     """
     __critical_codes = [1300]
     __error_codes = [
@@ -101,22 +104,19 @@ class TwsErrors(EWrapper, EClient, BaseBroker):
 
         @return None
         """
-        match error_code:
-            case self.__critical_codes:
-                self._process_critical_code(req_id, error_code, error_string,
-                                            advanced_order_rejection)
-            case self.__error_codes:
-                self._process_error_code(req_id, error_code, error_string, advanced_order_rejection)
-            case self.__warning_codes:
-                self._process_warning_code(req_id, error_code, error_string,
-                                           advanced_order_rejection)
-            case self.__info_codes:
-                self._process_info_code(req_id, error_code, error_string, advanced_order_rejection)
-            case self.__debug_codes:
-                self._process_debug_code(req_id, error_code, error_string, advanced_order_rejection)
-            case _:
-                logger.error("Error Code Level has not been identified")
-                self._process_error_code(req_id, error_code, error_string, advanced_order_rejection)
+        if error_code in self.__critical_codes:
+            self._process_critical_code(req_id, error_code, error_string, advanced_order_rejection)
+        elif error_code in self.__error_codes:
+            self._process_error_code(req_id, error_code, error_string, advanced_order_rejection)
+        elif error_code in self.__warning_codes:
+            self._process_warning_code(req_id, error_code, error_string, advanced_order_rejection)
+        elif error_code in self.__info_codes:
+            self._process_info_code(req_id, error_code, error_string, advanced_order_rejection)
+        elif error_code in self.__debug_codes:
+            self._process_debug_code(req_id, error_code, error_string, advanced_order_rejection)
+        else:
+            logger.error("Error Code Level has not been identified")
+            self._process_error_code(req_id, error_code, error_string, advanced_order_rejection)
 
     def remove_command(self, req_id: int) -> None:
         """!
@@ -184,21 +184,56 @@ class TwsErrors(EWrapper, EClient, BaseBroker):
             logger.debug("ReqID# %s, Code: %s (%s)", req_id, error_code, error_string)
 
     def _process_code_162(self, req_id: int, error_string: str) -> None:
-        if self.request_commands[req_id] == "history_begin":
+        """!
+        Error Code 162: Historical market data Service error message.
+
+        @param req_id:
+        @param error_string:
+
+        @return None
+        """
+        match self.request_commands[req_id]:
+            case "history_begin":
+                self._process_code_162_history_begin(req_id, error_string)
+            case _:
+                logger.error("Historical Market Data Service Error for Command '%s' not configured",
+                             self.request_commands[req_id])
+
+    def _process_code_200(self, req_id: int, error_string: str) -> None:
+        """!
+        Error Code 200:
+
+        Means either:
+        - No security definition has been found for the request.
+        - The contract description specified for <Symbol> is ambiguous
+
+        @param req_id:
+        @param error_string:
+
+        @return None
+        """
+        if self.request_commands[req_id] == "contract_details":
             self.remove_command(req_id)
-            if error_string == "Historical Market Data Service error message:No head time stamp":
+
+            if error_string == "No security definition has been found for the request":
+                self.contract_subjects.set_contract_details(req_id, "NonExistant")
+            else:
+                self.contract_subjects.set_contract_details(req_id, "Error")
+
+        logger.debug9("Error String: %s", error_string)
+
+    def _process_code_162_history_begin(self, req_id: int, error_string: str) -> None:
+        self.remove_command(req_id)
+        match error_string:
+            case "Historical Market Data Service error message:No head time stamp":
                 self.cancelHeadTimeStamp(req_id)
                 self.contract_history_begin_subjects.set_history_begin_date(req_id, "NoHistory")
-            else:
+            case "Historical Market Data Service error message:Request Timed Out":
+                self.cancelHeadTimeStamp(req_id)
+                self.contract_history_begin_subjects.set_history_begin_date(req_id, "NoHistory")
+            case _:
                 self.cancelHeadTimeStamp(req_id)
                 self.contract_history_begin_subjects.set_history_begin_date(req_id, "Error")
                 now = datetime.datetime.today()
                 logger.debug("Paused for 10 min at %s", now)
                 time.sleep(600)
-
-    def _process_code_200(self, req_id: int, error_string: str) -> None:
-        if self.request_commands[req_id] == "contract_details":
-            self.remove_command(req_id)
-            self.contract_subjects.set_contract_details(req_id, "Error")
-
-        logger.debug9("Error String: %s", error_string)

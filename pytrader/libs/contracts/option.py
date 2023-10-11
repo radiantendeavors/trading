@@ -85,7 +85,7 @@ class OptionContract(AbstractBaseContract):
         self.contract.strike = strike
         #self.contract.localSymbol =
 
-        return self._gen_option_contract_name(expiry, right, strike)
+        self.local_symbol = self._gen_option_contract_name(expiry, right, strike)
 
     def get_contract_details(self, sender: str = "downloader") -> None:
         self.req_contract_details(sender)
@@ -114,7 +114,13 @@ class OptionContract(AbstractBaseContract):
         ]
 
     def query_invalid_contracts(self):
-        return self.invalid_contract_table.select()
+        criteria = {
+            "symbol": [self.contract.symbol],
+            "last_trading_date": [self.contract.lastTradeDateOrContractMonth],
+            "strike": [self.contract.strike],
+            "opt_right": [self.contract.right[0]]
+        }
+        return self.invalid_contract_table.select(criteria=criteria)
 
     def _gen_option_contract_name(self, expiry: str, right: str, strike: float) -> str:
         strike_left = str(strike).split(".", maxsplit=1)[0]

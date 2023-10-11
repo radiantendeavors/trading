@@ -160,9 +160,12 @@ class TwsAccountClient(AbstractBrokerClient):
                                               use_regular_trading_hours, format_date,
                                               keep_up_to_date)
 
-    def request_contract_details(self, contract: Contract):
+    def request_contract_details(self, request: dict):
+        ticker = list(request)[0]
+        contract = request[ticker]
         self.req_id += 1
         logger.debug9("Contract: %s", contract)
+        self.brokerclient.add_contract_details_ticker(self.req_id, ticker)
         self.brokerclient.req_contract_details(self.req_id, contract)
 
     def request_global_cancel(self) -> None:
