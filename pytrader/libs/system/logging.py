@@ -1,9 +1,8 @@
 """!@package pytrader.libs.system.logging
 
-Provides additional functionality to the logging library from
-Python.
+Provides additional functionality to the logging library from Python.
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -33,21 +32,12 @@ Python.
 # pylint: disable=C0302,W0401,W0614
 #
 # ==================================================================================================
-
-# ==================================================================================================
-#
-# Libraries
-#
-#
-# ==================================================================================================
-# System Libraries
-import logging
 import copy
+import logging
 from logging import *
+from logging import (CRITICAL, DEBUG, ERROR, INFO, WARNING, Formatter, Logger,
+                     LogRecord, StreamHandler)
 
-# 3rd Party Libraries
-
-# Application Libraries
 from pytrader.libs.utilities import text
 
 # ==================================================================================================
@@ -117,793 +107,421 @@ logging.addLevelName(29, "INFO9")
 
 colortext = text.ConsoleText()
 
+
 # ==================================================================================================
 #
 # Classes
 #
-# LocalLogger
-# ConsoleLvlFormatter
-# ColorizingStreamHandler
-#
 # ==================================================================================================
+class DebugLogger(Logger):
+    """!
+    Adds additional debugging levels to the logger.
+    """
 
+    def debug2(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
 
-# ==================================================================================================
-#
-# Class LocalLogger
-#
-# Calls the read function based on the file format.
-#
-# Inputs
-# ------
-#    @param:
-#
-# Returns
-# -------
-#    @return: None
-#
-# Raises
-# ------
-#    ...
-#
-# ==================================================================================================
-class LocalLogger(Logger):
-    #-------------------------------------------------------------------
-    #
-    # Function debug2
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def debug2(self, message, *args, **kws):
+        @param message: The error message to print.
+        @param *args:
+        @param **kwargs:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(9):
             self._log(9, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function debug3
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def debug3(self, message, *args, **kws):
+    def debug3(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(8):
             self._log(8, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function debug4
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def debug4(self, message, *args, **kws):
+    def debug4(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(7):
             self._log(7, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function debug5
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def debug5(self, message, *args, **kws):
+    def debug5(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(6):
             self._log(6, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function debug6
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def debug6(self, message, *args, **kws):
+    def debug6(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(5):
             self._log(5, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function debug7
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def debug7(self, message, *args, **kws):
+    def debug7(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(4):
             self._log(4, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function debug8
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def debug8(self, message, *args, **kws):
+    def debug8(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(3):
             self._log(3, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function debug9
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def debug9(self, message, *args, **kws):
+    def debug9(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(2):
             self._log(2, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function debug10
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def debug10(self, message, *args, **kws):
+    def debug10(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(1):
             self._log(1, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function vinfo1
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def vinfo1(self, message, *args, **kws):
+
+class VerboseInfoLogger(DebugLogger):
+    """!
+    Adds 'verbose' info level logging.
+    """
+
+    def vinfo1(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(19):
             self._log(19, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function vinfo2
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def vinfo2(self, message, *args, **kws):
+    def vinfo2(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(18):
             self._log(18, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function vinfo3
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def vinfo3(self, message, *args, **kws):
+    def vinfo3(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(17):
             self._log(17, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function vinfo4
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def vinfo4(self, message, *args, **kws):
+    def vinfo4(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(16):
             self._log(16, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function vinfo5
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def vinfo5(self, message, *args, **kws):
+    def vinfo5(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(15):
             self._log(15, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function vinfo6
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def vinfo6(self, message, *args, **kws):
+    def vinfo6(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(14):
             self._log(14, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function vinfo7
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def vinfo7(self, message, *args, **kws):
+    def vinfo7(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(13):
             self._log(13, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function vinfo8
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def vinfo8(self, message, *args, **kws):
+    def vinfo8(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(12):
             self._log(12, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function vinfo9
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def vinfo9(self, message, *args, **kws):
+    def vinfo9(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(11):
             self._log(11, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function info1
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def info1(self, message, *args, **kws):
+
+class LocalLogger(VerboseInfoLogger):
+    """!
+    Adds additional info level logging.
+    """
+
+    def info1(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(21):
             self._log(21, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function info2
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def info2(self, message, *args, **kws):
+    def info2(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(22):
             self._log(22, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function info3
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def info3(self, message, *args, **kws):
+    def info3(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(23):
             self._log(23, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function info4
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def info4(self, message, *args, **kws):
+    def info4(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(24):
             self._log(24, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function info5
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def info5(self, message, *args, **kws):
+    def info5(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(25):
             self._log(25, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function info6
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
     def info6(self, message, *args, **kws):
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(26):
             self._log(26, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function info7
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def info7(self, message, *args, **kws):
+    def info7(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(27):
             self._log(27, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function info8
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def info8(self, message, *args, **kws):
+    def info8(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(28):
             self._log(28, message, args, **kws)
 
-    #-------------------------------------------------------------------
-    #
-    # Function info9
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: message - The error message to print.
-    #    @param: *args
-    #    @param: **kwargs
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def info9(self, message, *args, **kws):
+    def info9(self, message, *args, **kws) -> None:
+        """!
+        Calls the read function based on the file format.
+
+        @param message: The error message to print.
+        @param *args:
+        @param **kws:
+
+        @return: None
+        """
         # Yes, logger takes its '*args' as 'args'.
         if self.isEnabledFor(29):
             self._log(29, message, args, **kws)
 
 
-#-----------------------------------------------------------------------
-#
-# Class ConsoleLvlFormatter
-#
-# Adds further functionality for the console to change the
-# format based on the logging lewel
-#
-# Inputs
-# ------
-#    @param: self
-#    @param: message - The error message to print.
-#    @param: *args
-#    @param: **kwargs
-#
-# Returns
-# -------
-#    @return: None
-#
-# Raises
-# ------
-#    ...
-#
-#-----------------------------------------------------------------------
 class ConsoleLvlFormatter(Formatter):
+    """!
+    Adds further functionality for the console to change the format based on the logging level.
+    """
 
-    def __init__(self, fmt="%(levelno)s: %(message)s"):
+    def __init__(self, fmt="%(levelno)s: %(message)s") -> None:
+        """!
+        Initializes the ConsoleLvlFormatter
+
+        @param fmt:
+
+        @return None
+        """
         Formatter.__init__(self, fmt)
         self.dbg_fmt = "%(levelname)-8s: %(name)s:%(funcName)s:%(lineno)d - %(message)s"
         self.info_fmt = "%(message)s"
@@ -911,27 +529,12 @@ class ConsoleLvlFormatter(Formatter):
         self.err_fmt = "%(levelname)-8s: %(message)s"
         self.crit_fmt = "%(levelname)-8s: %(message)s"
 
-    #-------------------------------------------------------------------
-    #
-    # Function format
-    #
-    # ...
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: record - The error message to print.
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def format(self, record):
+    def format(self, record) -> None:
+        """!
+        @param record: The error message to print.
+
+        @return None
+        """
 
         # Save the original format configured by the user
         # when the logger formatter was instantiated
@@ -962,30 +565,20 @@ class ConsoleLvlFormatter(Formatter):
         return result
 
 
-#-----------------------------------------------------------------------
-#
-# Class ColorizingStreamHandler
-#
-# Calls the read function based on the file format.
-#
-# Inputs
-# ------
-#    @param: self
-#    @param: *args
-#    @param: **kwargs
-#
-# Returns
-# -------
-#    @return: None
-#
-# Raises
-# ------
-#    ...
-#
-#-----------------------------------------------------------------------
-class ColorizingStreamHandler(logging.StreamHandler, text.ConsoleText):
+class ColorizingStreamHandler(StreamHandler, text.ConsoleText):
+    """!
+    ColorizingStreamHandler
+    """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
+        """!
+        Initializes the ColorizingStreamHandler
+
+        @param *args:
+        @param **kwargs:
+
+        @return None
+        """
         self._colors = {
             DEBUG10: "green",
             DEBUG9: "green",
@@ -1020,62 +613,32 @@ class ColorizingStreamHandler(logging.StreamHandler, text.ConsoleText):
             ERROR: "red",
             CRITICAL: "magenta"
         }
-        super(ColorizingStreamHandler, self).__init__(*args, **kwargs)
-        return None
+        super().__init__(*args, **kwargs)
 
-    #-------------------------------------------------------------------
-    #
-    # Function is_tty
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #
-    # Returns
-    # -------
-    #    @return: isatty
-    #    @return: isatty()
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
     @property
     def is_tty(self):
+        """!
+
+        @return isatty:
+        @return isatty():
+        """
         isatty = getattr(self.stream, 'isatty', None)
         return isatty and isatty()
 
-    #-------------------------------------------------------------------
-    #
-    # Function emit
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: record - The error message to print.
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def emit(self, record):
+    def emit(self, record: LogRecord) -> None:
+        """!
+
+        @param record: The error message to print.
+
+        @return None
+        """
         try:
             message = self.format(record)
             stream = self.stream
-            if not self.is_tty:
+            if self.is_tty:
+                message = colortext.colorize(message, "none", self._colors[record.levelno], "black")
                 stream.write(message)
             else:
-                message = colortext.colorize(message, "none", self._colors[record.levelno], "black")
                 stream.write(message)
 
             stream.write(getattr(self, 'terminator', '\n'))
@@ -1085,67 +648,35 @@ class ColorizingStreamHandler(logging.StreamHandler, text.ConsoleText):
         except Exception:
             self.handleError(record)
 
-    #-------------------------------------------------------------------
-    #
-    # Function setLevelColor
-    #
-    # Calls the read function based on the file format.
-    #
-    # Inputs
-    # ------
-    #    @param: self
-    #    @param: logging_level - The error message to print.
-    #    @param: escaped_ansi_code
-    #
-    # Returns
-    # -------
-    #    @return: None
-    #
-    # Raises
-    # ------
-    #    ...
-    #
-    #-------------------------------------------------------------------
-    def setLevelColor(self, logging_level, escaped_ansi_code):
+    def setLevelColor(self, logging_level, escaped_ansi_code) -> None:
+        """!
+        Set's the color for the specified log level
+
+        @param logging_level: The error message to print.
+        @param escaped_ansi_code:
+
+        @return None
+        """
         self._colors[logging_level] = escaped_ansi_code
 
 
 local_manager = copy.copy(Logger.manager)
 local_manager.loggerClass = LocalLogger
 
-#-----------------------------------------------------------------------
+
+# ==================================================================================================
 #
 # Functions
 #
-# getLogger
-# verifydebuglevels
-#
-#-----------------------------------------------------------------------
+# ==================================================================================================
+def getLogger(name=None):
+    """!
+    Calls the read function based on the file format.
 
+    @param name:
 
-#-----------------------------------------------------------------------
-#
-# Function getLogger
-#
-# Calls the read function based on the file format.
-#
-# Inputs
-# ------
-#    @param: self
-#    @param: message - The error message to print.
-#    @param: *args
-#    @param: **kwargs
-#
-# Returns
-# -------
-#    @return: None
-#
-# Raises
-# ------
-#    ...
-#
-#-----------------------------------------------------------------------
-def getLogger(name=None):  # noqa
+    @return
+    """
     if name:
         return local_manager.getLogger(name)
     else:

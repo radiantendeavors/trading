@@ -49,12 +49,12 @@ class BaseOrder():
     Base Class for Orders
     """
 
-    def __init__(self, data_queue: Queue, contract: Contract, strategy: str):
+    def __init__(self, data_queue: Queue, contract: Contract, strategy: str = ""):
         self.contract = contract
         self.data_queue = data_queue
-        self.order = Order()
         self.status = None
         self.strategy_id = strategy
+        self.order = Order()
 
     def get_order(self) -> Order:
         """!
