@@ -23,6 +23,8 @@ Provides the base class for contracts
 
 @file pytrader/libs/clients/database/mysql/ibkr/base_contracts.py
 """
+from datetime import date, timedelta
+
 from pytrader.libs.clients.database.mysql.ibkr.base import IbkrBase
 from pytrader.libs.system import logging
 
@@ -51,3 +53,22 @@ class IbkrBaseContracts(IbkrBase):
     # Private Functions
     #
     # ==============================================================================================
+
+
+class IbkrBaseNoHistory(IbkrBase):
+
+    def clean_history(self) -> None:
+        """!
+        Cleans old data from table
+
+        @return None
+        """
+        self._clean_last_updated()
+
+    def _clean_last_updated(self) -> None:
+        today = date.today()
+        num_days = timedelta(days=7)
+        last_update_min = today - num_days
+        criteria = {"last_updated": last_update_min}
+
+        self.delete(criteria)

@@ -27,8 +27,8 @@ Provides common functionality for all Option Contracts
 from datetime import date, timedelta
 from typing import Optional
 
-from pytrader.libs.clients.database.mysql.ibkr.base_contracts import \
-    IbkrBaseContracts
+from pytrader.libs.clients.database.mysql.ibkr.base_contracts import (
+    IbkrBaseContracts, IbkrBaseNoHistory)
 from pytrader.libs.system import logging
 
 # ==================================================================================================
@@ -152,25 +152,9 @@ class IbkrOptionTradingHours(IbkrBaseContracts):
     update_column_names = insert_column_names
 
 
-class IbkrOptionNoHistory(IbkrBaseContracts):
+class IbkrOptionNoHistory(IbkrBaseNoHistory):
     """!
     Class for interacting with Stock Options No History Table.
     """
     insert_column_names = ["ibkr_contract_id"]
     update_column_names = insert_column_names + ["last_updated"]
-
-    def clean_history(self):
-        """!
-        Cleans table of old data.
-
-        @return None
-        """
-        self._clean_last_updated()
-
-    def _clean_last_updated(self):
-        today = date.today()
-        num_days = timedelta(days=7)
-        last_update_min = today - num_days
-        criteria = {"last_updated": last_update_min}
-
-        self.delete(criteria)

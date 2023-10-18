@@ -2,7 +2,7 @@
 
 General Utility functions for pytrader
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -22,11 +22,10 @@ General Utility functions for pytrader
 
 @file pytrader/libs/utilities/__init__.py
 """
-# System Libraries
 import importlib
 
-# System Library Overrides
 from pytrader.libs.system import logging
+
 # ==================================================================================================
 #
 # Global Variables
@@ -41,6 +40,14 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 def get_plugin_function(*args, **kwargs):
+    """!
+    Imports specified plugin.
+
+    @param *args:
+    @param **kwargs:
+
+    @return
+    """
     program = kwargs['program']
     command = kwargs['cmd']
     import_path = kwargs['import_path']
@@ -57,7 +64,7 @@ def get_plugin_function(*args, **kwargs):
         return getattr(module, command)
     except ImportError as msg:
         logger.error(msg)
-        raise ImportError(msg)
+        raise ImportError(msg) from msg
     except AttributeError as msg:
         logger.error(msg)
-        raise AttributeError(msg)
+        raise AttributeError(msg) from msg

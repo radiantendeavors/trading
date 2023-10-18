@@ -24,10 +24,8 @@ Provides the database client
 
 @file pytrader/libs/clients/mysql/etf_info.py
 """
-from datetime import date, timedelta
-
-from pytrader.libs.clients.database.mysql.ibkr.base_contracts import \
-    IbkrBaseContracts
+from pytrader.libs.clients.database.mysql.ibkr.base_contracts import (
+    IbkrBaseContracts, IbkrBaseNoHistory)
 from pytrader.libs.system import logging
 
 # ==================================================================================================
@@ -105,26 +103,10 @@ class IbkrStockTradingHours(IbkrBaseContracts):
     update_column_names = insert_column_names
 
 
-class IbkrStockNoHistory(IbkrBaseContracts):
+class IbkrStockNoHistory(IbkrBaseNoHistory):
     """!
     Class for interacting with the Stock Contracts No History Table.
     """
     table_name = "z_ibkr_stk_no_history"
     insert_column_names = ["ibkr_contract_id"]
     update_column_names = insert_column_names + ["last_updated"]
-
-    def clean_history(self):
-        """!
-        Cleans old data from table
-
-        @return None
-        """
-        self._clean_last_updated()
-
-    def _clean_last_updated(self):
-        today = date.today()
-        num_days = timedelta(days=7)
-        last_update_min = today - num_days
-        criteria = {"last_updated": last_update_min}
-
-        self.delete(criteria)

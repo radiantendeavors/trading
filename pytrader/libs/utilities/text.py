@@ -2,7 +2,7 @@
 
 Provides console text formatting capabilities.
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -51,65 +51,74 @@ class ConsoleText():
     """!
     Provides formatting for console text
     """
+    __escape = "\x1b["
+    __attributes = {
+        "none": 0,
+        "bold": 1,
+        "unk_a": 2,
+        "unk_b": 3,
+        "underline": 4,
+        "blink": 5,
+        "unk_c": 6,
+        "reverse": 7
+    }
+    __fgcolors = {
+        "black": 30,
+        "red": 31,
+        "green": 32,
+        "yellow": 33,
+        "blue": 34,
+        "fuchsia": 35,
+        "magenta": 35,
+        "turquoise": 36,
+        "cyan": 36,
+        "white": 37
+    }
+    __bgcolors = {
+        "black": 40,
+        "red": 41,
+        "green": 42,
+        "yellow": 43,
+        "blue": 44,
+        "fuchsia": 45,
+        "magenta": 45,
+        "turquoise": 46,
+        "cyan": 46,
+        "white": 47
+    }
 
-    def __init__(self):
-        self.escape = "\x1b["
+    def colorize(self,
+                 text: str,
+                 attribute: str = "none",
+                 fgcolor: str = "white",
+                 bgcolor: str = "black") -> str:
+        """!
+        Adds color to the text.
 
-        self.attributes = {
-            "none": 0,
-            "bold": 1,
-            "unk_a": 2,
-            "unk_b": 3,
-            "underline": 4,
-            "blink": 5,
-            "unk_c": 6,
-            "reverse": 7
-        }
+        @param text:
+        @param attribute:
+        @param fgcolor:
+        @param bgcolor:
 
-        self.fgcolors = {
-            "black": 30,
-            "red": 31,
-            "green": 32,
-            "yellow": 33,
-            "blue": 34,
-            "fuchsia": 35,
-            "magenta": 35,
-            "turquoise": 36,
-            "cyan": 36,
-            "white": 37
-        }
-
-        self.bgcolors = {
-            "black": 40,
-            "red": 41,
-            "green": 42,
-            "yellow": 43,
-            "blue": 44,
-            "fuchsia": 45,
-            "magenta": 45,
-            "turquoise": 46,
-            "cyan": 46,
-            "white": 47
-        }
-
-    def colorize(self, text, attribute="none", fgcolor="white", bgcolor="black"):
-        if attribute in self.attributes:
-            begincolor = self.escape + str(self.attributes[attribute])
+        @return textstring
+        """
+        if attribute in self.__attributes:
+            begincolor = self.__escape + str(self.__attributes[attribute])
         else:
-            begincolor = self.escape + str(self.attributes['none'])
+            begincolor = self.__escape + str(self.__attributes['none'])
 
-        if fgcolor in self.fgcolors:
-            begincolor = begincolor + ";" + str(self.fgcolors[fgcolor])
+        if fgcolor in self.__fgcolors:
+            begincolor = begincolor + ";" + str(self.__fgcolors[fgcolor])
         else:
-            begincolor = begincolor + ";" + str(self.fgcolors['white'])
+            begincolor = begincolor + ";" + str(self.__fgcolors['white'])
 
-        if bgcolor in self.bgcolors:
-            begincolor = begincolor + ";" + str(self.bgcolors[bgcolor]) + "m"
+        if bgcolor in self.__bgcolors:
+            begincolor = begincolor + ";" + str(self.__bgcolors[bgcolor]) + "m"
         else:
-            begincolor = begincolor + ";" + str(self.bgcolors['black']) + "m"
+            begincolor = begincolor + ";" + str(self.__bgcolors['black']) + "m"
 
-        resetcolor = self.escape + str(self.attributes['none']) + ";" + str(
-            self.fgcolors['white']) + ";" + str(self.bgcolors['black']) + "m"
+        resetcolor = self.__escape + str(self.__attributes['none']) + ";" + str(
+            self.__fgcolors['white']) + ";" + str(self.__bgcolors['black']) + "m"
 
         textstring = begincolor + text + resetcolor
         return textstring
