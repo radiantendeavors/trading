@@ -1,6 +1,6 @@
 """!@package pytrader.libs.applications.downloader
 
-The main user interface for the trading program.
+The Download Process Manager
 
 @author G S Derber
 @date 2022-2003
@@ -22,9 +22,9 @@ The main user interface for the trading program.
 @file pytrader/libs/applications/downloader/__init__.py
 """
 # System Libraries
+import argparse
 from datetime import date, datetime, time, timedelta
 from multiprocessing import Queue
-from time import sleep
 from typing import Optional
 
 # 3rd Party
@@ -34,9 +34,8 @@ from ibapi.contract import ContractDetails
 from pytrader.libs.clients.broker.ibkr.webscraper import IbkrWebScraper
 from pytrader.libs.clients.database.mysql.ibkr import (
     IbkrContractUniverse, IbkrIndOptHistoryBeginDate,
-    IbkrIndOptInvalidContracts, IbkrIndOptNoHistory,
-    IbkrStkOptHistoryBeginDate, IbkrStkOptInvalidContracts,
-    IbkrStkOptNoHistory)
+    IbkrIndOptInvalidContracts, IbkrStkOptHistoryBeginDate,
+    IbkrStkOptInvalidContracts)
 from pytrader.libs.contracts import (IndexContract, IndOptionContract,
                                      StkOptionContract, StockContract)
 from pytrader.libs.system import logging
@@ -67,6 +66,7 @@ class DownloadProcess():
     next_order_id = 0
     enabled = False
     download_options = False
+    args = None
 
     def __init__(self, cmd_queue: Queue, data_queue: Queue) -> None:
         """!
@@ -80,35 +80,23 @@ class DownloadProcess():
         self.cmd_queue = cmd_queue
         self.data_queue = data_queue
 
-    def enable_historical_downloader(self,
-                                     asset_classes: list,
-                                     regions: list,
-                                     currencies: list,
-                                     tickers: Optional[list] = None) -> None:
+    def enable_historical_downloader(self, args: argparse.Namespace,
+                                     broker_available: bool) -> None:
         """!
         Enable Downloading Historical Data.
 
-        @param asset_classes:
-        @param currencies:
-        @param regions:
-        @param tickers:
+        @param args: Command line arguments
 
         @return None
         """
-        self._get_contract_universe(asset_classes, regions, currencies, tickers)
+        self.args = args
+        self._get_contract_universe(args.asset_classes, args.regions, args.currencies, args.tickers)
         # self._clean_invalid_contracts()
 
         self.loop_list = [self.contract_universe[:] for _ in range(4)]
 
-        self.enabled = True
-
-    def enable_options(self) -> None:
-        """!
-        Enable downloading options.
-
-        @return None
-        """
-        self.download_options = True
+        self.enabled = broker_available
+        self.download_options = args.enable_options
 
     def run(self) -> None:
         """!
@@ -127,16 +115,19 @@ class DownloadProcess():
         counter = 0
         continue_loop = True
 
-        while continue_loop:
-            message = self.data_queue.get()
+        logger.debug("Enabled: %s", self.enabled)
 
-            if isinstance(message, dict):
-                message = self._process_data(message)
+        if self.enabled:
+            while continue_loop:
+                message = self.data_queue.get()
 
-            if message == "Done":
-                continue_loop = False
-            elif message == "Next" and self.enabled:
-                counter = self._next_step(counter)
+                if isinstance(message, dict):
+                    message = self._process_data(message)
+
+                if message == "Done":
+                    continue_loop = False
+                elif message == "Next":
+                    counter = self._next_step(counter)
 
     # ==============================================================================================
     #
@@ -187,11 +178,11 @@ class DownloadProcess():
         logger.debug9("Expirations: %s", expirations)
         logger.debug9("Strikes: %s", strikes)
 
-        expirations.sort()
+        expirations.sort(reverse=True)
         strikes.sort()
 
         if expirations:
-            for expiry in expirations[0:4]:
+            for expiry in expirations:
                 expiry_date = datetime.strptime(expiry, "%Y%m%d")
                 today = datetime.combine(date.today(), time(0, 0))
                 if expiry_date >= today:
@@ -297,14 +288,14 @@ class DownloadProcess():
             self._get_contract_details(self.loop_list[0].pop())
         elif len(self.loop_list[1]) > 0:
             self._get_contract_option_params(self.loop_list[1].pop())
-        elif len(self.loop_list[2]) > 0:
+        elif len(self.loop_list[2]) > 0 and self.download_options:
             self._gen_options_contracts(self.loop_list[2].pop())
             self.data_queue.put("Next")
         elif counter == 0:
             counter = 1
             self.symbol_list = list(self.contracts).copy()
             self.data_queue.put("Next")
-        elif len(list(self.symbol_list)) > 0 and counter == 1:
+        elif len(list(self.symbol_list)) > 0 and counter == 1 and self.download_options:
             self._get_option_contract_details(self.symbol_list.pop())
         elif len(list(self.symbol_list)) == 0 and counter == 1:
             counter = 2

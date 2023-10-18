@@ -97,21 +97,6 @@ class BrokerProcessManager():
             for broker in self.broker_list:
                 self._configure_brokers(broker, address)
 
-        # for broker in list(self.brokers):
-        #     logger.debug("Broker: %s", broker)
-        #     self.broker_clients[broker] = BrokerClient(self.brokers[broker],
-        #                                                self.broker_cmd_queues[broker],
-        #                                                self.data_queue)
-
-        #     self.broker_clients[broker].set_broker_observers(broker)
-
-        #     try:
-        #         self.broker_clients[broker].connect(self.address[broker])
-        #     except BrokerNotAvailable as msg:
-        #         logger.debug("Broker Not Available: %s", msg)
-        #         self.broker_clients.pop(broker, None)
-        #         continue
-
     def run(self) -> None:
         """!
         Run the broker process as long as the broker is connected.
@@ -120,53 +105,26 @@ class BrokerProcessManager():
         """
         self._start_processes()
 
-        broker_connection = True
-        while broker_connection:
-            cmd = self.cmd_queue.get()
-            logger.debug9("Command: %s", cmd)
+        if len(self.broker_processes) > 0:
+            continue_process = True
+            while continue_process:
+                try:
+                    cmd = self.cmd_queue.get()
+                    logger.debug9("Command: %s", cmd)
 
-            sender = list(cmd)[0]
-            logger.debug9("Sender: %s", sender)
+                    sender = list(cmd)[0]
+                    logger.debug9("Sender: %s", sender)
 
-            if cmd == "Quit":
-                broker_connection = False
-            else:
-                sender = "tws_demo_" + sender
-                self.broker_cmd_queues[sender].put(cmd)
+                    if cmd == "Quit":
+                        continue_process = False
+                    else:
+                        sender = "tws_demo_" + sender
+                        self.broker_cmd_queues[sender].put(cmd)
+                except KeyboardInterrupt:
+                    continue_process = False
 
-    # def set_downloader(self) -> None:
-    #     """!
-    #     Configures the downloader observers.
-
-    #     @return None
-    #     """
-    #     for broker in list(self.brokers):
-    #         if broker in list(self.broker_clients):
-    #             self.broker_clients[broker].set_downloader()
-
-    # def set_main(self) -> None:
-    #     """!
-    #     Configures the main process observers.
-
-    #     @return None
-    #     """
-    #     for broker in list(self.brokers):
-    #         if broker in list(self.broker_clients):
-    #             self.broker_clients[broker].set_main()
-
-    # def set_strategies(self, strategy_list: list) -> None:
-    #     """!
-    #     Set's the strategies observers for message passing.
-
-    #     @param strategy_list: A list of strategies
-
-    #     @return None
-    #     """
-    #     self.strategies = strategy_list
-
-    #     for broker in list(self.brokers):
-    #         if broker in list(self.broker_clients):
-    #             self.broker_clients[broker].set_strategies(strategy_list)
+        else:
+            self.data_queue["main"].put("Quit")
 
     def stop(self) -> None:
         """!
@@ -174,12 +132,14 @@ class BrokerProcessManager():
 
         @return None
         """
+        self.cmd_queue.put("Quit")
         for broker_id in list(self.broker_clients):
             logger.debug("Broker Id: %s", broker_id)
             logger.debug("Broker Processes: %s", self.broker_processes)
 
             # FIXME: The program doesn't always have broker_id in self.broker_processes.
             if broker_id in self.broker_processes:
+                self.broker_processes[broker_id].stop()
                 self.broker_processes[broker_id].join()
 
     # ==============================================================================================
@@ -203,22 +163,38 @@ class BrokerProcessManager():
                 self._configure_twsapi_brokers(broker_id, address)
 
     def _configure_twsapi_brokers(self, broker_id: str, address: str) -> None:
-        client_roles = ["order", "downloader"]
+        client_roles = ["downloader"]
         if self.strategies:
+            client_roles.insert(0, "orders")
             client_roles.insert(0, "strategy")
 
         for role in client_roles:
             client_id = broker_id + "_" + role
             self.broker_cmd_queues[client_id] = Queue()
+            self.data_queue[self.client_id] = Queue()
             self.broker_clients[client_id] = BrokerClient(broker_id,
                                                           self.broker_cmd_queues[client_id],
                                                           self.data_queue, self.client_id)
+
             self.broker_clients[client_id].set_address(address)
             self.broker_clients[client_id].set_role(role)
+
+            self.broker_clients[client_id].connect()
+
+            checking_connection = True
+            while checking_connection:
+                msg = self.data_queue[self.client_id].get()
+                if msg == "Connected":
+                    checking_connection = False
+                    self.client_id += 1
+                elif msg == "BrokerNotAvailable":
+                    checking_connection = False
+                    self.broker_clients.pop(client_id)
+                else:
+                    checking_connection = True
+
             if role == "strategy":
                 self.broker_clients[client_id].set_strategies(self.strategies)
-
-            self.client_id += 1
 
     def _start_processes(self) -> None:
         """!

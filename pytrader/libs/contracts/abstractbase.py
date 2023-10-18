@@ -467,23 +467,33 @@ class AbstractBaseContract(DatabaseContract, ABC):
         elif hours_type == "trading":
             hours_list = self.details.tradingHours.split(";")
 
-        for item in hours_list:
-            if "CLOSED" not in item:
-                item_list = item.split("-")
-                begin = item_list[0]
-                end = item_list[1]
+        if isinstance(hours_list, list):
+            for item in hours_list:
+                if "CLOSED" not in item:
+                    item_list = item.split("-")
 
-                logger.debug("Begin Time: %s", begin)
-                logger.debug("End Time: %s", end)
+                    if len(item_list) < 2:
+                        logger.warning("Hours: %s", item_list)
+                    else:
+                        begin = item_list[0]
+                        end = item_list[1]
 
-                begin_dt = datetime.strptime(
-                    begin, "%Y%m%d:%H%M").replace(tzinfo=ZoneInfo(self.details.timeZoneId))
-                end_dt = datetime.strptime(
-                    end, "%Y%m%d:%H%M").replace(tzinfo=ZoneInfo(self.details.timeZoneId))
+                        logger.debug("Begin Time: %s", begin)
+                        logger.debug("End Time: %s", end)
 
-                if hours_type == "liquid":
-                    self.contract_liquid_hours_table.insert([self.id, begin_dt, end_dt],
-                                                            {"begin_dt": [begin_dt]})
-                elif hours_type == "trading":
-                    self.contract_trading_hours_table.insert([self.id, begin_dt, end_dt],
-                                                             {"begin_dt": [begin_dt]})
+                        begin_dt = datetime.strptime(
+                            begin, "%Y%m%d:%H%M").replace(tzinfo=ZoneInfo(self.details.timeZoneId))
+                        end_dt = datetime.strptime(
+                            end, "%Y%m%d:%H%M").replace(tzinfo=ZoneInfo(self.details.timeZoneId))
+
+                        if hours_type == "liquid":
+                            self.contract_liquid_hours_table.insert([self.id, begin_dt, end_dt],
+                                                                    {"begin_dt": [begin_dt]})
+                        elif hours_type == "trading":
+                            self.contract_trading_hours_table.insert([self.id, begin_dt, end_dt],
+                                                                     {"begin_dt": [begin_dt]})
+
+                else:
+                    logger.debug("Hours: %s", item)
+        else:
+            logger.warning("Hours List: %s", hours_list)

@@ -132,8 +132,8 @@ class BrokerContractData(ContractData):
         self.contracts[req_id] = contract_details
         self.notify()
 
-        self.contracts.pop(req_id, None)
-        self.req_ids.pop(req_id, None)
+        #self.contracts.pop(req_id, None)
+        #self.req_ids.pop(req_id, None)
 
 
 class BrokerContractHistoryBeginDate(ContractHistoryBeginDate):

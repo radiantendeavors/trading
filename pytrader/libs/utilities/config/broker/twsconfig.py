@@ -110,7 +110,7 @@ class TwsConfig(AbstractBrokerConfig):
         if git_branch == "main" and port in [7496, 7497, 4001, 4002]:
             return True
 
-        if git_branch != "main" and port in [7497]:
+        if git_branch != "main" and port in [7497, 4002]:
             return True
 
         return False

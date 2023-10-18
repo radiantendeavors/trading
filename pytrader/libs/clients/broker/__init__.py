@@ -34,10 +34,8 @@ from pytrader.libs.clients.broker.ibkr.tws import (IbgDemoAccountClient,
                                                    IbgRealAccountClient,
                                                    TwsDemoAccountClient,
                                                    TwsRealAccountClient)
-# Application Libraries
 from pytrader.libs.system import logging
-
-# 3rd Party Libraries
+from pytrader.libs.utilities.exceptions import BrokerNotAvailable
 
 # ==================================================================================================
 #
@@ -81,13 +79,22 @@ class BrokerClient():
         self.data_queue = data_queue
         self.client_id = client_id
 
+    def connect(self) -> None:
+        """!
+        Attempt to connect to the broker client."""
+        try:
+            self.brokerclient.connect(self.address, self.client_id)
+            self.data_queue[self.client_id].put("Connected")
+        except BrokerNotAvailable as msg:
+            self.data_queue[self.client_id].put("BrokerNotAvailable")
+            logger.error("Broker Not Available: %s", msg)
+
     def run(self) -> None:
         """!
         Runs the BrokerClient Process.
 
         @return None
         """
-        self.brokerclient.connect(self.address, self.client_id)
         self.brokerclient.start(self.role, self.strategies)
 
         broker_connection = True
@@ -127,6 +134,9 @@ class BrokerClient():
         @return None
         """
         self.role = role
+
+    def stop(self) -> None:
+        self.brokerclient.stop()
 
     # ==============================================================================================
     #

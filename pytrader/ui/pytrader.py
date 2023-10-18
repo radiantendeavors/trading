@@ -22,17 +22,13 @@ The main user interface for the trading program.
 @file pytrader/ui/pytrader.py
 
 """
-# System libraries
 import sys
 
-# Application Libraries
 from pytrader import CLIENT_ID
-from pytrader.libs.applications import trader
-# System Library Overrides
+from pytrader.libs.applications.database import DatabaseManager
+from pytrader.libs.applications.trader import ProcessManager
 from pytrader.libs.system import argparse, logging
 from pytrader.libs.utilities import config
-
-# 3rd Party libraries
 
 # ==================================================================================================
 #
@@ -98,6 +94,7 @@ class PyTrader():
         """
         logger.debug("Starting Process Manager")
         try:
+            self._check_database()
             self._start_process_manager()
             return 0
         except KeyboardInterrupt as msg:
@@ -145,11 +142,13 @@ class PyTrader():
                             nargs="*",
                             metavar="PORT",
                             help="List of ports available to connect to.")
+
         help_str = "Disable Broker Initialization, NOTE: This severely limits capabilities"
         broker.add_argument("-d",
                             "--disable-broker",
                             action="store_false",
                             default=True,
+                            dest="enable_broker",
                             help=help_str)
 
     def _add_download_options(self) -> None:
@@ -158,6 +157,10 @@ class PyTrader():
                                       action="store_true",
                                       default=False,
                                       help="Enable Downloader")
+        download_options.add_argument("--enable-options",
+                                      action="store_true",
+                                      default=False,
+                                      help="Enable downloading options information.")
         download_options.add_argument("-t",
                                       "--tickers",
                                       nargs="*",
@@ -186,6 +189,11 @@ class PyTrader():
             default=["USD"],
             choices=currency_choices,
             help="Allowed currencies for securities. (default is ['USD'])")
+        download_options.add_argument("-l",
+                                      "--limit-expirations",
+                                      nargs=1,
+                                      type=int,
+                                      help="Limit to specified number of expirations")
         download_options.add_argument(
             "-r",
             "--regions",
@@ -209,6 +217,10 @@ class PyTrader():
                                       choices=["meeting", "minutes"],
                                       help="Let the system know of Fed Events.")
 
+    def _check_database(self) -> None:
+        dbmgr = DatabaseManager()
+        dbmgr.run()
+
     def _start_process_manager(self) -> None:
         """!
         Starts the Overall Process Manager.
@@ -217,8 +229,18 @@ class PyTrader():
 
         @return None
         """
-        self.process_manager = trader.ProcessManager(self.args)
-        self.process_manager.start(self.args.disable_broker)
+        self.process_manager = ProcessManager(self.args)
+        broker_configured = True
+
+        if self.args.enable_broker:
+            broker_configured = self.process_manager.configure_broker()
+            if self.args.strategies is not None and len(self.args.strategies) > 0:
+                self.process_manager.configure_strategies()
+
+        if self.args.enable_downloader:
+            self.process_manager.configure_downloader(broker_configured)
+
+        self.process_manager.start()
 
     def _stop(self) -> None:
         """!

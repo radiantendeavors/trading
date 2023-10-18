@@ -32,9 +32,12 @@ Implements the TWSAPI Client functions
 #
 # This file requires special pylint rules to match the API format.
 #
+# C0301:
 # C0302: too many lines
+# R0904: too many public methods
+# R0913: too many arguments
 #
-# pylint: disable=C0302
+# pylint: disable=C0301,C0302,R0904,R0913,C0301
 #
 # ==================================================================================================
 from datetime import datetime
@@ -48,7 +51,7 @@ from ibapi.scanner import ScannerSubscription
 
 from pytrader.libs.clients.broker.ibkr.tws.twspacemngr import TwsPacingMngr
 from pytrader.libs.system import logging
-from pytrader.libs.utilities.exceptions import InvalidExchange
+from pytrader.libs.utilities.exceptions import InvalidExchange, InvalidTickType
 
 # ==================================================================================================
 #
@@ -64,7 +67,6 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-#pylint: disable=R0904
 class TwsApiClient(TwsPacingMngr):
     """!
     The Command interface for the TWS API Client.
@@ -79,7 +81,6 @@ class TwsApiClient(TwsPacingMngr):
     # All functions in alphabetical order.
     #
     # ==============================================================================================
-    # pylint: disable=R0913
     def calculate_implied_volatility(
             self,
             req_id: int,
@@ -107,7 +108,6 @@ class TwsApiClient(TwsPacingMngr):
         self.calculateImpliedVolatility(req_id, contract, option_price, under_price,
                                         implied_option_volatility_options)
 
-    # pylint: disable=R0913
     def calculate_option_price(self,
                                req_id: int,
                                contract: Contract,
@@ -626,7 +626,6 @@ class TwsApiClient(TwsPacingMngr):
         """
         self.reqGlobalCancel()
 
-    # pylint: disable=R0913
     def req_head_timestamp(self,
                            req_id: int,
                            contract: Contract,
@@ -671,7 +670,6 @@ class TwsApiClient(TwsPacingMngr):
         """
         self.reqHistogramData(req_id, contract, use_regular_trading_hours, period)
 
-    # pylint: disable=C0301
     def req_historical_data(self,
                             req_id: int,
                             contract: Contract,
@@ -1276,20 +1274,21 @@ class TwsApiClient(TwsPacingMngr):
         @return req_id: The request's identifier
         """
         # Ensure we have the tick type formatted correctly for TWSAPI
-        # match tick_type.lower():
-        #     case "last":
-        #         tick_type = "Last"
-        #     case "alllast":
-        #         tick_type = "AllLast"
-        #     case "bidask":
-        #         tick_type = "BidAsk"
-        #     case "midpoint":
-        #         tick_type = "MidPoint"
-        #     case _:
-        #         raise InvalidTickType("Invalid Tick Type")
+        match tick_type.lower():
+            case "last":
+                tick_type = "Last"
+            case "alllast":
+                tick_type = "AllLast"
+            case "bidask":
+                tick_type = "BidAsk"
+            case "midpoint":
+                tick_type = "MidPoint"
+            case _:
+                raise InvalidTickType("Invalid Tick Type")
 
         logger.debug("ReqId %s Tick-by-Tick %s %s %s %s", req_id, contract, tick_type,
                      number_of_ticks, ignore_size)
+        self.reqTickByTickData(req_id, contract, tick_type, number_of_ticks, ignore_size)
 
     def req_user_info(self, req_id: int) -> None:
         """!
@@ -1336,6 +1335,14 @@ class TwsApiClient(TwsPacingMngr):
 
         @return
         """
+        # Ensure we have a valid log level.
+        if log_level < 1:
+            logger.warning("Invalid Log Level '%s'.  Log Level set to '1'", log_level)
+            log_level = 1
+        elif log_level > 5:
+            logger.warning("Invalid Log Level '%s'.  Log Level set to '5'", log_level)
+            log_level = 5
+
         self.setServerLogLevel(log_level)
 
     def subscribe_to_group_events(self, req_id: int, group_id: int) -> None:
@@ -1360,7 +1367,7 @@ class TwsApiClient(TwsPacingMngr):
                               - contract_id: Any non-combination contract. Examples:
                                    - 8314 for IBM SMART
                                    - 8314 for IBM ARCA
-                              - combo: If any combo is selected (TWSAPI, what does that mean?)
+                              - combo: If any combo is selected
 
         NOTE: This request from the API does not get a TWS response unless an error occurs.
 

@@ -82,7 +82,7 @@ class DownloaderContractDataObserver(ContractDataObserver):
 
         @return None
         """
-        logger.debug("Subject tickers: %s", subject.req_ids)
+        logger.debug9("Subject tickers: %s", subject.req_ids)
         ticker = subject.req_ids[subject.req_id]
         contract_details = subject.contracts[subject.req_id]
         if subject.contract == "Error":

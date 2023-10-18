@@ -23,18 +23,8 @@ Manages the Database.
 @file pytrader/libs/applications/database/__init__.py
 
 """
-# ==================================================================================================
-#
-# pytrader
-#
-# ==================================================================================================
-# System libraries
-
-# 3rd Party libraries
-
-# Application Libraries
-from pytrader.libs.clients.database.sqlalchemy import Database
 from pytrader.libs.clients.database.mysql import MySQLDatabase
+from pytrader.libs.clients.database.sqlalchemy import Database
 from pytrader.libs.system import logging
 
 # ==================================================================================================
@@ -59,7 +49,10 @@ class DatabaseManager():
 
     def initialize_database(self) -> None:
         """!
-        Initializes the database."""
+        Initializes the database.
+
+        @return None
+        """
         database = Database()
         database.create_engine()
         database.create_session()
@@ -110,6 +103,7 @@ class DatabaseManager():
         """
         logger.debug10("Begin Function")
         logger.debug10("End Function")
+
 
 # ==================================================================================================
 #

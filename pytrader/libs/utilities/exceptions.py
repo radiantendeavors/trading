@@ -1,8 +1,8 @@
 """!@package pytrader.libs.utilities.exceptions
 
-Testing Strategy
+Additional Exceptions
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -20,9 +20,6 @@ Testing Strategy
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 @file pytrader/libs/utilities/exceptions.py
-
-Testing Strategy
-
 """
 
 
@@ -71,12 +68,6 @@ class InvalidExchange(BrokerWarning):
 class InvalidTickType(BrokerWarning):
     """!
     Used for invalid tick types.
-    """
-
-
-class RuntimeWarning(Warning):
-    """!
-    Used to track run time warnings.
     """
 
 

@@ -36,10 +36,10 @@ abstract function names, and their variables.
 # C0103: Invalid Name
 # C0104: Bad name (bar)
 # C0302: too many lines
-# R0913: too many arguments
 # R0904: too many public methods
+# R0913: too many arguments
 #
-# pylint: disable=C0103,C0104,C0302,R0913,R0904
+# pylint: disable=C0103,C0104,C0301,C0302,R0913,R0904
 #
 # ==================================================================================================
 import datetime

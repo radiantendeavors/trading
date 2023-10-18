@@ -28,7 +28,6 @@ import multiprocessing
 
 # Application Libraries
 from pytrader.libs.applications import broker, downloader, strategy
-from pytrader.libs.applications.database import DatabaseManager
 from pytrader.libs.system import logging
 
 # ==================================================================================================
@@ -89,17 +88,11 @@ class ProcessManager(metaclass=SingletonMeta):
         @return None
         """
         logger.debug9("Args: %s", args)
-        self.brokers = args.brokers
-        self.address = args.address
-        self.client_id = args.client_id
         self.strategies = args.strategies
-        self.tickers = args.tickers
-        self.asset_classes = args.asset_classes
-        self.currencies = args.currencies
-        self.regions = args.regions
-        self.fed_event = args.fed
-        self.enable_downloader = args.enable_downloader
+        self.args = args
 
+        # Ensure the queues for the strategies take priority over the main, and downloader process
+        # queues.
         if len(self.strategies) > 0:
             for strategy_id in self.strategies:
                 strategy_data_queue = multiprocessing.Queue()
@@ -108,7 +101,36 @@ class ProcessManager(metaclass=SingletonMeta):
         self.reply_queue["downloader"] = multiprocessing.Queue()
         self.reply_queue["main"] = multiprocessing.Queue()
 
-    def start(self, enable_broker: bool) -> None:
+    def configure_broker(self) -> None:
+        self.broker_mngr = broker.BrokerProcessManager(self.args.brokers, self.cmd_queue,
+                                                       self.reply_queue)
+        self.broker_mngr.configure_brokers(self.args.address, self.args.client_id, self.strategies)
+        self._run_broker_process()
+
+        # This ensures we have the next order ID before doing anything else.
+        while self.next_order_id == 0:
+            message = self.reply_queue["main"].get()
+            if message == "Quit":
+                return False
+            if message.get("next_order_id"):
+                self.next_order_id = message["next_order_id"]
+
+        logger.debug("Next Order Id: %s", self.next_order_id)
+        return True
+
+    def configure_downloader(self, broker_available: bool) -> None:
+        self.downloader_mngr = downloader.DownloadProcess(self.cmd_queue,
+                                                          self.reply_queue["downloader"])
+        self.downloader_mngr.enable_historical_downloader(self.args, broker_available)
+        self.downloader_process = multiprocessing.Process(target=self.downloader_mngr.run, args=())
+
+    def configure_strategies(self) -> None:
+        self.strategy_mngr = strategy.StrategyProcess(self.cmd_queue, self.reply_queue,
+                                                      self.next_order_id, self.args.fed_event)
+        self.strategy_process = multiprocessing.Process(target=self.strategy_mngr.run,
+                                                        args=(self.strategies, ))
+
+    def start(self) -> None:
         """!
         Starts the various Subprocesses
 
@@ -116,17 +138,12 @@ class ProcessManager(metaclass=SingletonMeta):
 
         @return None
         """
-        self._run_database_mngr()
-
-        if enable_broker:
-            self._configure_broker()
-
         self._run_downloader_process()
 
         # If we disabled the broker, there is no point in running the strategies.
-        if self.strategies is not None and enable_broker:
+        if self.strategies is not None and self.args.enable_broker and len(self.strategies) > 0:
             logger.debug("Starting Straties: %s", self.strategies)
-            self._run_strategy_process(self.strategies, self.next_order_id)
+            self._run_strategy_process()
 
         self.run()
 
@@ -157,42 +174,14 @@ class ProcessManager(metaclass=SingletonMeta):
     # Private Functions
     #
     # ==============================================================================================
-    def _configure_broker(self) -> None:
-        self.broker_mngr = broker.BrokerProcessManager(self.brokers, self.cmd_queue,
-                                                       self.reply_queue)
-        self.broker_mngr.configure_brokers(self.address, self.client_id, self.strategies)
-        self._run_broker_process()
-
-        # This ensures we have the next order ID before doing anything else.
-        while self.next_order_id == 0:
-            message = self.reply_queue["main"].get()
-            if message.get("next_order_id"):
-                self.next_order_id = message["next_order_id"]
-
-        logger.debug("Next Order Id: %s", self.next_order_id)
-
     def _run_broker_process(self) -> None:
         self.broker_process = multiprocessing.Process(target=self.broker_mngr.run, args=())
         self.broker_process.start()
 
-    def _run_database_mngr(self) -> None:
-        dbmgr = DatabaseManager()
-        dbmgr.run()
-
     def _run_downloader_process(self) -> None:
-        self.downloader_mngr = downloader.DownloadProcess(self.cmd_queue,
-                                                          self.reply_queue["downloader"])
-        if self.enable_downloader:
-            self.downloader_mngr.enable_historical_downloader(self.asset_classes, self.regions,
-                                                              self.currencies, self.tickers)
-        self.downloader_process = multiprocessing.Process(target=self.downloader_mngr.run, args=())
         self.downloader_process.start()
 
-    def _run_strategy_process(self, strategy_list: list, next_order_id: int) -> None:
-        self.strategy_mngr = strategy.StrategyProcess(self.cmd_queue, self.reply_queue,
-                                                      next_order_id, self.fed_event)
-        self.strategy_process = multiprocessing.Process(target=self.strategy_mngr.run,
-                                                        args=(strategy_list, ))
+    def _run_strategy_process(self) -> None:
         self.strategy_process.start()
 
     def _stop_broker_process(self):
@@ -203,7 +192,8 @@ class ProcessManager(metaclass=SingletonMeta):
             logger.error("AttributeError Stopping Broker Processes: %s", msg)
 
     def _stop_downloader_process(self) -> None:
-        self.downloader_process.join()
+        if self.downloader_process is not None:
+            self.downloader_process.join()
 
     def _stop_strategy_process(self):
         try:
