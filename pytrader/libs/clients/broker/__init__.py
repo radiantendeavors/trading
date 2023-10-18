@@ -6,7 +6,7 @@ Creates a basic interface for interacting with a broker
 
 Creates a basic interface for interacting with a broker
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -24,9 +24,6 @@ Creates a basic interface for interacting with a broker
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 """
-# System Libraries
-import multiprocessing
-import threading
 from multiprocessing import Queue
 from typing import Optional
 
