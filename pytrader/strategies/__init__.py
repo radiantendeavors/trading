@@ -26,21 +26,17 @@ Provides the Base Class for a Strategy.
 """
 # System libraries
 import datetime
-
 from abc import ABCMeta, abstractmethod
 from multiprocessing import Queue
 from threading import Event
 
 # 3rd Party libraries
 from ibapi import contract
-
+# from pytrader.libs import contracts
+# Application Libraries
+from pytrader.libs import bars, ticks
 # System Library Overrides
 from pytrader.libs.system import logging
-
-# Application Libraries
-from pytrader.libs import bars
-# from pytrader.libs import contracts
-from pytrader.libs import ticks
 
 # ==================================================================================================
 #
@@ -492,7 +488,8 @@ class Strategy():
     def _process_5sec_rtb(self, bar_data):
         ticker, bar_size = self._process_bars(bar_data)
 
-        for item in self.bar_sizes:
+        # Ensure we do the smallest bar size last, since it is used to trigger trades.
+        for item in reversed(self.bar_sizes):
             new_bar = self.bars[ticker][bar_size].rescale(item)
 
             if new_bar:
