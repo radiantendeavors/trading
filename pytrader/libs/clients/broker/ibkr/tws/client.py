@@ -32,12 +32,14 @@ Implements the TWSAPI Client functions
 #
 # This file requires special pylint rules to match the API format.
 #
-# C0301:
+# C0301: Line too long
 # C0302: too many lines
 # R0904: too many public methods
 # R0913: too many arguments
+# E0611: No name in module (PyPi's version of ibapi is 985.01.  This program requires 10.25.01 which
+#        contain these functions.)
 #
-# pylint: disable=C0301,C0302,R0904,R0913,C0301
+# pylint: disable=C0301,C0302,R0904,R0913,C0301,E0611
 #
 # ==================================================================================================
 from datetime import datetime

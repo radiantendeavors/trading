@@ -138,8 +138,18 @@ class DownloaderContractOptionParametersObserver(ContractOptionParameterObserver
 
 
 class DownloaderMarketDataObserver(MarketDataObserver):
+    """!
+    Downloader observer for market data.
+    """
 
     def update(self, subject: Subject) -> None:
+        """!
+        Sends the market data to the downloader process.
+
+        @param subject:
+
+        @return None
+        """
         if len(self.tickers) > 0:
             if subject.ticker in self.tickers:
                 message = {"market_data": {subject.ticker: subject.market_data}}
@@ -147,8 +157,18 @@ class DownloaderMarketDataObserver(MarketDataObserver):
 
 
 class DownloaderOrderDataObserver(OrderDataObserver):
+    """!
+    Downloader observer for orders
+    """
 
     def update(self, subject: Subject) -> None:
+        """!
+        Sends order status updates to the downloader process.
+
+        @param subject:
+
+        @return None
+        """
         if len(self.order_ids) > 0:
             if subject.order_id in self.order_ids:
                 message = {"order_status": subject.order_status}
@@ -157,20 +177,34 @@ class DownloaderOrderDataObserver(OrderDataObserver):
 
 class DownloaderOrderIdObserver(OrderIdObserver):
     """!
-    Observer for historical bar data.
+    Downloader observer for order ids
     """
 
     def update(self, subject: Subject) -> None:
         """!
-        Saves the historical bar data to the database.
+        Sends the order ids to the downloader process.
+
+        @param subject:
+
+        @return None
         """
         msg = {"next_order_id": subject.order_id}
         self.msg_queue.put(msg)
 
 
 class DownloaderRealTimeBarObserver(RealTimeBarObserver):
+    """!
+    Downloader Observer for Real Time Bars.
+    """
 
     def update(self, subject: Subject) -> None:
+        """!
+        Sends the real time bars to the downloader process.
+
+        @param subject:
+
+        @return None
+        """
         if subject.ticker in self.tickers:
             msg = {"real_time_bars": {subject.ticker: {"rtb": subject.ohlc_bar}}}
             self.msg_queue.put(msg)

@@ -1,11 +1,10 @@
 """!
 @package pytrader.libs.clients.database.mysql.ibkr.ind_opt_contracts
 
-Provides the database client
+Provides classes for interacting with index option related tables.
 
-@author Geoff S. derber
-@version HEAD
-@date 2022
+@author G S Derber
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -24,9 +23,6 @@ Provides the database client
 
 @file pytrader/libs/clients/database/mysql/ibkr/stk_opt_contracts.py
 """
-from datetime import date, timedelta
-from typing import Optional
-
 from pytrader.libs.clients.database.mysql.ibkr.option_contracts import (
     IbkrOptionContractDetails, IbkrOptionContracts, IbkrOptionHistoryBeginDate,
     IbkrOptionInvalidContracts, IbkrOptionLiquidHours, IbkrOptionNoHistory,

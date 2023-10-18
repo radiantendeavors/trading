@@ -102,6 +102,11 @@ class ProcessManager(metaclass=SingletonMeta):
         self.reply_queue["main"] = multiprocessing.Queue()
 
     def configure_broker(self) -> None:
+        """!
+        Configures the broker process manager
+
+        @return None
+        """
         self.broker_mngr = broker.BrokerProcessManager(self.args.brokers, self.cmd_queue,
                                                        self.reply_queue)
         self.broker_mngr.configure_brokers(self.args.address, self.args.client_id, self.strategies)
@@ -119,12 +124,24 @@ class ProcessManager(metaclass=SingletonMeta):
         return True
 
     def configure_downloader(self, broker_available: bool) -> None:
+        """!
+        Configures the Downloader Process Manager.
+
+        @param broker_available: Informs the Downloader Process Manager if a broker is available.
+
+        @return None
+        """
         self.downloader_mngr = downloader.DownloadProcess(self.cmd_queue,
                                                           self.reply_queue["downloader"])
         self.downloader_mngr.enable_historical_downloader(self.args, broker_available)
         self.downloader_process = multiprocessing.Process(target=self.downloader_mngr.run, args=())
 
     def configure_strategies(self) -> None:
+        """!
+        Configures the strategy process managers
+
+        @return None
+        """
         self.strategy_mngr = strategy.StrategyProcess(self.cmd_queue, self.reply_queue,
                                                       self.next_order_id, self.args.fed_event)
         self.strategy_process = multiprocessing.Process(target=self.strategy_mngr.run,

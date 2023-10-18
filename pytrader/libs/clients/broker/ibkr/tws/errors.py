@@ -29,19 +29,6 @@ Provides the client for Interactive Brokers TWSAPI.
 This is the only file to not use snake_case for functions or variables.  This is to match TWSAPI
 abstract function names, and their variables.
 """
-# ==================================================================================================
-#
-# This file requires special pylint rules to match the API format.
-#
-# C0103: Invalid Name
-# C0104: Bad name (bar)
-# C0302: too many lines
-# R0904: too many public methods
-# R0913: too many arguments
-#
-# pylint: disable=C0103,C0104,C0302,R0913,R0904
-#
-# ==================================================================================================
 import datetime
 import time
 
@@ -254,9 +241,9 @@ class TwsErrors(EWrapper, EClient, BaseBroker):
 
     def _process_code_321(self, req_id: int, error_string: str) -> None:
         logger.debug("Req Id Error Code 321: %s", req_id)
-        match error_string:
-            case "Error validating request.-'bH' : cause - The API interface is currently in Read-Only mode.":
-                msg = error_string.split(" - ")[1]
+        msg = error_string.split(" - ")[1]
+        match msg:
+            case "The API interface is currently in Read-Only mode.":
                 logger.critical(msg)
 
     def _process_order_error(self, req_id: int, error_code: int, error_string: str,

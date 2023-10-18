@@ -136,6 +136,11 @@ class BrokerClient():
         self.role = role
 
     def stop(self) -> None:
+        """!
+        Stops the Broker Client Process
+
+        @return None
+        """
         self.brokerclient.stop()
 
     # ==============================================================================================

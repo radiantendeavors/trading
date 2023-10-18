@@ -1,10 +1,9 @@
 """!
-@package pytrader.libs.clients.database.ibkr
+@package pytrader.libs.clients.database.sqlachemy.base
 
-Defines the database schema, and creates the database tables for Interactive Brokers related
-information.
+Provides the base class for all database classes.
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -22,14 +21,10 @@ information.
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file pytrader/libs/clients/database/ibkr.py
+@file pytrader/libs/clients/database/sqlalchemy/base.py
 """
-# System Libraries
-
-# 3rd Party Libraries
 from sqlalchemy.orm import DeclarativeBase
 
-# Application Libraries
 from pytrader.libs.system import logging
 
 # ==================================================================================================
@@ -40,9 +35,6 @@ from pytrader.libs.system import logging
 ## The base logger.
 logger = logging.getLogger(__name__)
 
-# bigint = Annotated(int, "bigint")
-# my_metadata = MetaData()
-
 
 # ==================================================================================================
 #
@@ -50,8 +42,7 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class Base(DeclarativeBase):
-    # metadata = my_metadata
-
-    # type_annotation_map = {bigint: BigInteger()}
-
+    """!
+    Base Class for all Database Classes.
+    """
     pass

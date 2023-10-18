@@ -1,11 +1,10 @@
 """!
-@package pytrader.libs.clients.database
+@package pytrader.libs.clients.database.sqlalchemy
 
 Defines the database schema, and creates the database tables.
 
-@author Geoff S. Derber
-@version HEAD
-@date 2022
+@author G S Derber
+@date 2022-2023
 @copyright GNU Affero General Public License
 
     This program is free software: you can redistribute it and/or modify
@@ -22,15 +21,11 @@ Defines the database schema, and creates the database tables.
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-@file pytrader/libs/clients/database/__init__.py
+@file pytrader/libs/clients/database/sqlalchemy/__init__.py
 """
-# System Libraries
-
-# 3rd Party Libraries
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-# Application Libraries
 from pytrader.libs.clients.database.sqlalchemy import ibkr
 from pytrader.libs.system import logging
 from pytrader.libs.utilities import config
@@ -50,13 +45,29 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class Database(ibkr.IbkrDBTables):
+    """!
+    Manages the various database tables.
+    """
 
-    def __init__(self):
+    db_session = None
+    engine = None
+
+    def __init__(self) -> None:
+        """!
+        Creates an instance of the Database Class.
+
+        @return None
+        """
         conf = config.Config()
         conf.read_config()
         self.database_url = conf.set_database_url()
 
     def create_session(self) -> None:
+        """!
+        Creates a database session.
+
+        @return None
+        """
         if self.engine is None:
             self.create_engine()
 
@@ -65,5 +76,10 @@ class Database(ibkr.IbkrDBTables):
         #                           autoflush=False,
         #                           expire_on_commit=False)
 
-    def create_engine(self):
+    def create_engine(self) -> None:
+        """!
+        Creates the database engine.
+
+        @return None
+        """
         self.engine = create_engine(self.database_url)

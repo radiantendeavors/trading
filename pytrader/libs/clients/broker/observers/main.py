@@ -47,12 +47,12 @@ logger = logging.getLogger(__name__)
 # ==================================================================================================
 class MainOrderIdObserver(OrderIdObserver):
     """!
-    Observer for historical bar data.
+    Main Observer for Order Ids
     """
 
     def update(self, subject: Subject) -> None:
         """!
-        Saves the historical bar data to the database.
+        Sends order ids to the main process
         """
         msg = {"next_order_id": subject.order_id}
         self.msg_queue.put(msg)

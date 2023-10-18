@@ -22,17 +22,11 @@ Provides the observer classes for Interactive Brokers TWS
 
 @file pytrader/libs/applications/broker/observers/base.py
 """
-# System Libraries
 import multiprocessing
 import queue
 
-from pytrader.libs.events import ContractData, Observer, Subject
-# Application Libraries
+from pytrader.libs.events import Observer
 from pytrader.libs.system import logging
-
-# 3rd Party Libraries
-
-# Conditional Libraries
 
 # ==================================================================================================
 #
