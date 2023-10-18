@@ -38,8 +38,9 @@ Implements the TWSAPI Client functions
 # R0913: too many arguments
 # E0611: No name in module (PyPi's version of ibapi is 985.01.  This program requires 10.25.01 which
 #        contain these functions.)
+# E1101: Instance of ____ has no member: See E0611
 #
-# pylint: disable=C0301,C0302,R0904,R0913,C0301,E0611
+# pylint: disable=C0301,C0302,R0904,R0913,C0301,E0611,E1101
 #
 # ==================================================================================================
 from datetime import datetime
@@ -211,22 +212,19 @@ class TwsApiClient(TwsPacingMngr):
         """
         self.cancelNewsBulletins()
 
-    def cancel_order(self, order_id: int, manual_order_cancel_time: Optional[str] = "") -> None:
+    def cancel_order(self, order_id: int) -> None:
         """!
         Cancels an active order placed by from the same API client ID.
         Note: API clients cannot cancel individual orders placed by other clients. Only
         reqGlobalCancel is available.
 
         @param order_id: The Order Id to cancel.
-        @param manual_order_cancel_time: FIXME: This is not documented by the TWSAPI.  IBAPI says to
-                                         set the value to an empty string.
-
         @return None
         """
+        # TWSAPI has an additional parameter 'manual_order_cancel_time'
+        # This is not documented by the TWSAPI other than to  set the value to an empty string.
         # Ensure that manual_order_cancel_time is an empty string
-        manual_order_cancel_time = ""
-
-        self.cancelOrder(order_id, manual_order_cancel_time)
+        self.cancelOrder(order_id, "")
 
     def cancel_pnl(self, req_id: int) -> None:
         """!

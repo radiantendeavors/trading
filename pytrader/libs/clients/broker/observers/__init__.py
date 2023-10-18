@@ -35,6 +35,5 @@ from pytrader.libs.clients.broker.observers.downloader import (
     DownloaderRealTimeBarObserver)
 from pytrader.libs.clients.broker.observers.main import MainOrderIdObserver
 from pytrader.libs.clients.broker.observers.strategy import (
-    StrategyBarDataObserver, StrategyContractDataObserver,
     StrategyMarketDataObserver, StrategyOrderDataObserver,
     StrategyRealTimeBarObserver)

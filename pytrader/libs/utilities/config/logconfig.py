@@ -1,34 +1,31 @@
-#! /usr/bin/env python3
-# ==================================================================================================
-#
-#
-# Config:
-#
-#    Sets program configuration
-#
-# ==================================================================================================
+"""!@package pytrader.libs.utilities.config.logconfig
 
-# ==================================================================================================
-#
-# Libraries
-#
-# ==================================================================================================
-# System Libraries
+Reads the config files.
 
-# System Overrides
-from pytrader.libs.system import logging
-# Other Application Libraries
-from pytrader import logger, LOGLEVEL, consolehandler
+@author G S Derber
+@date 2022-2023
+@copyright GNU Affero General Public License
 
-# ==================================================================================================
-#
-# Global Variables
-#
-# ==================================================================================================
-"""!
-@var logger
-The base logger.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+@file pytrader/libs/utilities/config/__init__.py
 """
+import argparse
+
+from pytrader import LOGLEVEL, consolehandler, logger
+from pytrader.libs.system import logging
 
 
 # ==================================================================================================
@@ -37,12 +34,21 @@ The base logger.
 #
 # ==================================================================================================
 class LogConfig():
+    """!
+    Class for parsing logging related settings.
+    """
 
-    def __init__(self, *args, **kwargs):
-        self.loglevel = LOGLEVEL
-        return None
+    loglevel = LOGLEVEL
 
-    def read_config(self, *args, **kwargs):
+    def read_config(self, *args, **kwargs) -> None:
+        """!
+        Parses the config for logging related settings.
+
+        @param *args:
+        @param **kwargs:
+
+        @return None
+        """
         config = kwargs["config"]
 
         loglevels = {'debug': 10, 'info': 20, 'warning': 30, 'error': 40, 'critical': 50}
@@ -52,9 +58,15 @@ class LogConfig():
                 self.loglevel = loglevels[config["logging"]["loglevel"]]
             if "verbosity" in config["logging"]:
                 self.loglevel = 11 - min(10, config["logging"]["verbosity"])
-        return None
 
-    def update_loglevel(self, args):
+    def update_loglevel(self, args: argparse.Namespace) -> None:
+        """!
+        Updates the desired loglevel
+
+        @param args:
+
+        @return None
+        """
         if args.debug:
             self.loglevel = 1
         elif args.quiet > 0:
@@ -69,9 +81,15 @@ class LogConfig():
             if not isinstance(numeric_level, int):
                 raise ValueError('Invalid log level: %s' % args.loglevel)
             self.loglevel = numeric_level
-        return None
 
-    def set_loglevel(self, args):
+    def set_loglevel(self, args: argparse.Namespace) -> None:
+        """!
+        Sets the loglevel
+
+        @param args:
+
+        @return None
+        """
         self.update_loglevel(args)
         logger.setLevel(self.loglevel)
         consolehandler.setLevel(self.loglevel)
@@ -81,4 +99,3 @@ class LogConfig():
         logger.debug("Arguments Processed")
 
         logger.debug10("End Function")
-        return None

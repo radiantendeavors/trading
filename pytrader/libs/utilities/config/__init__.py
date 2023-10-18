@@ -27,8 +27,7 @@ import os
 import yaml
 
 from pytrader.libs.system import logging
-from pytrader.libs.utilities.config import (broker, database, logconfig,
-                                            polygon, redditconfig)
+from pytrader.libs.utilities.config import broker, database, logconfig
 
 # ==================================================================================================
 #
@@ -51,8 +50,7 @@ with open(config_file, 'r', encoding='utf-8') as config_stream:
 # Classes
 #
 # ==================================================================================================
-class Config(broker.BrokerConfig, database.DatabaseConfig, logconfig.LogConfig,
-             polygon.PolygonConfig, redditconfig.RedditConfig):
+class Config(broker.BrokerConfig, database.DatabaseConfig, logconfig.LogConfig):
     """!
     Class for reading the config file.
     """
@@ -83,4 +81,3 @@ class Config(broker.BrokerConfig, database.DatabaseConfig, logconfig.LogConfig,
         broker.BrokerConfig.read_config(self, config=config)
         logconfig.LogConfig.read_config(self, config=config)
         database.DatabaseConfig.read_config(self, config=config)
-        polygon.PolygonConfig.read_config(self, config=config)
