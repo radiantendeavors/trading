@@ -17,7 +17,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install "git+https://github.com/InteractiveBrokers/tws-api.git/#subdirectory=source/pythonclient" pandas pylint requests requests-cache sqlalchemy yfinance PyYAML pygit2 pymysql
+        pip install ibapi pandas pylint requests requests-cache sqlalchemy yfinance PyYAML pygit2 pymysql
     - name: Analysing the code with pylint
       run: |
         pylint -d W0511 $(git ls-files '*.py')
