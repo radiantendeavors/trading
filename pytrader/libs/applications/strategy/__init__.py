@@ -2,7 +2,7 @@
 
 Provides the application process manager
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -19,7 +19,7 @@ Provides the application process manager
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file pytrader/libs/applications/trader/__init__.py
+@file pytrader/libs/applications/strategy/__init__.py
 """
 # Standard Libraries
 import importlib
