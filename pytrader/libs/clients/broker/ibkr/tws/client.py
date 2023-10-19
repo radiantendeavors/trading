@@ -565,8 +565,18 @@ class TwsApiClient(TwsPacingMngr):
         """
         self.add_command(req_id, "contract_details")
         self.contract_details_data_wait()
+        logger.debug("Requesting Contract Details for %s", contract.symbol)
+
+        if contract.lastTradeDateOrContractMonth:
+            logger.debug("Expiration: %s", contract.lastTradeDateOrContractMonth)
+        if contract.strike:
+            logger.debug("Strike: %s", contract.strike)
+        if contract.right:
+            logger.debug("Right: %s", contract.right)
         self.reqContractDetails(req_id, contract)
+
         self.contract_details_data_req_timestamp = datetime.now()
+        logger.debug("Contract Details Requested.")
 
     def req_current_time(self) -> None:
         """!

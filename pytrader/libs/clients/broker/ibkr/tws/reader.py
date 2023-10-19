@@ -278,6 +278,7 @@ class TwsReader(TwsErrors):
 
         @return None
         """
+        logger.debug("Contract Details Received for %s", contractDetails.contract.localSymbol)
         self.remove_command(reqId)
         self.contract_subjects.set_contract_details(reqId, contractDetails)
 

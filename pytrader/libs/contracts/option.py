@@ -73,7 +73,7 @@ class OptionContract(AbstractBaseContract):
         self.contract.currency = currency
         self.contract.lastTradeDateOrContractMonth = expiry
         self.contract.multiplier = multiplier
-        self.contract.right = right
+        self.contract.right = right[0]
         self.contract.strike = strike
         #self.contract.localSymbol =
 
