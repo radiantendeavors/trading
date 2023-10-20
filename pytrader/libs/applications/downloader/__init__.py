@@ -187,7 +187,7 @@ class DownloadProcess():
         logger.debug9("Expirations: %s", expirations)
         logger.debug9("Strikes: %s", strikes)
 
-        expirations.sort()
+        expirations.sort(reverse=True)
         strikes.sort()
 
         if expirations:
