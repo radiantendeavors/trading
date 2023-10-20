@@ -21,21 +21,14 @@ Manages the configuration for TWS API clients
 
 @file pytrader/libs/applications/broker/__init__.py
 """
-# System Libraries
-
-# 3rd Party Libraries
-
-# Other Application Libraries
 from pytrader import git_branch
+from pytrader.libs.clients.broker.ibkr.tws.ibgdemo import IbgDemoAccountClient
+from pytrader.libs.clients.broker.ibkr.tws.ibgreal import IbgRealAccountClient
 from pytrader.libs.clients.broker.ibkr.tws.twsdemo import TwsDemoAccountClient
 from pytrader.libs.clients.broker.ibkr.tws.twsreal import TwsRealAccountClient
-# Application Libraries
-# System Library Overrides
 from pytrader.libs.system import logging
 from pytrader.libs.utilities.config.broker.abstractbrokerconfig import \
     AbstractBrokerConfig
-
-# Conditional Libraries
 
 # ==================================================================================================
 #
@@ -76,8 +69,8 @@ class TwsConfig(AbstractBrokerConfig):
         self.potential_clients = {
             "twsreal": TwsRealAccountClient,
             "twsdemo": TwsDemoAccountClient,
-            "ibgreal": TwsRealAccountClient,
-            "ibgdemo": TwsDemoAccountClient
+            "ibgreal": IbgRealAccountClient,
+            "ibgdemo": IbgDemoAccountClient
         }
         self.address = address
 
@@ -114,7 +107,7 @@ class TwsConfig(AbstractBrokerConfig):
 
         @return bool: True if the port is available, False if it is not available.
         """
-        if git_branch == "main" and port in [7496]:
+        if git_branch == "main" and port in [7496, 7497, 4001, 4002]:
             return True
 
         if git_branch != "main" and port in [7497]:

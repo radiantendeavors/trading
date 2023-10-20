@@ -25,20 +25,14 @@ Creates a basic interface for interacting with a broker
 
 """
 # System Libraries
+import multiprocessing
 import threading
-
 from queue import Queue
-
-# 3rd Party Libraries
+from typing import Optional
 
 # Application Libraries
-# System Library Overrides
-from pytrader.libs.system import logging
-
-# Other Application Libraries
 from pytrader.libs.clients.broker.ibkr.tws.reader import TwsReader
-
-# Conditional Libraries
+from pytrader.libs.system import logging
 
 # ==================================================================================================
 #
@@ -60,10 +54,10 @@ class TwsThreadMngr(TwsReader):
     """
 
     def __init__(self):
-        super().__init__()
         self.api_thread = threading.Thread(target=self.run, daemon=True)
+        super().__init__()
 
-    def start(self, thread_queue: Queue) -> None:
+    def start(self, role: str, data_queue: dict, queue: Queue, strategies: Optional[list]) -> None:
         """!
         Starts the api thread.
 
@@ -71,8 +65,25 @@ class TwsThreadMngr(TwsReader):
 
         @return None
         """
-        self.queue = thread_queue
+        self.data_queue = data_queue
+        logger.debug("Process Name: %s", multiprocessing.current_process().name)
+        logger.debug("Thread Name: %s", threading.current_thread().name)
         self.api_thread.start()
+        logger.debug("Process Name: %s", multiprocessing.current_process().name)
+        logger.debug("Thread Name: %s", threading.current_thread().name)
+
+        logger.debug(self.data_queue)
+
+        logger.debug("Role: %s", role)
+        if role == "strategy":
+            self.config_strategy_observers(strategies)
+        if role == "downloader":
+            self.config_downloader_observers()
+
+        self.config_broker_observers(role, queue)
+        self.config_main_observers()
+
+        logger.debug("Starting Thread")
 
     def stop(self) -> None:
         """!

@@ -36,16 +36,15 @@ Provides a wrapper arround pythons argparse library, with additional functionali
 #
 # ==================================================================================================
 # System Libraries
-from argparse import ArgumentParser, ArgumentError
+from argparse import ArgumentError, ArgumentParser
+
+# Other Application Libraries
+from pytrader import CLIENT_ID, DEBUG, __version__
 
 # 3rd Party Libraries
 
 # Application Libraries
 # System Library Overrides
-
-# Other Application Libraries
-from pytrader import __version__, DEBUG, CLIENT_ID
-from pytrader.libs.utilities.config.broker import BROKERS
 
 # ==================================================================================================
 #
@@ -101,33 +100,6 @@ class ArgParser(ArgumentParser):
                           action='version',
                           help='Print version information and exit',
                           version='%(prog)s ' + __version__)
-
-    def add_broker_options(self) -> None:
-        """!
-        Adds options related to the broker.
-
-        @return None
-        """
-        broker_list = list(BROKERS)
-        help_str = (f"Brokers (Default: {broker_list})\n"
-                    f"If 'backtest' is chosen, all other brokers will be ignored.")
-        self.add_argument("-b",
-                          "--broker",
-                          nargs="*",
-                          choices=broker_list,
-                          default=[broker_list[0]],
-                          help=help_str)
-        self.add_argument("-c",
-                          "--client-id",
-                          default=CLIENT_ID,
-                          help=f"Broker Client Id (Default: {CLIENT_ID})")
-
-        default_address = "127.0.0.1"
-        self.add_argument("-a",
-                          "--address",
-                          default=default_address,
-                          help=f"The Broker Address (Default: {default_address})")
-        self.add_argument("-p", "--ports", nargs="*", help="List of ports available to connect to.")
 
     def add_logging_option(self):
         """!

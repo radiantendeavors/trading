@@ -1,9 +1,9 @@
 """!
-@package pytrader.libs.clients.broker.ibkr.tws
+@package pytrader.libs.clients.broker.ibkr.tws.reader
 
-Provides the client for Interactive Brokers TWSAPI.
+Reads data received from TWSAPI.
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -22,9 +22,9 @@ Provides the client for Interactive Brokers TWSAPI.
 
   Creates a basic interface for interacting with Interactive Brokers.
 
-@file pytrader/libs/clients/broker/ibkr/tws/__init__.py
+@file pytrader/libs/clients/broker/ibkr/tws/reader.py
 
-Provides the client for Interactive Brokers TWSAPI.
+Reads data received from TWSAPI.
 
 This is the only file to not use snake_case for functions or variables.  This is to match TWSAPI
 abstract function names, and their variables.
@@ -36,33 +36,25 @@ abstract function names, and their variables.
 # C0103: Invalid Name
 # C0104: Bad name (bar)
 # C0302: too many lines
-# R0913: too many arguments
 # R0904: too many public methods
+# R0913: too many arguments
 #
-# pylint: disable=C0103,C0104,C0302,R0913,R0904
+# pylint: disable=C0103,C0104,C0301,C0302,R0913,R0904
 #
 # ==================================================================================================
-# Standard Libraries
 import datetime
-import threading
-
 from decimal import Decimal
 
-# 3rd Party Libraries
-from ibapi.client import EClient
 from ibapi.commission_report import CommissionReport
-from ibapi.common import (BarData, TickAttribLast, TickAttribBidAsk, TickAttrib)
+from ibapi.common import BarData, TickAttrib, TickAttribBidAsk, TickAttribLast
 from ibapi.contract import Contract, ContractDetails, DeltaNeutralContract
 from ibapi.execution import Execution
 from ibapi.order import Order
 from ibapi.order_state import OrderState
-from ibapi.utils import (iswrapper)
-from ibapi.wrapper import EWrapper
+from ibapi.utils import iswrapper
 
-# Standard Library Overrides
+from pytrader.libs.clients.broker.ibkr.tws.errors import TwsErrors
 from pytrader.libs.system import logging
-
-# Other Libraries
 
 # ==================================================================================================
 #
@@ -78,40 +70,10 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class TwsReader(EWrapper, EClient):
+class TwsReader(TwsErrors):
     """!
     Serves as the client interface for Interactive Brokers
     """
-
-    ## Used to track the number of available market data lines
-    __available_market_data_lines = 100
-
-    ## Used to track available streams of level 2 data
-    __available_deep_data_allotment = 3
-
-    def __init__(self) -> None:
-        """!
-        Initialize the IbkrClient class
-
-        @return None
-        """
-        EWrapper.__init__(self)
-        EClient.__init__(self, self)
-
-        ## Used to track available accounts
-        self.accounts = []
-
-        ## Used to track if account list is available
-        self.accounts_available = threading.Event()
-
-        ## Used to store any data requested using a request ID.
-        self.data = {}
-
-        ## Used to track if requested data is available
-        self.data_available = {}
-
-        ##
-        self.queue = None
 
     # ==============================================================================================
     #
@@ -194,9 +156,6 @@ class TwsReader(EWrapper, EClient):
 
         @return None
         """
-        self.data[reqId] = {"account": account, "tag": tag, "value": value, "currency": currency}
-        self.data_available[reqId].set()
-
         logger.debug("Account Summary. ReqId: %s\nAccount: %s, Tag: %s, Value: %s, Currency: %s",
                      reqId, account, tag, value, currency)
 
@@ -308,7 +267,7 @@ class TwsReader(EWrapper, EClient):
         logger.warning("Connection Closed for client id: %s", self.clientId)
 
     @iswrapper
-    def contractDetails(self, reqId: int, contractDetails: ContractDetails):
+    def contractDetails(self, reqId: int, contractDetails: ContractDetails) -> None:
         """!
         Receives the full contract's definitions This method will return all contracts matching the
         requested via EClientSocket::reqContractDetails. For example, one can obtain the whole
@@ -317,68 +276,10 @@ class TwsReader(EWrapper, EClient):
         @param reqId: The Unique Reuest Identifier
         @param contractDetails: The details for the contract
 
-        @return
+        @return None
         """
-        logger.debug6("Contract Info Received")
-        logger.debug6("Contract ID: %s", contractDetails.contract.conId)
-        logger.debug6("Symbol: %s", contractDetails.contract.symbol)
-        logger.debug6("Security Type: %s", contractDetails.contract.secType)
-        logger.debug6("Exchange: %s", contractDetails.contract.exchange)
-        logger.debug6("Currency: %s", contractDetails.contract.currency)
-        logger.debug6("Local Symbol: %s", contractDetails.contract.localSymbol)
-        logger.debug6("Primary Exchange: %s", contractDetails.contract.primaryExchange)
-        logger.debug6("Trading Class: %s", contractDetails.contract.tradingClass)
-        logger.debug6("Security ID Type: %s", contractDetails.contract.secIdType)
-        logger.debug6("Security ID: %s", contractDetails.contract.secId)
-        #logger.debug("Description: %s", contractDetails.contract.description)
-
-        logger.debug6("Contract Detail Info")
-        logger.debug6("Market name: %s", contractDetails.marketName)
-        logger.debug6("Min Tick: %s", contractDetails.minTick)
-        logger.debug6("OrderTypes: %s", contractDetails.orderTypes)
-        logger.debug6("Valid Exchanges: %s", contractDetails.validExchanges)
-        logger.debug6("Underlying Contract ID: %s", contractDetails.underConId)
-        logger.debug6("Long name: %s", contractDetails.longName)
-        logger.debug6("Industry: %s", contractDetails.industry)
-        logger.debug6("Category: %s", contractDetails.category)
-        logger.debug6("Subcategory: %s", contractDetails.subcategory)
-        logger.debug6("Time Zone: %s", contractDetails.timeZoneId)
-        logger.debug6("Trading Hours: %s", contractDetails.tradingHours)
-        logger.debug6("Liquid Hours: %s", contractDetails.liquidHours)
-        logger.debug6("SecIdList: %s", contractDetails.secIdList)
-        logger.debug6("Underlying Symbol: %s", contractDetails.underSymbol)
-        logger.debug6("Stock Type: %s", contractDetails.stockType)
-        logger.debug6("Next Option Date: %s", contractDetails.nextOptionDate)
-        logger.debug6("Details: %s", contractDetails)
-
-        msg = {"contract_details": {reqId: contractDetails}}
-        self.queue.put(msg)
-
-        # if contractDetails.contract.secType == "Bond":
-        #     logger.debug("Description: %s", contractDetails.contract.description)
-        #     logger.debug("Issuer ID: %s", contractDetails.contract.issuerId)
-        #     logger.debug("Cusip", contractDetails.cusip)
-
-        # elif contractDetails.contract.secType == "IND":
-        #     db = index_info.IndexInfo()
-        #     db.update_ibkr_info(contractDetails.contract.symbol,
-        #                         contractDetails.contract.conId,
-        #                         contractDetails.contract.primaryExchange,
-        #                         contractDetails.contract.exchange, contractDetails.longName)
-
-        # if contractDetails.stockType == "ETF" or contractDetails.stockType == "ETN":
-        #     db = etf_info.EtfInfo()
-        #     db.update_ibkr_info(contractDetails.contract.symbol,
-        #                         contractDetails.contract.conId,
-        #                         contractDetails.contract.primaryExchange,
-        #                         contractDetails.contract.exchange)
-
-        # elif contractDetails.stockType == "STK":
-        #     db = stock_info.EtfInfo()
-        #     db.update_ibkr_info(contractDetails.contract.symbol,
-        #                         contractDetails.contract.conId,
-        #                         contractDetails.contract.primaryExchange,
-        #                         contractDetails.contract.exchange)
+        self.remove_command(reqId)
+        self.contract_subjects.set_contract_details(reqId, contractDetails)
 
     @iswrapper
     def contractDetailsEnd(self, reqId: int):
@@ -454,7 +355,7 @@ class TwsReader(EWrapper, EClient):
               reqId: int,
               errorCode: int,
               errorString: str,
-              advanced_order_rejection: str = "") -> None:
+              advancedOrderRejectJson: str = "") -> None:
         """!
         Errors sent by the TWS are received here.
 
@@ -469,29 +370,7 @@ class TwsReader(EWrapper, EClient):
 
         @return None
         """
-        critical_codes = [1300]
-        error_codes = [
-            100, 102, 103, 104, 105, 106, 107, 109, 110, 111, 113, 116, 117, 118, 119, 120, 121,
-            122, 123, 124, 125, 126, 129, 131, 132, 162, 200, 320, 321, 502, 503, 504, 1101, 2100,
-            2101, 2102, 2103, 2168, 2169, 10038, 10147
-        ]
-        warning_codes = [101, 501, 1100, 2105, 2107, 2108, 2109, 2110, 2137]
-        info_codes = [1102]
-        debug_codes = [2104, 2106, 2158]
-
-        if errorCode in critical_codes:
-            self._process_critical_code(reqId, errorCode, errorString, advanced_order_rejection)
-        elif errorCode in error_codes:
-            self._process_error_code(reqId, errorCode, errorString, advanced_order_rejection)
-        elif errorCode in warning_codes:
-            self._process_warning_code(reqId, errorCode, errorString, advanced_order_rejection)
-        elif errorCode in info_codes:
-            self._process_info_code(reqId, errorCode, errorString, advanced_order_rejection)
-        elif errorCode in debug_codes:
-            self._process_debug_code(reqId, errorCode, errorString, advanced_order_rejection)
-        else:
-            logger.error("Error Code Level has not been identified")
-            self._process_error_code(reqId, errorCode, errorString, advanced_order_rejection)
+        self.process_error_code(reqId, errorCode, errorString, advancedOrderRejectJson)
 
     @iswrapper
     def execDetails(self, reqId: int, contract: Contract, execution: Execution) -> None:
@@ -504,6 +383,7 @@ class TwsReader(EWrapper, EClient):
 
         @return None
         """
+        logger.debug("Req Id: %s", reqId)
         msg = {"order_execution": {execution.OrderId: {contract.localSymbol: execution}}}
         logger.debug(msg)
 
@@ -552,12 +432,17 @@ class TwsReader(EWrapper, EClient):
 
         @return None
         """
-        logger.debug("Begin Function")
-        logger.debug("ReqID: %s, IPO Date: %s", reqId, headTimestamp)
-        self.data[reqId] = headTimestamp
-        self.data_available[reqId].set()
+        logger.debug("Head Timstamp received for req_id %s: %s", reqId, headTimestamp)
+        self.remove_command(reqId)
 
-        logger.debug("End Function")
+        if "-" in headTimestamp:
+            # Sometimes the string they send is in '%Y%m%d-%H:%M:%S' format instead of the more
+            # normal '%Y%m%d %H:%M:%S' format
+            head_timestamp = headTimestamp.replace("-", " ")
+        else:
+            head_timestamp = headTimestamp
+
+        self.contract_history_begin_subjects.set_history_begin_date(reqId, head_timestamp)
 
     @iswrapper
     def histogramData(self, reqId: int, items: list) -> None:
@@ -587,8 +472,7 @@ class TwsReader(EWrapper, EClient):
         logger.debug6("ReqID: %s", reqId)
         logger.debug6("Bar: %s", bar)
 
-        msg = {"historical_bar": {reqId, bar}}
-        self.queue.put(msg)
+        # msg = {"historical_bar": {reqId, bar}}
 
     @iswrapper
     def historicalDataEnd(self, reqId: int, start: str, end: str) -> None:
@@ -602,8 +486,7 @@ class TwsReader(EWrapper, EClient):
         @return None
         """
         logger.debug6("Data Complete for ReqID: %s from: %s to: %s", reqId, start, end)
-        msg = {"historical_bar": {reqId: "complete"}}
-        self.queue.put(msg)
+        # msg = {"historical_bar": {reqId: "complete"}}
 
     @iswrapper
     def historicalDataUpdate(self, reqId: int, bar: BarData) -> None:
@@ -626,7 +509,7 @@ class TwsReader(EWrapper, EClient):
 
         send_item = [reqId, date_time, bar]
         logger.debug("Sending Queue Item: %s", send_item)
-        self.queue.put(send_item)
+        # self.queue.put(send_item)
 
         logger.debug("End Function")
 
@@ -669,7 +552,7 @@ class TwsReader(EWrapper, EClient):
         logger.debug("Has More: %s", hasMore)
 
     @iswrapper
-    def historicalSchedule(self, reqId: int, startDateTime: str, endDateTime: str, timezone: str,
+    def historicalSchedule(self, reqId: int, startDateTime: str, endDateTime: str, timeZone: str,
                            sessions: list) -> None:
         """!
         Returns historical Schedule when reqHistoricalData whatToShow="SCHEDULE"
@@ -686,7 +569,7 @@ class TwsReader(EWrapper, EClient):
         logger.debug("ReqId: %s", reqId)
         logger.debug("Start DateTime: %s", startDateTime)
         logger.debug("End DateTime: %s", endDateTime)
-        logger.debug("Timezone: %s", timezone)
+        logger.debug("Timezone: %s", timeZone)
         logger.debug("Sessions: %s", sessions)
 
     @iswrapper
@@ -745,10 +628,7 @@ class TwsReader(EWrapper, EClient):
         @return None
         """
         logger.debug6("Accounts: %s", accountsList)
-        self.accounts = accountsList.split(",")
-        self.accounts_available.set()
-        msg = {"accounts": self.accounts}
-        self.queue.put(msg)
+        # msg = {"accounts": self.accounts}
 
     @iswrapper
     def marketDataType(self, reqId: int, marketDataType: int):
@@ -842,8 +722,7 @@ class TwsReader(EWrapper, EClient):
 
         @return None
         """
-        msg = {"next_order_id": orderId}
-        self.queue.put(msg)
+        self.order_id_subjects.send_order_id(orderId)
 
     @iswrapper
     def openOrder(self, orderId: int, contract: Contract, order: Order,
@@ -945,23 +824,22 @@ class TwsReader(EWrapper, EClient):
         logger.debug9("Why Held: %s", whyHeld)
         logger.debug9("Market Cap Price: %s", mktCapPrice)
 
-        msg = {
-            "order_status": {
-                orderId: {
-                    "status": status,
-                    "filled": filled,
-                    "remaining": remaining,
-                    "average_fill_price": avgFillPrice,
-                    "perm_id": permId,
-                    "parent_id": parentId,
-                    "last_fill_price": lastFillPrice,
-                    "client_id": clientId,
-                    "why_held": whyHeld,
-                    "market_cap_price": mktCapPrice
-                }
-            }
-        }
-        self.queue.put(msg)
+        # msg = {
+        #     "order_status": {
+        #         orderId: {
+        #             "status": status,
+        #             "filled": filled,
+        #             "remaining": remaining,
+        #             "average_fill_price": avgFillPrice,
+        #             "perm_id": permId,
+        #             "parent_id": parentId,
+        #             "last_fill_price": lastFillPrice,
+        #             "client_id": clientId,
+        #             "why_held": whyHeld,
+        #             "market_cap_price": mktCapPrice
+        #         }
+        #     }
+        # }
 
     @iswrapper
     def pnl(self, reqId: int, dailyPnL: float, unrealizedPnL: float, realizedPnL: float) -> None:
@@ -1082,7 +960,7 @@ class TwsReader(EWrapper, EClient):
         """
         ohlc_bar = [time, open_, high, low, close, volume, wap, count]
         msg = {"real_time_bars": {reqId: ohlc_bar}}
-        self.queue.put(msg)
+        logger.debug("Message: %s", msg)
 
     @iswrapper
     def receiveFA(self, faData: int, cxml: str) -> None:
@@ -1223,11 +1101,11 @@ class TwsReader(EWrapper, EClient):
             "exchange": exchange,
             "underlying_contract_id": underlyingConId,
             "trading_class": tradingClass,
-            "mulitplier": multiplier,
+            "multiplier": multiplier,
             "expirations": expirations,
             "strikes": strikes
         }
-        self.data[reqId] = opt_params
+        self.contract_option_parameter_subjects.set_option_parameter(reqId, opt_params)
 
     @iswrapper
     def securityDefinitionOptionParameterEnd(self, reqId: int) -> None:
@@ -1239,7 +1117,6 @@ class TwsReader(EWrapper, EClient):
         @return None
         """
         logger.debug9("SecurityDefinitionOptionParameterEnd. ReqId: %s", reqId)
-        self.data_available[reqId].set()
 
     @iswrapper
     def smartComponents(self, reqId: int, smartComponentMap: dict) -> None:
@@ -1279,10 +1156,8 @@ class TwsReader(EWrapper, EClient):
         logger.debug("Begin Function")
         logger.info("Number of descriptions: %s", len(contractDescriptions))
 
-        self.data[reqId] = []
         for description in contractDescriptions:
-            self.data[reqId].append(description)
-            logger.info("Symbol: %s", description.contract.symbol)
+            logger.info("Req Id: %s  Symbol: %s", reqId, description.contract.symbol)
 
         logger.debug("End Function")
 
@@ -1308,8 +1183,7 @@ class TwsReader(EWrapper, EClient):
         """
         tick = [tickType, time, price, size, tickAttribLast, exchange, specialConditions]
         msg = {"tick": {reqId: tick}}
-
-        self.queue.put(msg)
+        logger.debug("Message: %s", msg)
 
     @iswrapper
     def tickByTickBidAsk(self, reqId: int, time: int, bidPrice: float, askPrice: float,
@@ -1332,8 +1206,7 @@ class TwsReader(EWrapper, EClient):
         """
         tick = [time, bidPrice, askPrice, bidSize, askSize, tickAttribBidAsk]
         msg = {"tick": {reqId: tick}}
-
-        self.queue.put(msg)
+        logger.debug("Message: %s", msg)
 
     @iswrapper
     def tickByTickMidPoint(self, reqId: int, time: int, midPoint: float) -> None:
@@ -1348,7 +1221,7 @@ class TwsReader(EWrapper, EClient):
         """
         tick = [time, midPoint]
         msg = {"tick": {reqId: tick}}
-        self.queue.put(msg)
+        logger.debug("Message: %s", msg)
 
     @iswrapper
     def tickEFP(self, reqId: int, tickType: int, basisPoints: float, formattedBasisPoints: str,
@@ -1379,7 +1252,7 @@ class TwsReader(EWrapper, EClient):
             futureLastTradeDate, dividendImpact, dividendsToLastTradeDate
         ]
         msg = {"market_data": {reqId: tick}}
-        self.queue.put(msg)
+        logger.debug("Message: %s", msg)
 
     @iswrapper
     def tickGeneric(self, reqId: int, tickType: int, value: float) -> None:
@@ -1394,7 +1267,7 @@ class TwsReader(EWrapper, EClient):
         """
         tick = ["tick_generic", tickType, value]
         msg = {"market_data": {reqId: tick}}
-        self.queue.put(msg)
+        logger.debug("Message: %s", msg)
 
     @iswrapper
     def tickNews(self, tickerId: int, timeStamp: int, providerCode: str, articleId: str,
@@ -1414,7 +1287,7 @@ class TwsReader(EWrapper, EClient):
         """
         tick = ["tick_news", timeStamp, providerCode, articleId, headline, extraData]
         msg = {"market_data": {tickerId: tick}}
-        self.queue.put(msg)
+        logger.debug("Message: %s", msg)
 
     @iswrapper
     def tickOptionComputation(self, reqId: int, tickType: int, tickAttrib: int, impliedVol: float,
@@ -1450,7 +1323,7 @@ class TwsReader(EWrapper, EClient):
             pvDividend, gamma, vega, theta, undPrice
         ]
         msg = {"market_data": {reqId: tick}}
-        self.queue.put(msg)
+        logger.debug("Message: %s", msg)
 
     @iswrapper
     def tickPrice(self, reqId: int, tickType: int, price: float, attrib: TickAttrib) -> None:
@@ -1472,7 +1345,7 @@ class TwsReader(EWrapper, EClient):
         """
         tick = ["tick_price", tickType, price, attrib]
         msg = {"market_data": {reqId: tick}}
-        self.queue.put(msg)
+        logger.debug("Message: %s", msg)
 
     @iswrapper
     def tickReqParams(self, tickerId: int, minTick: float, bboExchange: str,
@@ -1489,7 +1362,7 @@ class TwsReader(EWrapper, EClient):
         """
         tick = ["tick_req_params", minTick, bboExchange, snapshotPermissions]
         msg = {"market_data": {tickerId: tick}}
-        self.queue.put(msg)
+        logger.debug("Message: %s", msg)
 
     @iswrapper
     def tickSize(self, reqId: int, tickType: int, size: Decimal) -> None:
@@ -1505,7 +1378,7 @@ class TwsReader(EWrapper, EClient):
         """
         tick = ["tick_size", tickType, size]
         msg = {"market_data": {reqId: tick}}
-        self.queue.put(msg)
+        logger.debug("Message: %s", msg)
 
     @iswrapper
     def tickString(self, reqId: int, tickType: int, value: str) -> None:
@@ -1524,7 +1397,7 @@ class TwsReader(EWrapper, EClient):
         """
         tick = ["tick_string", tickType, value]
         msg = {"market_data": {reqId: tick}}
-        self.queue.put(msg)
+        logger.debug("Message: %s", msg)
 
     @iswrapper
     def updateAccountTime(self, timeStamp: str) -> None:
@@ -1873,53 +1746,3 @@ class TwsReader(EWrapper, EClient):
         @return None
         """
         logger.debug("ReqId: %s  Data: %s", reqId, dataJson)
-
-    # ==============================================================================================
-    #
-    # Private Functions
-    #
-    # ==============================================================================================
-    def _process_critical_code(self, req_id: int, error_code, error_string,
-                               advanced_order_rejection):
-        if advanced_order_rejection:
-            logger.critical("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id,
-                            error_code, error_string, advanced_order_rejection)
-        else:
-            logger.critical("ReqID# %s, Code: %s (%s)", req_id, error_code, error_string)
-
-    def _process_error_code(self, req_id: int, error_code, error_string, advanced_order_rejection):
-        if advanced_order_rejection:
-            logger.error("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id,
-                         error_code, error_string, advanced_order_rejection)
-        else:
-            logger.error("ReqID# %s, Code: %s (%s)", req_id, error_code, error_string)
-
-        if error_code == 200:
-            self.data[req_id] = {"Error": error_string}
-            self.data_available[req_id].set()
-
-        elif error_code in [103, 10147]:
-            msg = {"order_status": {req_id: {"status": "TWS_CLOSED"}}}
-            self.queue.put(msg)
-
-    def _process_warning_code(self, req_id: int, error_code, error_string,
-                              advanced_order_rejection):
-        if advanced_order_rejection:
-            logger.warning("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id,
-                           error_code, error_string, advanced_order_rejection)
-        else:
-            logger.warning("ReqID# %s, Code: %s (%s)", req_id, error_code, error_string)
-
-    def _process_info_code(self, req_id: int, error_code, error_string, advanced_order_rejection):
-        if advanced_order_rejection:
-            logger.info("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id,
-                        error_code, error_string, advanced_order_rejection)
-        else:
-            logger.info("ReqID# %s, Code: %s (%s)", req_id, error_code, error_string)
-
-    def _process_debug_code(self, req_id: int, error_code, error_string, advanced_order_rejection):
-        if advanced_order_rejection:
-            logger.debug("ReqID# %s, Code: %s (%s), Advanced Order Rejection: %s", req_id,
-                         error_code, error_string, advanced_order_rejection)
-        else:
-            logger.debug("ReqID# %s, Code: %s (%s)", req_id, error_code, error_string)

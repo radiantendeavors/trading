@@ -1,8 +1,8 @@
 """!@package pytrader.libs.applications
 
-Application code
+Process Managers
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 

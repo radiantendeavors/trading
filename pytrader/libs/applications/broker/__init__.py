@@ -21,20 +21,15 @@ Manages the broker processes
 
 @file pytrader/libs/applications/broker/__init__.py
 """
-# System Libraries
+import multiprocessing
+import threading
 from multiprocessing import Process, Queue
+from typing import Optional
 
-# 3rd Party Libraries
-
-# Application Libraries
-# System Library Overrides
-from pytrader.libs.system import logging
-
-# Other Application Libraries
+from pytrader import git_branch
 from pytrader.libs.clients.broker import BrokerClient
-from pytrader.libs.utilities.config.broker import BrokerConfig
-
-# Conditional Libraries
+from pytrader.libs.system import logging
+from pytrader.libs.utilities.exceptions import BrokerNotAvailable
 
 # ==================================================================================================
 #
@@ -56,26 +51,27 @@ class BrokerProcessManager():
     """
 
     address = {}
-    brokers = {}
+    broker_clients = {}
     broker_configs = {}
     broker_processes = {}
-    broker_clients = {}
     broker_cmd_queues = {}
+    strategies = None
+    client_id = None
 
-    def __init__(self, broker_list: list, client_id: int, cmd_queue: Queue,
-                 data_queue: dict) -> None:
+    def __init__(self, brokers: list, cmd_queue: Queue, data_queue: dict) -> None:
         """!
         Creates an instance of the BrokerProcess.
 
         @return None
         """
-        self.broker_list = broker_list
-        self.client_id = client_id
+        self.broker_list = brokers
         self.cmd_queue = cmd_queue
         self.data_queue = data_queue
-        self.strategies = None
 
-    def configure_brokers(self) -> None:
+    def configure_brokers(self,
+                          address: str,
+                          client_id: Optional[int] = 0,
+                          strategies: Optional[list] = None) -> None:
         """!
         Configures the various broker options
 
@@ -86,25 +82,35 @@ class BrokerProcessManager():
         # TraderWorkstation, or IBGateway.  So for each broker in the list, it gets a dictionary of
         # the possible connection settings for each broker, and appends it to the previously
         # gathered dictionaries of brokers.
-        brokers = {}
-        addresses = {}
-        for broker in self.broker_list:
-            self.broker_configs[broker] = BrokerConfig(broker)
-            brokers.update(self.broker_configs[broker].identify_clients())
-            addresses[broker] = self.broker_configs[broker].get_client_address()
-
         # Once all potential brokers are identified, create an instance of each broker client.
-        for broker in list(brokers):
-            self.broker_cmd_queues[broker] = Queue()
-            self.brokers[broker] = brokers[broker](self.data_queue)
-            # FIXME: This is so fucked up.
-            self.address[broker] = addresses[self.broker_list[0]]
+        if strategies:
+            self.strategies = strategies
 
-        for broker in list(self.brokers):
-            self.broker_clients[broker] = BrokerClient(self.brokers[broker],
-                                                       self.broker_cmd_queues[broker],
-                                                       self.data_queue)
-            self.broker_clients[broker].connect(self.address[broker], self.client_id)
+        self.client_id = client_id
+
+        logger.debug("Strategies: %s", self.strategies)
+
+        # We don't want to run the other brokers if we're backtesting.
+        if "backtester" in self.broker_list:
+            self._configure_backtester()
+        else:
+            for broker in self.broker_list:
+                self._configure_brokers(broker, address)
+
+        # for broker in list(self.brokers):
+        #     logger.debug("Broker: %s", broker)
+        #     self.broker_clients[broker] = BrokerClient(self.brokers[broker],
+        #                                                self.broker_cmd_queues[broker],
+        #                                                self.data_queue)
+
+        #     self.broker_clients[broker].set_broker_observers(broker)
+
+        #     try:
+        #         self.broker_clients[broker].connect(self.address[broker])
+        #     except BrokerNotAvailable as msg:
+        #         logger.debug("Broker Not Available: %s", msg)
+        #         self.broker_clients.pop(broker, None)
+        #         continue
 
     def run(self) -> None:
         """!
@@ -114,64 +120,53 @@ class BrokerProcessManager():
         """
         self._start_processes()
 
-        try:
-            broker_connection = True
-            while broker_connection:
-                cmd = self.cmd_queue.get()
-                logger.debug4("Command: %s", cmd)
+        broker_connection = True
+        while broker_connection:
+            cmd = self.cmd_queue.get()
+            logger.debug9("Command: %s", cmd)
 
-                if cmd == "Quit":
-                    broker_connection = False
-                else:
-                    # TODO: Determine how to distribute the cmd requests among the different broker
-                    # clients.
-                    #
-                    # For order placement, this will be dependent upon which account to send the
-                    # order to as long as there is only one client connected to that account.
-                    #
-                    # For streaming market data, it makes sense to consolidate strategies that use
-                    # the same ticker symbols together, so we aren't requesting duplicate data.
-                    #
-                    # At the same time, some duplication may help with failover.
-                    #
-                    # Because of the limits on the number of tickers that can be requested for
-                    # streaming data, it also makes sense to distribute the different tickers among
-                    # the different clients.
-                    #
-                    # For historical data, it may make sense to load balance among available
-                    # clients.
-                    #
-                    # To make it more complicated, if you have two clients for TwsApi connected to
-                    # the real account, that has the same limitations as a single client.  Whereas,
-                    # one client connected to the real account, and one client connected to a demo
-                    # account, may have separate limitations.  May be because it depends on how the
-                    # user has set up their paper trading account data permissions.
-                    #
-                    # In addition, each client may have different limits on the number of data
-                    # requests it can make.  So we'll need to track how many outstanding requests
-                    # each client has.
-                    #
-                    # Figuring out how to do this properly is a fucking mess.
-                    #
-                    # For now, we send all data requests to the 1st client.
-                    broker = list(self.broker_clients)[0]
-                    self.broker_cmd_queues[broker].put(cmd)
+            sender = list(cmd)[0]
+            logger.debug9("Sender: %s", sender)
 
-        except KeyboardInterrupt:
-            logger.critical("Received Keyboard Interrupt! Shutting down the Broker Clients.")
+            if cmd == "Quit":
+                broker_connection = False
+            else:
+                sender = "tws_demo_" + sender
+                self.broker_cmd_queues[sender].put(cmd)
 
-    def set_strategies(self, strategy_list: list) -> None:
-        """!
-        Set's the strategies observers for message passing.
+    # def set_downloader(self) -> None:
+    #     """!
+    #     Configures the downloader observers.
 
-        @param strategy_list: A list of strategies
+    #     @return None
+    #     """
+    #     for broker in list(self.brokers):
+    #         if broker in list(self.broker_clients):
+    #             self.broker_clients[broker].set_downloader()
 
-        @return None
-        """
-        self.strategies = strategy_list
+    # def set_main(self) -> None:
+    #     """!
+    #     Configures the main process observers.
 
-        for broker in list(self.brokers):
-            self.broker_clients[broker].set_strategies(strategy_list)
+    #     @return None
+    #     """
+    #     for broker in list(self.brokers):
+    #         if broker in list(self.broker_clients):
+    #             self.broker_clients[broker].set_main()
+
+    # def set_strategies(self, strategy_list: list) -> None:
+    #     """!
+    #     Set's the strategies observers for message passing.
+
+    #     @param strategy_list: A list of strategies
+
+    #     @return None
+    #     """
+    #     self.strategies = strategy_list
+
+    #     for broker in list(self.brokers):
+    #         if broker in list(self.broker_clients):
+    #             self.broker_clients[broker].set_strategies(strategy_list)
 
     def stop(self) -> None:
         """!
@@ -192,17 +187,51 @@ class BrokerProcessManager():
     # Private Functions
     #
     # ==============================================================================================
+    def _configure_backtester(self) -> None:
+        logger.debug("Running Backtesting Broker")
+
+    def _configure_brokers(self, broker: str, address: str) -> None:
+        brokers = {}
+
+        if git_branch == "main":
+            brokers["twsapi"] = ["tws_real"]
+        else:
+            brokers["twsapi"] = ["tws_demo"]
+
+        for broker_id in brokers[broker]:
+            if broker == "twsapi":
+                self._configure_twsapi_brokers(broker_id, address)
+
+    def _configure_twsapi_brokers(self, broker_id: str, address: str) -> None:
+        client_roles = ["order", "downloader"]
+        if self.strategies:
+            client_roles.insert(0, "strategy")
+
+        for role in client_roles:
+            client_id = broker_id + "_" + role
+            self.broker_cmd_queues[client_id] = Queue()
+            self.broker_clients[client_id] = BrokerClient(broker_id,
+                                                          self.broker_cmd_queues[client_id],
+                                                          self.data_queue, self.client_id)
+            self.broker_clients[client_id].set_address(address)
+            self.broker_clients[client_id].set_role(role)
+            if role == "strategy":
+                self.broker_clients[client_id].set_strategies(self.strategies)
+
+            self.client_id += 1
+
     def _start_processes(self) -> None:
         """!
         Starts the broker client processes.
 
         @return None
         """
-        logger.debug("Client Id: %s", self.client_id)
-        logger.debug("Broker Clients: %s", self.broker_clients)
+        logger.debug("Process Name: %s  Thread Name: %s",
+                     multiprocessing.current_process().name,
+                     threading.current_thread().name)
 
         for broker_id, brokerclient in self.broker_clients.items():
-            logger.debug("Brokerclient: %s", brokerclient)
+            logger.debug("Starting Brokerclient %s: %s", broker_id, brokerclient)
             self.broker_processes[broker_id] = Process(target=brokerclient.run, args=())
             self.broker_processes[broker_id].start()
 

@@ -27,10 +27,16 @@ NOTE: This is a very early alpha stage program.  It's functionality will change 
 Installation and Usage
 ---------------------------
 
+### Dependencies
+
+This program depends on MySQL or MariaDB.
+
+### Installation
+
 This program exists twice.  C++ is the production version.  The prototype is developed using python.
 Read the relevant README files for their installation and usage instructions.
 
-Both C++ and Python target TWSAPI v10.20.
+Both C++ and Python target TWSAPI v10.25.
 
 - [C++](src/README.md)
 - [Python](pytrader/README.md)

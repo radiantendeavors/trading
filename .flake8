@@ -3,11 +3,15 @@ max_line_length = 100
 
 # Ignored Rules:
 # E266: too many leading ‘#’ for block comment - Ignored because we are using doxygen, which uses '##' to comment a variable
-extend_ignore = E266
+extend_ignore = E265, E266, F401
 
 per-file-ignores =
     # Ignored Rules (These are ignored because the TWSAPI does not follow these rules, and we are required to follow TWSAPI to implement it):
     # R0913: Refactor (Too Many arguments)
+    # E501: Line too long
     pytrader/libs/clients/broker/ibkr/tws/reader.py:N802,N803,R0913
+    pytrader/libs/clients/broker/ibkr/tws/client.py:E501
+    pytrader/libs/clients/broker/ibkr/tws/errors.py:E501
+    pytrader/libs/clients/broker/ibkr/webscraper/__init__.py:W605
     pytrader/libs/system/argparse.py:F401
     pytrader/libs/system/logging.py:F403

@@ -3,7 +3,7 @@
 
 Provides the internal libraries for pytrader
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
