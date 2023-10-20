@@ -25,16 +25,11 @@ Provides the Base Class for Contracts
 
 Provides the Base Class for Contracts
 """
-# System libraries
-from datetime import date, datetime, timedelta
-from multiprocessing import Queue
+from datetime import datetime
 from typing import Optional
 
-# 3rd Party libraries
 from ibapi.contract import Contract as IbContract
-from ibapi.contract import ContractDetails
 
-# Application Libraries
 from pytrader.libs.contracts.base import BaseContract
 from pytrader.libs.system import logging
 

@@ -47,18 +47,27 @@ BROKERS = {"twsapi": twsconfig.TwsConfig}
 #
 # ==================================================================================================
 class BrokerConfig():
+    """!
+    Managers the configuration for the broker.
+    """
 
     def __init__(self, broker_id: str):
         self.config = BROKERS[broker_id]()
         self.brokerclient_account = None
 
-    def get_client_address(self):
+    def get_client_address(self) -> str:
+        """!
+        Returns address: The client url or ip address
+        """
         return self.config.get_client_address()
 
     def identify_clients(self):
         return self.config.identify_clients()
 
-    def read_config(self, *args, **kwargs):
+    def read_config(self, *args, **kwargs) -> None:
+        """!
+        Parses the config file for broker related settings.
+        """
         config = kwargs["config"]
 
         if git_branch == "main":

@@ -1,6 +1,6 @@
-"""!@package pytrader.libs.applications.broker
+"""!@package pytrader.libs.utilities.config.abstractbrokerconfig
 
-Manages the broker processes
+Abstract Base Class for Broker Configuration
 
 @author G S Derber
 @date 2022-2023
@@ -19,20 +19,11 @@ Manages the broker processes
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file pytrader/libs/applications/broker/__init__.py
+@file pytrader/libs/utilities/config/broker/abstractbrokerconfig.py
 """
-# System Libraries
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
-# 3rd Party Libraries
-
-# Application Libraries
-# System Library Overrides
 from pytrader.libs.system import logging
-
-# Other Application Libraries
-
-# Conditional Libraries
 
 # ==================================================================================================
 #
@@ -48,9 +39,12 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class AbstractBrokerConfig():
+class AbstractBrokerConfig(ABC):
+    """!
+    Abstract Broker Config.
 
-    __metaclass__ = ABCMeta
+    Ensures all functions exists for the different brokers.
+    """
 
     @abstractmethod
     def identify_clients(self):

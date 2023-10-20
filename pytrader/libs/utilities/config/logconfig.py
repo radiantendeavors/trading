@@ -79,7 +79,7 @@ class LogConfig():
             # specify --log=DEBUG or --log=debug
             numeric_level = getattr(logging, args.loglevel.upper(), None)
             if not isinstance(numeric_level, int):
-                raise ValueError('Invalid log level: %s' % args.loglevel)
+                raise ValueError(f"Invalid log level: {args.loglevel}")
             self.loglevel = numeric_level
 
     def set_loglevel(self, args: argparse.Namespace) -> None:
