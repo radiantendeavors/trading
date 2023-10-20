@@ -25,7 +25,7 @@ Provides order management.
 from multiprocessing import Queue
 
 from ibapi.contract import Contract
-from ibapi.order import Order
+from ibapi.order import Order as IbOrder
 
 from pytrader.libs.system import logging
 from pytrader.libs.utilities.config import Config
@@ -49,20 +49,20 @@ class BaseOrder():
     Base Class for Orders
     """
 
-    def __init__(self, data_queue: Queue, contract: Contract, strategy: str = ""):
+    def __init__(self, data_queue: Queue, contract: Contract, strategy: str):
         self.contract = contract
         self.data_queue = data_queue
         self.status = None
         self.strategy_id = strategy
-        self.order = Order()
+        self.order = IbOrder()
 
-    def get_order(self) -> Order:
+    def get_order(self) -> IbOrder:
         """!
         Returns the order
         """
         return self.order
 
-    def get_status(self):
+    def get_status(self) -> str:
         """!
         Returns the order's status.
         """

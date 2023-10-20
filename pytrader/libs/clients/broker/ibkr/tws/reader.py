@@ -240,11 +240,11 @@ class TwsReader(TwsErrors):
         logger.debug("Completed Order for %s\n%s\n%s", contract, order, orderState)
 
     @iswrapper
-    def completedOrdersEnd(self):
+    def completedOrdersEnd(self) -> None:
         """!
         Notifies the end of the completed order's reception.
 
-        @return
+        @return None
         """
         logger.debug("All data received for completed order")
 

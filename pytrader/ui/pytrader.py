@@ -136,6 +136,7 @@ class PyTrader():
         broker.add_argument("-c",
                             "--client-id",
                             default=CLIENT_ID,
+                            type=int,
                             help=f"Broker Client Id (Default: {CLIENT_ID})")
         broker.add_argument("-p",
                             "--ports",
@@ -230,7 +231,7 @@ class PyTrader():
         @return None
         """
         self.process_manager = ProcessManager(self.args)
-        broker_configured = True
+        broker_configured = False
 
         if self.args.enable_broker:
             broker_configured = self.process_manager.configure_broker()

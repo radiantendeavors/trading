@@ -65,12 +65,9 @@ class TwsThreadMngr(TwsReader):
 
         @return None
         """
+        logger.debug("Starting TWSAPI Thread")
         self.data_queue = data_queue
-        logger.debug("Process Name: %s", multiprocessing.current_process().name)
-        logger.debug("Thread Name: %s", threading.current_thread().name)
         self.api_thread.start()
-        logger.debug("Process Name: %s", multiprocessing.current_process().name)
-        logger.debug("Thread Name: %s", threading.current_thread().name)
 
         logger.debug(self.data_queue)
 
@@ -82,8 +79,7 @@ class TwsThreadMngr(TwsReader):
 
         self.config_broker_observers(role, queue)
         self.config_main_observers()
-
-        logger.debug("Starting Thread")
+        logger.debug("TWSAPI Thread Start-up complete")
 
     def stop(self) -> None:
         """!

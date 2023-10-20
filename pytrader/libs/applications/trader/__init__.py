@@ -21,12 +21,10 @@ The main user interface for the trading program.
 
 @file pytrader/libs/applications/trader/__init__.py
 """
-
-# System libraries
 import argparse
 import multiprocessing
+from queue import Empty
 
-# Application Libraries
 from pytrader.libs.applications import broker, downloader, strategy
 from pytrader.libs.system import logging
 
@@ -101,11 +99,13 @@ class ProcessManager(metaclass=SingletonMeta):
         self.reply_queue["downloader"] = multiprocessing.Queue()
         self.reply_queue["main"] = multiprocessing.Queue()
 
-    def configure_broker(self) -> None:
+    def configure_broker(self) -> bool:
         """!
         Configures the broker process manager
 
-        @return None
+        @return bool:
+            - True if a broker is available
+            - False if a broker is not available
         """
         self.broker_mngr = broker.BrokerProcessManager(self.args.brokers, self.cmd_queue,
                                                        self.reply_queue)
@@ -114,7 +114,13 @@ class ProcessManager(metaclass=SingletonMeta):
 
         # This ensures we have the next order ID before doing anything else.
         while self.next_order_id == 0:
-            message = self.reply_queue["main"].get()
+            message = {}
+            try:
+                message = self.reply_queue["main"].get(timeout=10)
+            except Empty as msg:
+                logger.error("Queue is empty: %s", msg)
+                message = "Quit"
+
             if message == "Quit":
                 return False
             if message.get("next_order_id"):
@@ -131,6 +137,7 @@ class ProcessManager(metaclass=SingletonMeta):
 
         @return None
         """
+        logger.debug("Broker Available: %s", broker_available)
         self.downloader_mngr = downloader.DownloadProcess(self.cmd_queue,
                                                           self.reply_queue["downloader"])
         self.downloader_mngr.enable_historical_downloader(self.args, broker_available)

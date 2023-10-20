@@ -1284,6 +1284,7 @@ class TwsApiClient(TwsPacingMngr):
         @return req_id: The request's identifier
         """
         # Ensure we have the tick type formatted correctly for TWSAPI
+        # TODO: Check if these are actually case sensitive.
         match tick_type.lower():
             case "last":
                 tick_type = "Last"
@@ -1294,7 +1295,7 @@ class TwsApiClient(TwsPacingMngr):
             case "midpoint":
                 tick_type = "MidPoint"
             case _:
-                raise InvalidTickType("Invalid Tick Type")
+                raise InvalidTickType("Invalid Tick Type: %s", tick_type)
 
         logger.debug("ReqId %s Tick-by-Tick %s %s %s %s", req_id, contract, tick_type,
                      number_of_ticks, ignore_size)

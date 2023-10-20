@@ -233,6 +233,7 @@ class AbstractBaseContract(DatabaseContract, ABC):
 
         @return None"""
         message = {sender: {"req": {"contract_details": {self.local_symbol: self.contract}}}}
+        print("Message: %s", message)
         self.queue.put(message)
 
     def req_contract_history_begin_date(self, sender: str) -> None:
@@ -244,6 +245,7 @@ class AbstractBaseContract(DatabaseContract, ABC):
         @return None
         """
         message = {sender: {"req": {"history_begin_date": self.contract}}}
+        logger.debug("Message: %s", message)
         self.queue.put(message)
 
     def req_contract_option_parameters(self, sender: str) -> None:
@@ -255,6 +257,7 @@ class AbstractBaseContract(DatabaseContract, ABC):
         @return None
         """
         message = {sender: {"req": {"option_details": self.contract}}}
+        logger.debug("Message: %s", message)
         self.queue.put(message)
 
     def query_no_history(self) -> dict:

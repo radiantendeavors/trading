@@ -24,6 +24,7 @@ Manages the broker processes
 import multiprocessing
 import threading
 from multiprocessing import Process, Queue
+from queue import Empty
 from typing import Optional
 
 from pytrader import git_branch
@@ -51,6 +52,7 @@ class BrokerProcessManager():
     """
 
     address = {}
+    brokers = {}
     broker_clients = {}
     broker_configs = {}
     broker_processes = {}
@@ -105,23 +107,27 @@ class BrokerProcessManager():
         """
         self._start_processes()
 
+        logger.debug("Broker Processes: %s", self.broker_processes)
+
         if len(self.broker_processes) > 0:
             continue_process = True
             while continue_process:
                 try:
-                    cmd = self.cmd_queue.get()
-                    logger.debug9("Command: %s", cmd)
+                    cmd = self.cmd_queue.get(timeout=10)
+                    print("Command: %s", cmd)
+                except Empty:
+                    logger.error("No Command Received")
+                    cmd = "Quit"
 
-                    sender = list(cmd)[0]
-                    logger.debug9("Sender: %s", sender)
-
-                    if cmd == "Quit":
-                        continue_process = False
-                    else:
-                        sender = "tws_demo_" + sender
-                        self.broker_cmd_queues[sender].put(cmd)
-                except KeyboardInterrupt:
+                if cmd == "Quit":
                     continue_process = False
+                else:
+                    sender = list(cmd)[0]
+                    logger.debug("Sender: %s", sender)
+                    receiver = f"{self.brokers['twsapi']}_{sender}"
+                    logger.debug("Sender: %s", sender)
+                    logger.debug("CMD Queue Keys: %s", list(self.broker_cmd_queues))
+                    self.broker_cmd_queues[receiver].put(cmd)
 
         else:
             self.data_queue["main"].put("Quit")
@@ -134,7 +140,7 @@ class BrokerProcessManager():
         """
         self.cmd_queue.put("Quit")
         for broker_id in list(self.broker_clients):
-            logger.debug("Broker Id: %s", broker_id)
+            logger.debug("Stopping Broker Id: %s", broker_id)
             logger.debug("Broker Processes: %s", self.broker_processes)
 
             # FIXME: The program doesn't always have broker_id in self.broker_processes.
@@ -151,14 +157,12 @@ class BrokerProcessManager():
         logger.debug("Running Backtesting Broker")
 
     def _configure_brokers(self, broker: str, address: str) -> None:
-        brokers = {}
-
         if git_branch == "main":
-            brokers["twsapi"] = ["tws_real"]
+            self.brokers["twsapi"] = ["tws_real"]
         else:
-            brokers["twsapi"] = ["tws_demo"]
+            self.brokers["twsapi"] = ["tws_real"]
 
-        for broker_id in brokers[broker]:
+        for broker_id in self.brokers[broker]:
             if broker == "twsapi":
                 self._configure_twsapi_brokers(broker_id, address)
 
@@ -184,6 +188,7 @@ class BrokerProcessManager():
             checking_connection = True
             while checking_connection:
                 msg = self.data_queue[self.client_id].get()
+                logger.debug("Broker Connection Msg: %s", msg)
                 if msg == "Connected":
                     checking_connection = False
                     self.client_id += 1
