@@ -136,7 +136,7 @@ class AbstractBrokerClient(ABC):
         return self.connection_status
 
     @abstractmethod
-    def request_bar_history(self) -> None:
+    def request_bar_history(self, request: dict) -> None:
         """!
         Abstract method to request bar history.
         """
@@ -154,13 +154,13 @@ class AbstractBrokerClient(ABC):
         """
 
     @abstractmethod
-    def request_history_begin_date(self, contract: Contract):
+    def request_history_begin_date(self, contract: Contract) -> None:
         """!
         Requests the earliest date available for bar history.
         """
 
     @abstractmethod
-    def request_option_details(self, strategy_id: str):
+    def request_option_details(self, contract: Contract):
         """!
         Abstract method to request for option details.
         """

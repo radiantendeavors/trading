@@ -1,7 +1,7 @@
 """!
-@package pytrader.libs.clients.broker.ibkr.tws.twsdemo
+@package pytrader.libs.clients.broker.ibkr.tws.twsaccount
 
-Creates the interface for connecting to Tws Demo account.
+Creates the base class for the different TWS API acounts.
 
 @author G S Derber
 @date 2022-2023
@@ -20,23 +20,14 @@ Creates the interface for connecting to Tws Demo account.
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-@file pytrader/libs/clients/broker/ibkr/tws/twsdemo.py
+@file pytrader/libs/clients/broker/ibkr/tws/twsaccount.py
 
-Creates the interface for connecting to Tws Demo account.
+Creates the base class for the different TWS API acounts.
 """
-# System Libraries
-import datetime
-import multiprocessing
-import threading
-from queue import Queue
-from time import sleep
 from typing import Optional
 
-# 3rd Party Libraries
 from ibapi.contract import Contract
 
-# Application Libraries
-from pytrader import CLIENT_ID
 from pytrader.libs.clients.broker.abstractclient import AbstractBrokerClient
 from pytrader.libs.clients.broker.ibkr.tws.client import TwsApiClient
 from pytrader.libs.system import logging
@@ -46,24 +37,6 @@ from pytrader.libs.system import logging
 # Global Variables
 #
 # ==================================================================================================
-## Amount of time to sleep to avoid pacing violations.
-HISTORICAL_DATA_SLEEP_TIME = 0
-
-## Sleep time to avoid pacing violations
-SMALL_BAR_SLEEP_TIME = 15
-
-## Used to store bar sizes with pacing violations
-SMALL_BAR_SIZES = ["1 secs", "5 secs", "10 secs", "15 secs", "30 secs"]
-
-## Used to store allowed intraday bar sizes
-INTRADAY_BAR_SIZES = SMALL_BAR_SIZES + [
-    "1 min", "2 mins", "3 mins", "5 mins", "10 mins", "15 mins", "20 mins", "30 mins", "1 hour",
-    "2 hours", "3 hours", "4 hours", "8 hours"
-]
-
-## Used to store allowed bar sizes
-BAR_SIZES = INTRADAY_BAR_SIZES + ["1 day", "1 week", "1 month"]
-
 ## The Base Logger
 logger = logging.getLogger(__name__)
 
@@ -124,10 +97,16 @@ class TwsAccountClient(AbstractBrokerClient):
         """
         self.order_subjects.cancel_order(order_id)
 
-    def calculate_implied_volatility(self):
+    def calculate_implied_volatility(self,
+                                     req_id: int,
+                                     contract: Contract,
+                                     option_price: float,
+                                     underlying_price: float,
+                                     implied_volatility_options: Optional[list] = None) -> None:
         logger.debug("Calculate Implied Volatility")
 
-    def calculate_option_price(self):
+    def calculate_option_price(self, req_id: int, contract: Contract, volatility: float,
+                               underlying_price: float) -> None:
         logger.debug("Calculate Option Price")
 
     def create_order(self, order_request: dict, strategy_id: str) -> None:
@@ -222,18 +201,3 @@ class TwsAccountClient(AbstractBrokerClient):
         contracts = self.contract_subjects.get_contracts()
         self.bar_subjects.add_bar_sizes(tickers, contracts, bar_sizes)
         self.bar_observers[strategy_id].add_ticker_bar_sizes(tickers, bar_sizes)
-
-    # ==============================================================================================
-    #
-    # Internal Helper Functions
-    #
-    # ==============================================================================================
-    def _req_tick_by_tick_data(self, contract: Contract, tick_type: str, number_of_ticks: int,
-                               ignore_size: bool):
-        self.req_id += 1
-        self._historical_data_wait()
-
-        self.reqTickByTickData(self.req_id, contract, tick_type, number_of_ticks, ignore_size)
-        self.__historical_data_req_timestamp = datetime.datetime.now()
-        logger.debug("End Function")
-        return self.req_id

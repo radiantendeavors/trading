@@ -74,6 +74,7 @@ class TwsReader(TwsErrors):
     """!
     Serves as the client interface for Interactive Brokers
     """
+    next_order_id = 0
 
     # ==============================================================================================
     #
@@ -722,6 +723,10 @@ class TwsReader(TwsErrors):
 
         @return None
         """
+        # Only update next_order_id if it is less than order_id
+        if self.next_order_id < orderId:
+            self.next_order_id = orderId
+
         self.order_id_subjects.send_order_id(orderId)
 
     @iswrapper
