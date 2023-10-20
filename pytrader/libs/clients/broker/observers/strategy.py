@@ -22,22 +22,11 @@ Provides the observer classes for the running strategies
 
 @file pytrader/libs/applications/broker/observers/strategy.py
 """
-# System Libraries
-
-# 3rd Party Libraries
-
-# Other Application Libraries
-from pytrader.libs.clients.broker.observers.base import (BarDataObserver,
-                                                         ContractDataObserver,
-                                                         MarketDataObserver,
+from pytrader.libs.clients.broker.observers.base import (MarketDataObserver,
                                                          OrderDataObserver,
                                                          RealTimeBarObserver)
 from pytrader.libs.events import Subject
-# Application Libraries
-# System Library Overrides
 from pytrader.libs.system import logging
-
-# Conditional Libraries
 
 # ==================================================================================================
 #

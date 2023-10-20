@@ -142,7 +142,7 @@ class AbstractBrokerClient(ABC):
         """
 
     @abstractmethod
-    def request_contract_details(self, contract: Contract):
+    def request_contract_details(self, request: dict) -> None:
         """!
         Abstract method to set the contracts.
         """

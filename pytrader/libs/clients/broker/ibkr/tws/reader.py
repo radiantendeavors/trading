@@ -723,10 +723,7 @@ class TwsReader(TwsErrors):
 
         @return None
         """
-        # Only update next_order_id if it is less than order_id
-        if self.next_order_id < orderId:
-            self.next_order_id = orderId
-
+        self.next_order_id = max(self.next_order_id, orderId)
         self.order_id_subjects.send_order_id(orderId)
 
     @iswrapper

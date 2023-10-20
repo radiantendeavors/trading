@@ -203,9 +203,10 @@ class BrokerProcessManager():
                 self._configure_twsapi_brokers(broker_id, address)
 
     def _configure_twsapi_brokers(self, broker_id: str, address: str) -> None:
-        client_roles = ["order", "downloader"]
+        client_roles = ["downloader"]
         if self.strategies:
             client_roles.insert(0, "strategy")
+            client_roles.insert(0, "order")
 
         for role in client_roles:
             client_id = broker_id + "_" + role

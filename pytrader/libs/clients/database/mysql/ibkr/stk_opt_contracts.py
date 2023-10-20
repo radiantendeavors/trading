@@ -24,9 +24,6 @@ Provides the database client
 
 @file pytrader/libs/clients/database/mysql/ibkr/stk_opt_contracts.py
 """
-from datetime import date, timedelta
-from typing import Optional
-
 from pytrader.libs.clients.database.mysql.ibkr.option_contracts import (
     IbkrOptionContractDetails, IbkrOptionContracts, IbkrOptionHistoryBeginDate,
     IbkrOptionInvalidContracts, IbkrOptionLiquidHours, IbkrOptionNoHistory,

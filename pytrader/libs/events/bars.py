@@ -21,11 +21,8 @@ Provides Observers of Bar Data
 
 @file pytrader/libs/events/bars.py
 """
-# System Libraries
-from abc import ABC, abstractmethod
 from typing import List
 
-# Application Libraries
 from pytrader.libs.events.base import Observer, Subject
 from pytrader.libs.system import logging
 
@@ -98,6 +95,9 @@ class BarData(Subject):
 
 
 class RealTimeBarData(Subject):
+    """!
+    Class for storing real time bar data.
+    """
     _observers: List[Observer] = []
     contracts = {}
     rtb_ids = {}
@@ -106,6 +106,15 @@ class RealTimeBarData(Subject):
     ticker = None
 
     def add_tickers(self, tickers: list, contracts: dict):
+        """!
+        Add tickers to be tracked for real time bar data.
+
+        @param tickers:
+        @param contracts:
+
+
+        @return None
+        """
         for ticker in tickers:
             if ticker not in self.tickers:
                 self.tickers.append(ticker)
@@ -114,9 +123,7 @@ class RealTimeBarData(Subject):
             if ticker not in list(self.contracts):
                 self.contracts[ticker] = contract_
 
-    def attach(self, observer: Observer, brokerclient):
-        self.brokerclient = brokerclient
-
+    def attach(self, observer: Observer):
         if observer not in self._observers:
             self._observers.append(observer)
 
