@@ -53,41 +53,19 @@ logger = logging.getLogger(__name__)
 # Classes
 #
 # ==================================================================================================
-class StrategyBarDataObserver(BarDataObserver):
+class StrategyMarketDataObserver(MarketDataObserver):
     """!
+    Strategy observer for streaming market data.
     """
 
     def update(self, subject: Subject) -> None:
-        for ticker, bar_sizes_dict in self.ticker_bar_sizes.items():
-            for bar_size, sent_status in bar_sizes_dict.items():
-                if not sent_status:
+        """!
+        Sends market data to the Strategy Processes
 
-                    # Ensure we only send a bar size if it is available.
-                    # Avoids KeyError for missing bar sizes.
-                    if bar_size in list(subject.ohlc_bars[ticker]):
-                        ohlc_bars = subject.ohlc_bars[ticker][bar_size]
+        @param subject:
 
-                        msg = {"bars": {ticker: {bar_size: ohlc_bars}}}
-                        self.msg_queue.put(msg)
-                        self.ticker_bar_sizes[ticker][bar_size] = True
-
-
-class StrategyContractDataObserver(ContractDataObserver):
-
-    def update(self, subject: Subject) -> None:
-        contracts = {}
-
-        if len(self.tickers) > 0:
-            for ticker in self.tickers:
-                contracts[ticker] = subject.contracts[ticker]
-
-            msg = {"contracts": contracts}
-            self.msg_queue.put(msg)
-
-
-class StrategyMarketDataObserver(MarketDataObserver):
-
-    def update(self, subject: Subject) -> None:
+        @return None:
+        """
         if len(self.tickers) > 0:
             if subject.ticker in self.tickers:
                 message = {"market_data": {subject.ticker: subject.market_data}}
@@ -95,8 +73,18 @@ class StrategyMarketDataObserver(MarketDataObserver):
 
 
 class StrategyOrderDataObserver(OrderDataObserver):
+    """!
+    Strategy observer for order status updates.
+    """
 
     def update(self, subject: Subject) -> None:
+        """!
+        Sends order status updates to the strategy
+
+        @param subject:
+
+        @return None
+        """
         if len(self.order_ids) > 0:
             if subject.order_id in self.order_ids:
                 message = {"order_status": subject.order_status}
@@ -104,8 +92,18 @@ class StrategyOrderDataObserver(OrderDataObserver):
 
 
 class StrategyRealTimeBarObserver(RealTimeBarObserver):
+    """!
+    Strategy observer for Real time bar data.
+    """
 
     def update(self, subject: Subject) -> None:
+        """!
+        Sends real time bar data to the strategies.
+
+        @param subject:
+
+        @return None
+        """
         if subject.ticker in self.tickers:
             msg = {"real_time_bars": {subject.ticker: {"rtb": subject.ohlc_bar}}}
             self.msg_queue.put(msg)

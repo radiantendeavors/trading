@@ -52,6 +52,9 @@ class BrokerBarData(BarData):
     """
 
     def request_bars(self):
+        """!
+        Request bars
+        """
         for contract_ in list(self.contracts.values()):
             if contract_.localSymbol not in list(self.ohlc_bars):
                 self.ohlc_bars[contract_.localSymbol] = {}
@@ -126,8 +129,19 @@ class BrokerBarData(BarData):
 
 
 class BrokerContractData(ContractData):
+    """!
+    Contract Data Subject
+    """
 
     def set_contract_details(self, req_id: int, contract_details: ContractDetails | str) -> None:
+        """!
+        Sets the contract details, then notifies the observers.
+
+        @param req_id: The req_id of the contract details received.
+        @param contract_details: The contract details received.
+
+        @return None.
+        """
         self.req_id = req_id
         self.contracts[req_id] = contract_details
         self.notify()
@@ -137,8 +151,19 @@ class BrokerContractData(ContractData):
 
 
 class BrokerContractHistoryBeginDate(ContractHistoryBeginDate):
+    """!
+    Contract History Begin Subject
+    """
 
-    def set_history_begin_date(self, req_id: int, history_begin_date: str):
+    def set_history_begin_date(self, req_id: int, history_begin_date: str) -> None:
+        """!
+        Sets the history begin date, then notifies the observers.
+
+        @param req_id: The req_id of the history begin date received.
+        @param history_begin_date:
+
+        @return None
+        """
         self.req_id = req_id
         self.history_begin_date[req_id] = history_begin_date
         self.notify()
@@ -147,8 +172,19 @@ class BrokerContractHistoryBeginDate(ContractHistoryBeginDate):
 
 
 class BrokerContractOptionParametersData(ContractOptionParametrsData):
+    """!
+    Contract Option Parameters Subject
+    """
 
-    def set_option_parameter(self, req_id: int, option_parameters: dict):
+    def set_option_parameter(self, req_id: int, option_parameters: dict) -> None:
+        """!
+        Sets the option parameters for the contract, then notifies the observers.
+
+        @param req_id: The req_id of the option parameters received.
+        @param option_parameters: The option parameters received.
+
+        @return None
+        """
         self.req_id = req_id
         self.option_parameters[req_id] = option_parameters
         self.notify()
@@ -160,15 +196,30 @@ class BrokerContractOptionParametersData(ContractOptionParametrsData):
 
 
 class BrokerMarketData(MarketData):
+    """!
+    Market Data Subject
+    """
 
-    def request_market_data(self):
+    def request_market_data(self) -> None:
+        """!
+        Requests market data.
+
+        @return None
+        """
         for ticker, contract_ in self.contracts.items():
             if ticker not in self.rtmd_ids.values():
                 logger.debug2("Requesting Market Data for Ticker: %s", ticker)
                 req_id = self.brokerclient.req_market_data(contract_)
                 self.rtmd_ids[req_id] = ticker
 
-    def send_market_data_ticks(self, market_data: dict):
+    def send_market_data_ticks(self, market_data: dict) -> None:
+        """!
+        Sets the market data information, then notifies the observers.
+
+        @param market_data:
+
+        @return None
+        """
         req_id = list(market_data)[0]
         self.ticker = self.rtmd_ids[req_id]
         self.market_data = market_data[req_id]
@@ -176,12 +227,22 @@ class BrokerMarketData(MarketData):
 
 
 class BrokerOrderData(OrderData):
+    """!
+    Broker Order Data Subject
+    """
 
-    def cancel_order(self, order_id: int):
+    def cancel_order(self, order_id: int) -> None:
+        """!
+        Cancels specified order.
+
+        @param order_id: The order_id of the order to cancel.
+
+        @retur None
+        """
         if order_id in self.valid_order_ids:
             self.brokerclient.cancel_order(order_id)
 
-    def create_order(self, order_contract: Contract, new_order: Order, order_id: int):
+    def create_order(self, order_contract: Contract, new_order: Order, order_id: int) -> None:
         """!
         Create a new order from an order request.
 
@@ -192,7 +253,14 @@ class BrokerOrderData(OrderData):
         self.valid_order_ids.append(order_id)
         self.brokerclient.place_order(order_contract, new_order, order_id)
 
-    def send_order_status(self, order_status: dict):
+    def send_order_status(self, order_status: dict) -> None:
+        """!
+        Updates the order status, and notifies the observers.
+
+        @param order_status:
+
+        @return None
+        """
         self.order_id = list(order_status)[0]
         self.order_status = order_status
         status = order_status[self.order_id]["status"]
@@ -205,22 +273,47 @@ class BrokerOrderData(OrderData):
 
 
 class BrokerOrderIdData(OrderIdData):
+    """!
+    Broker Order Id Subject
+    """
 
-    def send_order_id(self, order_id: int):
+    def send_order_id(self, order_id: int) -> None:
+        """!
+        Updates the order id, and notifies the observers.
+
+        @param order_id:
+
+        @return None
+        """
         self.order_id = order_id
         self.notify()
 
 
 class BrokerRealTimeBarData(RealTimeBarData):
+    """!
+    Broker Real Time Bar Data subject
+    """
 
-    def request_real_time_bars(self):
+    def request_real_time_bars(self) -> None:
+        """!
+        Requets real time bars.
+
+        @return None.
+        """
         for ticker, contract_ in self.contracts.items():
             if ticker not in self.rtb_ids.values():
                 logger.debug2("Requesting Real Time Bars for Ticker: %s", ticker)
                 req_id = self.brokerclient.req_real_time_bars(contract_)
                 self.rtb_ids[req_id] = ticker
 
-    def send_real_time_bars(self, real_time_bar: dict):
+    def send_real_time_bars(self, real_time_bar: dict) -> None:
+        """!
+        Updates the real time bar information, and notifies the observers.
+
+        @param real_time_bar:
+
+        @return None
+        """
         # There should really only be one key.
         req_id = list(real_time_bar)[0]
         self.ticker = self.rtb_ids[req_id]

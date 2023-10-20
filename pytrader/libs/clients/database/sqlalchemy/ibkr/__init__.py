@@ -4,7 +4,7 @@
 Defines the database schema, and creates the database tables for Interactive Brokers related
 information.
 
-@author G. S. Derber
+@author G S Derber
 @date 2022-2023
 @copyright GNU Affero General Public License
 
@@ -48,9 +48,6 @@ from pytrader.libs.system import logging
 ## The base logger.
 logger = logging.getLogger(__name__)
 
-# bigint = Annotated(int, "bigint")
-# my_metadata = MetaData()
-
 
 # ==================================================================================================
 #
@@ -58,6 +55,9 @@ logger = logging.getLogger(__name__)
 #
 # ==================================================================================================
 class IbkrContractListing(base.Base):
+    """!
+    Provides the table definition for the contract universe.
+    """
     __tablename__ = "z_ibkr_contract_listing"
     id: Mapped[int] = mapped_column(primary_key=True)
     long_id: Mapped[str] = mapped_column(String(40), index=True, unique=True)
@@ -71,7 +71,7 @@ class IbkrContractListing(base.Base):
     last_seen: Mapped[date] = mapped_column(server_default=func.current_timestamp())
 
 
-class IbkrDBTables(object):
+class IbkrDBTables():
     """!
     Manages the Interactive Broker DB Tables
     """
@@ -82,7 +82,7 @@ class IbkrDBTables(object):
 
         @return None
         """
-        logger.debug("Creating Tables")
+        logger.debug9("Creating Tables")
 
         # Yes I know checkfirst defaults to true.  I wanted it to be explicit.
         base.Base.metadata.create_all(self.engine, checkfirst=True)

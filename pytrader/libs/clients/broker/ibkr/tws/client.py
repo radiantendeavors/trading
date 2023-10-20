@@ -223,11 +223,10 @@ class TwsApiClient(TwsPacingMngr):
 
         @return None
         """
-        # manual_order_cancel_time's actual usage is not documented by the TWSAPI.  IBAPI says to
-        # set the value to an empty string.
-        manual_order_cancel_time = ""
-
-        self.cancelOrder(order_id, manual_order_cancel_time)
+        # TWSAPI has an additional parameter 'manual_order_cancel_time'
+        # This is not documented by the TWSAPI other than to  set the value to an empty string.
+        # Ensure that manual_order_cancel_time is an empty string
+        self.cancelOrder(order_id, "")
 
     def cancel_pnl(self, req_id: int) -> None:
         """!

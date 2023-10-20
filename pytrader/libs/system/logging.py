@@ -679,5 +679,5 @@ def getLogger(name=None):
     """
     if name:
         return local_manager.getLogger(name)
-    else:
-        return Logger.root
+
+    return Logger.root

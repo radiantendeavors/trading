@@ -1,34 +1,39 @@
-# ==================================================================================================
-#
-#
-# Config:
-#
-#    Sets program configuration
-#
-# ==================================================================================================
+"""!@package pytrader.libs.utilities.config.database
 
-# ==================================================================================================
-#
-# Libraries
-#
-# ==================================================================================================
-# System Libraries
+Reads the config files.
+
+@author G S Derber
+@date 2022-2023
+@copyright GNU Affero General Public License
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+@file pytrader/libs/utilities/config/database.py
+"""
 import os
 
-# System Overrides
 from pytrader.libs.system import logging
-
-# Other Application Libraries
 
 # ==================================================================================================
 #
 # Global Variables
 #
 # ==================================================================================================
-# Enable Logging
-# create logger
+## The Base Logger
 logger = logging.getLogger(__name__)
-database_port = {"sqlite": None, "mysql": "3306"}
+database_ports = {"sqlite": None, "mysql": "3306"}
 home = os.path.expanduser("~") + "/"
 config_dir = home + ".config/investing"
 
@@ -39,23 +44,29 @@ config_dir = home + ".config/investing"
 #
 # ==================================================================================================
 class DatabaseConfig():
+    """!
+    Manages the configuration for the database.
+    """
 
-    def __init__(self):
-        self.database_type = "sqlite"
-        self.database_driver = None
-        self.database_username = None
-        self.database_password = None
-        self.database_host = "localhost"
-        self.database_port = database_port[self.database_type]
-        self.database_path = config_dir
-        self.database_name = "investing"
+    database_type = "sqlite"
+    database_driver = None
+    database_username = None
+    database_password = None
+    database_host = "localhost"
+    database_port = database_ports[database_type]
+    database_path = config_dir
+    database_name = "investing"
+    database_url = None
 
     def read_config(self, *args, **kwargs):
+        """!
+        Parses the config file for dabatase related settings.
+        """
         config = kwargs["config"]
 
         if "database_type" in config:
             self.database_type = config["database_type"]
-            self.database_port = database_port[self.database_type]
+            self.database_port = database_ports[self.database_type]
 
         if "database_driver" in config:
             self.database_driver = config["database_driver"]
@@ -79,7 +90,12 @@ class DatabaseConfig():
         if "database_host" in config:
             self.database_host = config["database_host"]
 
-    def set_database_url(self, *args, **kwargs):
+    def set_database_url(self, *args, **kwargs) -> str:
+        """!
+        Creates the database url based on the database settings.
+
+        @return database_url: The url for the database.
+        """
         url = self.database_type
 
         if self.database_driver is not None:

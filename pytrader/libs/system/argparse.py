@@ -30,35 +30,14 @@ Provides a wrapper arround pythons argparse library, with additional functionali
 # pylint: disable=W0611
 #
 # ==================================================================================================
-# ==================================================================================================
-#
-# Libraries
-#
-# ==================================================================================================
-# System Libraries
 from argparse import ArgumentError, ArgumentParser
 
-# Other Application Libraries
-from pytrader import CLIENT_ID, DEBUG, __version__
-
-# 3rd Party Libraries
-
-# Application Libraries
-# System Library Overrides
-
-# ==================================================================================================
-#
-# Global Variables
-#
-# ==================================================================================================
+from pytrader import DEBUG, __version__
 
 
 # ==================================================================================================
 #
 # Classes
-#
-# CommonParser
-# ArgParser
 #
 # ==================================================================================================
 class ArgParser(ArgumentParser):
@@ -120,27 +99,9 @@ class ArgParser(ArgumentParser):
         # Create Parent Parser
         self.parent = ArgumentParser(add_help=False)
 
-        # Parser Groups
-        # Logging Group
-        # self.parent_logging = self.parent.add_argument_group("Logging Options")
         self.logging = self.add_argument_group("Logging Options")
-
-        # Quiet Settings
         self.logging.add_argument("-q", "--quiet", action="count", default=0, help=quiet_help)
-        # self.parent_logging.add_argument("-q",
-        #                                  "--quiet",
-        #                                  action="count",
-        #                                  default=0,
-        #                                  help=quiet_help)
-
-        # Verbose Options
         self.logging.add_argument("-v", "--verbosity", action="count", default=0, help=verbose_help)
-
-        # self.parent_logging.add_argument("-v",
-        #                                  "--verbosity",
-        #                                  action="count",
-        #                                  default=0,
-        #                                  help=verbose_help)
 
         # If debugging is enabled
         if DEBUG:
@@ -151,15 +112,5 @@ class ArgParser(ArgumentParser):
                                       help=loglevel_help)
             # Maximize logging
             self.logging.add_argument("--debug", action="store_true", help=debug_help)
-
-            # # Set Loglevel
-            # self.parent_logging.add_argument("--loglevel",
-            #                                  choices=loglevel_choices,
-            #                                  default="INFO",
-            #                                  help=loglevel_help)
-            # # Maximize logging
-            # self.parent_logging.add_argument("--debug",
-            #                                  action="store_true",
-            #                                  help=debug_help)
 
         return self.parent
